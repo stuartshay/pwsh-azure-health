@@ -17,7 +17,7 @@ echo "Installing PowerShell modules..."
 pwsh -Command "
     Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
     Write-Host 'Installing Az module...'
-    Install-Module -Name Az -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+    Install-Module -Name Az -Repository PSGallery -Force -AllowClobber -Scope CurrentUser -RequiredVersion 12.0.0
     Write-Host 'Installing Az.ResourceGraph module...'
     Install-Module -Name Az.ResourceGraph -Repository PSGallery -Force -Scope CurrentUser
     Write-Host 'Installing Az.Monitor module...'
