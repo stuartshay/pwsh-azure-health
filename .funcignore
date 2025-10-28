@@ -1,0 +1,34 @@
+# Azure Functions
+bin
+obj
+appsettings.json
+local.settings.json
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json
+.python_packages
+.venv
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# Azure Functions Core Tools
+.vscode/extensions.json
+*.user
+*.suo
+
+# Test results
+test-results/
+coverage/
+
+# Environment
+.env
+.env.local
