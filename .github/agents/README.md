@@ -59,7 +59,10 @@ Custom agents are configured using YAML files in this directory. Each agent conf
 - **name**: Unique identifier for the agent
 - **description**: Brief summary of the agent's purpose
 - **instructions**: Detailed guidance on how the agent should behave and what it knows about the project
-- **tools**: List of tools the agent can use (we use `"*"` to grant access to all available tools)
+- **tools**: List of tools the agent can use
+  - We use `"*"` to grant access to all available tools (read, edit, search, etc.)
+  - This is recommended for general-purpose development agents
+  - Alternative: Specify individual tools like `["read", "edit", "search"]` for more restricted access
 
 ## Customizing Agents
 
