@@ -37,11 +37,11 @@ try {
         $body = [ordered]@{
             subscriptionId = $subscriptionId
             retrievedAt    = (Get-Date).ToString('o')
-            eventCount     = $events.Count
+            eventCount     = @($events).Count
             events         = $events
         }
 
-        Write-Host "Successfully retrieved $($events.Count) Service Health events."
+        Write-Host "Successfully retrieved $(@($events).Count) Service Health events."
         $response = New-HttpJsonResponse -StatusCode ([HttpStatusCode]::OK) -Body $body
     }
 }

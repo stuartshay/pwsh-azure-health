@@ -68,7 +68,7 @@ function Get-ServiceHealthEvents {
     Write-Verbose "Setting Azure context to subscription '$SubscriptionId'."
     Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
 
-    $isoStart = $StartTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $isoStart = $StartTime.ToUniversalTime().ToString('o')
     $query = @"
 ServiceHealthResources
 | where type == 'microsoft.resourcehealth/events'
