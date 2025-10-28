@@ -62,7 +62,7 @@ function Get-ServiceHealthData {
         [Parameter(Mandatory = $true)]
         [string]$SubscriptionId
     )
-    
+
     # Implementation
 }
 ```
@@ -91,11 +91,42 @@ Write-Host "Warning: No data found" -ForegroundColor Yellow
 Write-Host "Error: Failed to connect" -ForegroundColor Red
 ```
 
-### 3. Test Your Changes
+### 3. Set Up Pre-Commit Hooks
+
+This project uses pre-commit hooks to enforce code quality standards. **This is required** before making commits:
+
+```bash
+# Install the pre-commit hooks
+./scripts/install-hooks.sh
+```
+
+The pre-commit hooks will automatically:
+- Lint PowerShell code with PSScriptAnalyzer
+- Check for secrets and credentials using pattern matching
+- Validate YAML and JSON files
+- Remove trailing whitespace
+- Ensure proper line endings
+- Check for large files
+- Detect merge conflict markers
+
+If a hook fails, your commit will be blocked. Fix the issues and try committing again.
+
+**To manually test the hooks before committing:**
+```bash
+./scripts/pre-commit-hook.sh
+```
+
+### 4. Test Your Changes
 
 Before submitting:
 
 ```bash
+# Run PSScriptAnalyzer manually
+pwsh -Command "Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./.PSScriptAnalyzerSettings.psd1"
+
+# Run Pester tests
+pwsh -Command "Invoke-Pester -Path ./tests/unit -Output Detailed"
+
 # Start the function locally
 func start --script-root src
 
@@ -105,14 +136,14 @@ curl "http://localhost:7071/api/GetServiceHealth?SubscriptionId=your-sub-id"
 # Verify no errors in the console output
 ```
 
-### 4. Update Documentation
+### 5. Update Documentation
 
 - Update README.md if you've added new features
 - Update relevant documentation in the `docs/` folder
 - Add comments to complex code sections
 - Update function-level documentation
 
-### 5. Commit Your Changes
+### 6. Commit Your Changes
 
 Follow conventional commit messages:
 
@@ -142,7 +173,7 @@ Types:
 - `test` - Tests
 - `chore` - Maintenance
 
-### 6. Push and Create Pull Request
+### 7. Push and Create Pull Request
 
 ```bash
 git push origin feature/your-feature-name
@@ -158,13 +189,16 @@ Then create a Pull Request on GitHub with:
 
 ### PR Checklist
 
+- [ ] Pre-commit hooks are installed and passing (`pre-commit install`)
 - [ ] Code follows the project style guidelines
+- [ ] PSScriptAnalyzer passes with no errors
+- [ ] All Pester tests pass locally
 - [ ] Comments added to complex code sections
 - [ ] Documentation updated as needed
-- [ ] All tests pass locally
 - [ ] No new warnings or errors
 - [ ] Commit messages follow conventions
 - [ ] PR description is clear and complete
+- [ ] No secrets or credentials committed
 
 ### Review Process
 
