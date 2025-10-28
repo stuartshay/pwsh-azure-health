@@ -16,7 +16,7 @@ The DevContainer includes all required tools and dependencies:
   - Az (latest)
   - Az.ResourceGraph (latest)
   - Az.Monitor (latest)
-  - Pester (latest) - Testing framework
+  - Pester (>=5.4.0) - Testing framework
 
 ## VS Code Extensions
 
