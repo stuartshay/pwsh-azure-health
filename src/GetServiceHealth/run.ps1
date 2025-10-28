@@ -6,7 +6,7 @@ Write-Host "Processing Azure Service Health request."
 
 $subscriptionId = $Request.Query.SubscriptionId
 if (-not $subscriptionId -and $Request.Body) {
-    if ($Request.Body -is [string] -and $Request.Body.Trim().StartsWith('{')) {
+    if ($Request.Body -is [string] -and $Request.Body.Trim().StartsWith('{', [System.StringComparison]::Ordinal)) {
         try {
             $parsedBody = $Request.Body | ConvertFrom-Json -ErrorAction Stop
             $subscriptionId = $parsedBody.SubscriptionId
