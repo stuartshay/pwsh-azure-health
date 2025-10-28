@@ -2,9 +2,31 @@ $modulePath = Join-Path $PSScriptRoot '..' '..' 'src' 'shared' 'Modules' 'Servic
 Import-Module $modulePath -Force
 
 describe 'Get-ServiceHealthEvents' -Tag 'unit' {
+    BeforeAll {
+        # Import Az.Accounts to ensure cmdlets are available for mocking
+        Import-Module Az.Accounts -ErrorAction SilentlyContinue
+        Import-Module Az.ResourceGraph -ErrorAction SilentlyContinue
+    }
+    
     BeforeEach {
-        Mock -CommandName Set-AzContext -MockWith { $null }
-        Mock -CommandName Search-AzGraph -MockWith {
+        # Mock Get-AzContext to return a valid context (simulates being logged in)
+        Mock -CommandName Get-AzContext -ModuleName ServiceHealth -MockWith {
+            [pscustomobject]@{
+                Subscription = [pscustomobject]@{
+                    Id = '00000000-0000-0000-0000-000000000000'
+                }
+            }
+        }
+        
+        Mock -CommandName Set-AzContext -ModuleName ServiceHealth -MockWith {
+            [pscustomobject]@{
+                Subscription = [pscustomobject]@{
+                    Id = $SubscriptionId
+                }
+            }
+        }
+        
+        Mock -CommandName Search-AzGraph -ModuleName ServiceHealth -MockWith {
             @(
                 [pscustomobject]@{
                     id               = '/subscriptions/0000/resourceGroups/rg/providers/microsoft.resourcehealth/events/1'
@@ -29,7 +51,7 @@ describe 'Get-ServiceHealthEvents' -Tag 'unit' {
         $events[0].Title | Should -Be 'Test issue'
         $events[0].ImpactedServices | Should -Contain 'Compute'
 
-        Assert-MockCalled -CommandName Set-AzContext -Times 1 -Exactly -ParameterFilter { $SubscriptionId -eq $subscription }
-        Assert-MockCalled -CommandName Search-AzGraph -Times 1 -Exactly -ParameterFilter { $Subscription -eq $subscription }
+        Assert-MockCalled -CommandName Set-AzContext -ModuleName ServiceHealth -Times 1 -Exactly -ParameterFilter { $SubscriptionId -eq $subscription }
+        Assert-MockCalled -CommandName Search-AzGraph -ModuleName ServiceHealth -Times 1 -Exactly -ParameterFilter { $Subscription -eq $subscription }
     }
 }
