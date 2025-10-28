@@ -116,18 +116,22 @@ SECRET_PATTERNS=(
     "secret\s*=\s*['\"].*['\"]"
     "token\s*=\s*['\"].*['\"]"
     "private[_-]?key"
-    "-----BEGIN RSA PRIVATE KEY-----"
-    "-----BEGIN PRIVATE KEY-----"
+    "BEGIN RSA PRIVATE KEY"
+    "BEGIN PRIVATE KEY"
 )
 
 SECRET_FOUND=0
 for pattern in "${SECRET_PATTERNS[@]}"; do
-    if git diff --cached | grep -iE "$pattern" > /dev/null; then
+    if git diff --cached | grep -iE "$pattern" > /dev/null 2>&1; then
         echo -e "${RED}✗${NC} Potential secret detected matching pattern: $pattern"
         SECRET_FOUND=1
     fi
 done
-print_status $SECRET_FOUND "Secret detection" && true || FAILED=1
+if [ $SECRET_FOUND -eq 0 ]; then
+    echo -e "${GREEN}✓${NC} No secrets detected"
+else
+    FAILED=1
+fi
 
 # Summary
 echo ""
