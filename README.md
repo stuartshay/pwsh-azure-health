@@ -226,12 +226,49 @@ Retrieves Azure Service Health events for a specified subscription.
 This project uses EditorConfig for consistent formatting:
 - PowerShell files: 4 spaces
 
+### Code Quality and Pre-Commit Hooks
+
+This project enforces strict enterprise development standards using pre-commit hooks. All commits are automatically validated for:
+
+- **PowerShell Linting**: PSScriptAnalyzer checks for code quality and best practices
+- **File Quality**: Trailing whitespace, end-of-file fixes, large file detection
+- **Security**: Pattern-based secret detection to prevent credential leaks
+- **YAML/JSON Validation**: Syntax checking for configuration files
+- **Merge Conflict Detection**: Prevents committing files with conflict markers
+
+**Setting up pre-commit:**
+
+```bash
+# Run the setup script to install hooks
+./scripts/install-hooks.sh
+```
+
+The hooks will automatically run on every commit. If any issues are found, the commit will be blocked until they are resolved.
+
+**To skip hooks for a specific commit (not recommended):**
+```bash
+git commit --no-verify
+```
+
 ### Testing
 
 Pester tests are located under the `tests/` directory. Run them with:
 
 ```powershell
 Invoke-Pester -Script tests/unit
+```
+
+**Running all quality checks locally:**
+
+```bash
+# Run PSScriptAnalyzer
+pwsh -Command "Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./.PSScriptAnalyzerSettings.psd1"
+
+# Run Pester tests
+pwsh -Command "Invoke-Pester -Path ./tests/unit -Output Detailed"
+
+# Run pre-commit checks manually
+./scripts/pre-commit-hook.sh
 ```
 
 ### GitHub Copilot Custom Agent

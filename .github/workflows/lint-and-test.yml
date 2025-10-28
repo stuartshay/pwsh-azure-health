@@ -1,0 +1,166 @@
+name: Lint and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pre-commit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pre-commit
+        run: |
+          pip install pre-commit
+          pre-commit --version
+
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
+
+  powershell-lint:
+    name: PowerShell Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PowerShell
+        run: |
+          # Install PowerShell
+          wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          Get-Module -ListAvailable PSScriptAnalyzer
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./.PSScriptAnalyzerSettings.psd1
+
+          if ($results) {
+            Write-Host "::group::PSScriptAnalyzer Results"
+            $results | Format-Table -AutoSize | Out-String | Write-Host
+            Write-Host "::endgroup::"
+
+            $errors = $results | Where-Object Severity -eq 'Error'
+            if ($errors) {
+              Write-Host "::error::Found $($errors.Count) PSScriptAnalyzer errors"
+              exit 1
+            }
+
+            $warnings = $results | Where-Object Severity -eq 'Warning'
+            if ($warnings) {
+              Write-Host "::warning::Found $($warnings.Count) PSScriptAnalyzer warnings"
+            }
+          } else {
+            Write-Host "✓ No PSScriptAnalyzer issues found"
+          }
+
+  powershell-test:
+    name: PowerShell Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PowerShell
+        run: |
+          # Install PowerShell
+          wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -Scope CurrentUser
+          Get-Module -ListAvailable Pester
+
+      - name: Install Az Modules (for tests)
+        shell: pwsh
+        run: |
+          Install-Module -Name Az.Accounts -Force -Scope CurrentUser -AllowClobber
+          Install-Module -Name Az.ResourceGraph -Force -Scope CurrentUser -AllowClobber
+
+      - name: Run Pester Tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests/unit'
+          $config.Output.Verbosity = 'Detailed'
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = 'test-results.xml'
+          $config.CodeCoverage.Enabled = $false
+
+          $results = Invoke-Pester -Configuration $config
+
+          if ($results.FailedCount -gt 0) {
+            Write-Host "::error::$($results.FailedCount) test(s) failed"
+            exit 1
+          }
+
+          Write-Host "✓ All $($results.PassedCount) test(s) passed"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results.xml
+          retention-days: 30
+
+  validate-yaml:
+    name: Validate YAML Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Run yamllint
+        run: |
+          yamllint -d '{extends: default, rules: {line-length: {max: 120}, document-start: disable, truthy: {check-keys: false}}}' .github/ .devcontainer/ || true
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
