@@ -43,16 +43,16 @@ This document outlines best practices for developing, deploying, and maintaining
 
 4. **Logging**
    ```powershell
-   # Use structured logging
-   Write-Host "Processing request" -ForegroundColor Cyan
-   Write-Host "  SubscriptionId: $subscriptionId"
-   Write-Host "  DaysBack: $daysBack"
+   # Use Write-Information for structured logging in Azure Functions
+   Write-Information "Processing request" -InformationAction Continue
+   Write-Information "SubscriptionId: $subscriptionId" -InformationAction Continue
+   Write-Information "DaysBack: $daysBack" -InformationAction Continue
    
    # Include timing information
    $startTime = Get-Date
    # ... processing ...
    $duration = (Get-Date) - $startTime
-   Write-Host "Completed in $($duration.TotalSeconds) seconds"
+   Write-Information "Completed in $($duration.TotalSeconds) seconds" -InformationAction Continue
    ```
 
 ### Code Organization
@@ -220,15 +220,15 @@ This document outlines best practices for developing, deploying, and maintaining
 
 1. **Structured Logging**
    ```powershell
-   Write-Host @"
-   {
-       "timestamp": "$(Get-Date -Format 'o')",
-       "level": "Information",
-       "message": "Processing completed",
-       "subscriptionId": "$subscriptionId",
-       "eventCount": $count
+   # Use PowerShell objects for structured logging
+   $logData = @{
+       timestamp = Get-Date -Format 'o'
+       level = "Information"
+       message = "Processing completed"
+       subscriptionId = $subscriptionId
+       eventCount = $count
    }
-   "@
+   Write-Information ($logData | ConvertTo-Json -Compress) -InformationAction Continue
    ```
 
 2. **Log Levels**

@@ -51,7 +51,7 @@ curl "http://localhost:7071/api/GetServiceHealth?SubscriptionId=xxxxxxxx-xxxx-xx
 
 **GET Request with Authorization (Azure):**
 ```bash
-curl "https://func-azure-health.azurewebsites.net/api/GetServiceHealth?code=your-function-key&SubscriptionId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+curl "https://[your-function-app-name].azurewebsites.net/api/GetServiceHealth?code=your-function-key&SubscriptionId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
 **POST Request with JSON Body:**
