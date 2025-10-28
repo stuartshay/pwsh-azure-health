@@ -13,6 +13,7 @@ This project provides a robust, production-ready solution for monitoring Azure S
 - **Resource Graph Integration**: Uses Azure Resource Graph for efficient querying
 - **Enterprise Ready**: Structured with scalability and maintainability in mind
 - **Local Development Support**: Complete setup for local testing and debugging
+- **GitHub Copilot Custom Agent**: Specialized AI assistant for PowerShell Azure Functions development
 
 ## Prerequisites
 
@@ -215,6 +216,24 @@ Pester tests are located under the `tests/` directory. Run them with:
 ```powershell
 Invoke-Pester -Script tests/unit
 ```
+
+### GitHub Copilot Custom Agent
+
+This project includes a custom GitHub Copilot agent (`powershell-azure-expert`) specialized for PowerShell Azure Functions development.
+
+**To use the custom agent:**
+
+In GitHub Copilot Chat (VS Code, Codespaces):
+```
+@powershell-azure-expert help me add a new Azure Function
+```
+
+When assigning Copilot to an issue:
+1. Click "Assign Copilot to issue"
+2. Select `powershell-azure-expert` from the "Custom agent" dropdown
+3. The agent will use project-specific knowledge and best practices
+
+For more details, see [`.github/agents/README.md`](.github/agents/README.md).
 
 ## Deployment
 
