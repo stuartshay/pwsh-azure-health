@@ -68,7 +68,8 @@ foreach ($module in $modules) {
 
 # Validate local.settings.json
 Write-Host "`nValidating local.settings.json..." -ForegroundColor Yellow
-$localSettingsPath = Join-Path $PSScriptRoot ".." "local.settings.json"
+$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$localSettingsPath = Join-Path $repoRoot "src" "local.settings.json"
 if (Test-Path $localSettingsPath) {
     try {
         $localSettings = Get-Content $localSettingsPath | ConvertFrom-Json
@@ -81,7 +82,7 @@ if (Test-Path $localSettingsPath) {
         Write-Host "  ERROR: Invalid local.settings.json format" -ForegroundColor Red
     }
 } else {
-    Write-Host "  ERROR: local.settings.json not found" -ForegroundColor Red
+    Write-Host "  ERROR: local.settings.json not found in src/" -ForegroundColor Red
 }
 
 # Test Azure authentication
@@ -100,6 +101,6 @@ try {
 
 Write-Host "`n✓ Setup complete!" -ForegroundColor Green
 Write-Host "`nNext steps:" -ForegroundColor Cyan
-Write-Host "  1. Configure AZURE_SUBSCRIPTION_ID in local.settings.json" -ForegroundColor White
+Write-Host "  1. Configure AZURE_SUBSCRIPTION_ID in src/local.settings.json" -ForegroundColor White
 Write-Host "  2. Run 'Connect-AzAccount' to authenticate" -ForegroundColor White
-Write-Host "  3. Run 'func start' to start the function app" -ForegroundColor White
+Write-Host "  3. Run 'func start --script-root src' to start the function app" -ForegroundColor White

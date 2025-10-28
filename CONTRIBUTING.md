@@ -97,7 +97,7 @@ Before submitting:
 
 ```bash
 # Start the function locally
-func start
+func start --script-root src
 
 # Test the function
 curl "http://localhost:7071/api/GetServiceHealth?SubscriptionId=your-sub-id"
@@ -177,7 +177,7 @@ Then create a Pull Request on GitHub with:
 
 When adding a new Azure Function:
 
-1. Create a new directory: `MyNewFunction/`
+1. Create a new directory under `src/`: `src/MyNewFunction/`
 2. Add `function.json` with appropriate bindings
 3. Add `run.ps1` with the implementation
 4. Update `README.md` with the new endpoint
@@ -186,16 +186,18 @@ When adding a new Azure Function:
 
 Example structure:
 ```
-MyNewFunction/
-├── function.json
-└── run.ps1
+src/
+├── MyNewFunction/
+│   ├── function.json
+│   └── run.ps1
+└── shared/
 ```
 
 ## Testing Guidelines
 
 ### Manual Testing
 
-1. Test locally with `func start`
+1. Test locally with `func start --script-root src`
 2. Test all endpoints and parameters
 3. Test error conditions
 4. Verify logging output

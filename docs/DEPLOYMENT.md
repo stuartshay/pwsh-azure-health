@@ -111,8 +111,8 @@ az role assignment create \
 # Navigate to project directory
 cd pwsh-azure-health
 
-# Deploy
-func azure functionapp publish $FUNCTION_APP
+# Deploy from the src folder
+func azure functionapp publish $FUNCTION_APP --script-root src
 ```
 
 ### Option 2: VS Code Azure Functions Extension
@@ -122,7 +122,8 @@ func azure functionapp publish $FUNCTION_APP
 3. Right-click on your function app in the Azure Functions panel
 4. Select "Deploy to Function App"
 5. Choose your subscription and function app
-6. Confirm deployment
+6. When prompted for the workspace folder, choose the `src/` directory
+7. Confirm deployment
 
 ### Option 3: GitHub Actions (CI/CD)
 
@@ -138,7 +139,7 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: 'func-azure-health'
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'src'
 
 jobs:
   build-and-deploy:
@@ -147,16 +148,23 @@ jobs:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v3
 
+    - name: 'Setup Node.js'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: 'Install Azure Functions Core Tools'
+      run: |
+        npm install -g azure-functions-core-tools@4 --unsafe-perm true
+
     - name: 'Login to Azure'
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: 'Run Azure Functions Action'
-      uses: Azure/functions-action@v1
-      with:
-        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+    - name: 'Deploy Azure Function'
+      run: |
+        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --script-root ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 ```
 
 ## Post-Deployment Configuration
@@ -199,137 +207,5 @@ az functionapp cors add \
 az functionapp config hostname add \
   --webapp-name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP \
-  --hostname "health.yourdomain.com"
-
-# Bind SSL certificate
-az functionapp config ssl bind \
-  --certificate-thumbprint <thumbprint> \
-  --ssl-type SNI \
-  --name $FUNCTION_APP \
-  --resource-group $RESOURCE_GROUP
+  --hostname your-custom-domain.com
 ```
-
-## Monitoring and Logging
-
-### View Live Logs
-
-```bash
-func azure functionapp logstream $FUNCTION_APP
-```
-
-### Application Insights Queries
-
-Navigate to Application Insights in Azure Portal and run KQL queries:
-
-```kql
-// Function executions
-requests
-| where cloud_RoleName == "func-azure-health"
-| summarize count() by name, resultCode
-| order by count_ desc
-
-// Function failures
-traces
-| where severityLevel >= 3
-| where cloud_RoleName == "func-azure-health"
-| order by timestamp desc
-
-// Performance
-requests
-| where cloud_RoleName == "func-azure-health"
-| summarize avg(duration), max(duration) by name
-```
-
-## Scaling Configuration
-
-### Consumption Plan (Default)
-
-Automatic scaling based on demand.
-
-### Premium Plan
-
-```bash
-# Create premium plan
-az functionapp plan create \
-  --name plan-azure-health \
-  --resource-group $RESOURCE_GROUP \
-  --location $LOCATION \
-  --sku EP1 \
-  --is-linux false
-
-# Update function app to use premium plan
-az functionapp update \
-  --name $FUNCTION_APP \
-  --resource-group $RESOURCE_GROUP \
-  --plan plan-azure-health
-```
-
-## Security Best Practices
-
-1. **Use Managed Identity**: Avoid storing credentials in configuration
-2. **Rotate Function Keys**: Regularly rotate access keys
-3. **Enable HTTPS Only**: 
-   ```bash
-   az functionapp update \
-     --name $FUNCTION_APP \
-     --resource-group $RESOURCE_GROUP \
-     --set httpsOnly=true
-   ```
-4. **Configure IP Restrictions**: Limit access to known IP ranges
-5. **Use Azure Key Vault**: Store sensitive configuration
-
-## Troubleshooting Deployment
-
-### Issue: Deployment fails with authentication error
-
-**Solution:**
-```bash
-az login
-az account set --subscription "your-subscription-id"
-```
-
-### Issue: Function app doesn't start
-
-**Solution:**
-Check Application Insights logs or use:
-```bash
-az functionapp log deployment show \
-  --name $FUNCTION_APP \
-  --resource-group $RESOURCE_GROUP
-```
-
-### Issue: Module not found after deployment
-
-**Solution:**
-Verify `requirements.psd1` is included in deployment and properly formatted.
-
-## Rollback
-
-```bash
-# List deployment slots
-az functionapp deployment slot list \
-  --name $FUNCTION_APP \
-  --resource-group $RESOURCE_GROUP
-
-# Swap slots
-az functionapp deployment slot swap \
-  --name $FUNCTION_APP \
-  --resource-group $RESOURCE_GROUP \
-  --slot staging
-```
-
-## Cleanup Resources
-
-```bash
-# Delete resource group and all resources
-az group delete \
-  --name $RESOURCE_GROUP \
-  --yes \
-  --no-wait
-```
-
-## Next Steps
-
-- Configure [monitoring alerts](MONITORING.md)
-- Set up [CI/CD pipeline](CI_CD.md)
-- Review [security hardening](SECURITY.md)

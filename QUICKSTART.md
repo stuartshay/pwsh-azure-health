@@ -40,10 +40,10 @@ sudo apt-get install azure-functions-core-tools-4
 ### 3. Setup Local Configuration
 
 ```bash
-# Copy the template
-cp local.settings.json.template local.settings.json
+# Copy the template from src/
+cp src/local.settings.json.template src/local.settings.json
 
-# Edit local.settings.json and add your subscription ID
+# Edit src/local.settings.json and add your subscription ID
 # Replace "your-subscription-id-here" with your actual subscription ID
 ```
 
@@ -58,7 +58,7 @@ Set-AzContext -SubscriptionId "your-subscription-id"
 ### 5. Run the Function Locally
 
 ```bash
-func start
+func start --script-root src
 ```
 
 You should see:
@@ -101,7 +101,7 @@ Invoke-RestMethod -Uri "http://localhost:7071/api/GetServiceHealth?SubscriptionI
 ```powershell
 # Clear module cache and restart
 Remove-Item -Path "$env:HOME/.azure/functions/managedDependencies" -Recurse -Force
-func start
+func start --script-root src
 ```
 
 ### "Authentication failed" error
@@ -114,7 +114,7 @@ Set-AzContext -SubscriptionId "your-subscription-id"
 ### "Port already in use" error
 ```bash
 # Use a different port
-func start --port 7072
+func start --port 7072 --script-root src
 ```
 
 ## Next Steps
@@ -125,17 +125,18 @@ func start --port 7072
    - [Deployment Guide](docs/DEPLOYMENT.md)
 
 2. **Customize the Function**
-   - Modify query parameters in `GetServiceHealth/run.ps1`
-   - Adjust time range (currently 7 days)
-   - Add filtering or sorting
+   - Modify query parameters in `src/GetServiceHealth/run.ps1`
+   - Adjust time range (currently 7 days) in `src/shared/Modules/ServiceHealth.psm1`
+   - Add additional filters or telemetry helpers in `src/shared/`
 
 3. **Deploy to Azure**
-   - Use the deployment script: `./scripts/deploy-to-azure.sh`
+   - Use the deployment script: `./scripts/deployment/deploy-to-azure.sh`
    - Or deploy via VS Code Azure Functions extension
    - See [Deployment Guide](docs/DEPLOYMENT.md) for details
 
 4. **Add More Functions**
-   - Create new functions for different health metrics
+   - Create new function folders under `src/`
+   - Share common logic via `src/shared/Modules`
    - See [Contributing Guide](CONTRIBUTING.md) for guidelines
 
 ## Development Workflow
@@ -143,7 +144,7 @@ func start --port 7072
 ```bash
 # 1. Make changes to the code
 # 2. Test locally
-func start
+func start --script-root src
 
 # 3. In another terminal, test the function
 curl "http://localhost:7071/api/GetServiceHealth?SubscriptionId=xxx"
@@ -158,8 +159,8 @@ git push
 
 1. Open the project in VS Code
 2. Install recommended extensions when prompted
-3. Press F5 to start debugging
-4. Set breakpoints in PowerShell files
+3. Press F5 to start debugging (runs `func start --script-root src`)
+4. Set breakpoints in PowerShell files under `src/`
 5. Test and debug
 
 ## Resources

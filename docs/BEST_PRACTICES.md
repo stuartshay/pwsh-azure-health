@@ -66,6 +66,7 @@ This document outlines best practices for developing, deploying, and maintaining
    - Use environment variables for configuration
    - Never hardcode secrets or credentials
    - Use Azure Key Vault for sensitive data
+   - Store reusable modules under `src/shared/Modules` and scripts under `src/shared/Scripts`
 
 3. **Documentation**
    - Include comment-based help for all functions
