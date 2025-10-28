@@ -16,10 +16,15 @@ az version
 echo "Installing PowerShell modules..."
 pwsh -Command "
     Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-    Install-Module -Name Az -Repository PSGallery -Force -AllowClobber -Scope CurrentUser -ErrorAction SilentlyContinue
-    Install-Module -Name Az.ResourceGraph -Repository PSGallery -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-    Install-Module -Name Az.Monitor -Repository PSGallery -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-    Install-Module -Name Pester -Repository PSGallery -Force -Scope CurrentUser -MinimumVersion 5.0 -ErrorAction SilentlyContinue
+    Write-Host 'Installing Az module...'
+    Install-Module -Name Az -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+    Write-Host 'Installing Az.ResourceGraph module...'
+    Install-Module -Name Az.ResourceGraph -Repository PSGallery -Force -Scope CurrentUser
+    Write-Host 'Installing Az.Monitor module...'
+    Install-Module -Name Az.Monitor -Repository PSGallery -Force -Scope CurrentUser
+    Write-Host 'Installing Pester module...'
+    Install-Module -Name Pester -Repository PSGallery -Force -Scope CurrentUser -MinimumVersion 5.0
+    Write-Host 'PowerShell modules installed successfully!'
 "
 
 # Create local.settings.json if it doesn't exist

@@ -13,10 +13,10 @@ The DevContainer includes all required tools and dependencies:
 - **Node.js 20** - Required by Azure Functions Core Tools
 - **Git** - Version control
 - **PowerShell Modules**:
-  - Az (v12.*)
-  - Az.ResourceGraph (v1.*)
-  - Az.Monitor (v5.*)
-  - Pester (v5.0+) - Testing framework
+  - Az (latest)
+  - Az.ResourceGraph (latest)
+  - Az.Monitor (latest)
+  - Pester (latest) - Testing framework
 
 ## VS Code Extensions
 
@@ -69,7 +69,7 @@ Port 7071 (Azure Functions default) is automatically forwarded, allowing you to 
 
 ### Azure Credentials
 
-The DevContainer mounts your local `~/.azure` directory, preserving Azure CLI credentials between container rebuilds.
+You'll need to authenticate with Azure inside the DevContainer using `az login`. Credentials are stored within the container and will persist between sessions.
 
 ### PowerShell as Default
 
@@ -100,7 +100,7 @@ bash .devcontainer/post-create.sh
 
 ### Azure CLI Authentication
 
-Your Azure credentials are mounted from `~/.azure`. If you need to re-authenticate:
+If you need to authenticate or re-authenticate:
 ```bash
 az login
 ```
