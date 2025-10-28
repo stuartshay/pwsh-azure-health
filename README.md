@@ -13,9 +13,26 @@ This project provides a robust, production-ready solution for monitoring Azure S
 - **Resource Graph Integration**: Uses Azure Resource Graph for efficient querying
 - **Enterprise Ready**: Structured with scalability and maintainability in mind
 - **Local Development Support**: Complete setup for local testing and debugging
+- **DevContainer Support**: Pre-configured development environment with all prerequisites
 - **GitHub Copilot Custom Agent**: Specialized AI assistant for PowerShell Azure Functions development
 
+## Quick Start with DevContainer
+
+The fastest way to get started is using the pre-configured DevContainer:
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop) and [VS Code Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+2. Open this repository in VS Code
+3. Click "Reopen in Container" when prompted (or use Command Palette: "Dev Containers: Reopen in Container")
+4. Wait for the container to build (first time only)
+5. Authenticate with Azure: `az login`
+6. Update `src/local.settings.json` with your subscription ID
+7. Start the function: `func start --script-root src`
+
+All prerequisites (PowerShell 7.4, Azure Functions Core Tools, .NET 8, Azure CLI, and PowerShell modules) are automatically installed! See [`.devcontainer/README.md`](.devcontainer/README.md) for details.
+
 ## Prerequisites
+
+> **💡 Using DevContainer?** If you're using the DevContainer, all required tools are pre-installed. Skip to the [Quick Start with DevContainer](#quick-start-with-devcontainer) section above.
 
 ### Required Tools
 
