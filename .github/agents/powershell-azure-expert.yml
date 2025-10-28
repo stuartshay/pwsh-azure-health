@@ -24,7 +24,6 @@ instructions: |
   - `scripts/` - Deployment and local development automation
   
   ## Code Style Guidelines
-  - Use 4 spaces for indentation in PowerShell files
   - Follow PowerShell approved verbs (Get-, Set-, New-, etc.)
   - Include comment-based help for all functions
   - Use proper error handling with try/catch blocks
