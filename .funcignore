@@ -32,3 +32,4 @@ coverage/
 # Environment
 .env
 .env.local
+src/local.settings.json

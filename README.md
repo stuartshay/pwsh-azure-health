@@ -35,22 +35,31 @@ This project provides a robust, production-ready solution for monitoring Azure S
 
 ```
 pwsh-azure-health/
-├── .vscode/                    # VS Code configuration
-│   ├── extensions.json         # Recommended extensions
-│   ├── launch.json            # Debug configuration
-│   ├── settings.json          # Editor settings
-│   └── tasks.json             # Build tasks
-├── GetServiceHealth/          # Service Health function
-│   ├── function.json          # Function bindings
-│   └── run.ps1               # Function implementation
-├── .editorconfig             # Code formatting rules
-├── .funcignore              # Files to exclude from deployment
-├── .gitignore               # Git ignore patterns
-├── host.json                # Function app host configuration
-├── local.settings.json      # Local development settings
-├── profile.ps1              # PowerShell profile (cold start)
-├── requirements.psd1        # PowerShell module dependencies
-└── README.md               # This file
+├── docs/                       # Documentation (best practices, deployment, setup)
+├── scripts/
+│   ├── ci/                     # Continuous integration helpers (placeholder)
+│   ├── deployment/             # Deployment automation scripts
+│   │   └── deploy-to-azure.sh
+│   └── local/                  # Local development utilities
+│       └── setup-local-dev.ps1
+├── src/
+│   ├── GetServiceHealth/       # Service Health function implementation
+│   │   ├── function.json       # Function bindings
+│   │   └── run.ps1             # HTTP trigger entry point
+│   ├── shared/
+│   │   ├── Modules/            # Reusable PowerShell modules
+│   │   │   └── ServiceHealth.psm1
+│   │   └── Scripts/            # Common scripts and helpers
+│   │       └── HttpHelpers.ps1
+│   ├── host.json               # Function app host configuration
+│   ├── local.settings.json     # Local development settings (ignored by Git)
+│   ├── local.settings.json.template
+│   ├── profile.ps1             # PowerShell profile (executed on cold start)
+│   └── requirements.psd1       # PowerShell module dependencies
+├── tests/
+│   └── unit/
+│       └── ServiceHealth.Tests.ps1
+└── README.md
 ```
 
 ## Getting Started
@@ -85,13 +94,13 @@ sudo apt-get install azure-functions-core-tools-4
 
 ### 3. Configure Local Settings
 
-Copy the `local.settings.json.template` to `local.settings.json` and configure your Azure subscription:
+Copy the template into the `src` directory and configure your Azure subscription:
 
 ```bash
-cp local.settings.json.template local.settings.json
+cp src/local.settings.json.template src/local.settings.json
 ```
 
-Then edit `local.settings.json` with your subscription ID:
+Then edit `src/local.settings.json` with your subscription ID:
 
 ```json
 {
@@ -106,11 +115,11 @@ Then edit `local.settings.json` with your subscription ID:
 }
 ```
 
-**Note:** The `local.settings.json` file is excluded from source control for security. Always use the template to create your local configuration.
+**Note:** The `src/local.settings.json` file is excluded from source control for security. Always use the template to create your local configuration.
 
 ### 4. Install PowerShell Modules
 
-The required PowerShell modules are defined in `requirements.psd1` and will be automatically installed by Azure Functions when running locally or in Azure. For local development, you can pre-install them:
+The required PowerShell modules are defined in `src/requirements.psd1` and will be automatically installed by Azure Functions when running locally or in Azure. For local development, you can pre-install them:
 
 ```powershell
 Install-Module -Name Az -Repository PSGallery -Force -AllowClobber
@@ -130,10 +139,10 @@ Set-AzContext -SubscriptionId "your-subscription-id"
 ### Start the Function App
 
 ```bash
-func start
+func start --script-root src
 ```
 
-The function app will start on `http://localhost:7071`
+The function app will start on `http://localhost:7071`.
 
 ### Test the Function
 
@@ -191,151 +200,22 @@ Retrieves Azure Service Health events for a specified subscription.
 ### VS Code Setup
 
 1. Install recommended extensions when prompted
-2. Use F5 to start debugging
+2. Use F5 to start debugging (`func start --script-root src`)
 3. Set breakpoints in PowerShell files
 
 ### Code Formatting
 
 This project uses EditorConfig for consistent formatting:
 - PowerShell files: 4 spaces
-- JSON files: 2 spaces
-- Follow existing code style
 
-### PowerShell Best Practices
+### Testing
 
-- Use approved verbs for function names
-- Include proper error handling with try/catch
-- Write verbose logging for debugging
-- Comment complex logic
-- Use parameter validation
+Pester tests are located under the `tests/` directory. Run them with:
+
+```powershell
+Invoke-Pester -Script tests/unit
+```
 
 ## Deployment
 
-### Deploy to Azure
-
-```bash
-# Login to Azure
-az login
-
-# Create a resource group
-az group create --name rg-azure-health --location eastus
-
-# Create a storage account
-az storage account create --name stazurehealthfunc --resource-group rg-azure-health --location eastus --sku Standard_LRS
-
-# Create a Function App
-az functionapp create --resource-group rg-azure-health --consumption-plan-location eastus \
-  --runtime powershell --runtime-version 7.4 --functions-version 4 \
-  --name func-azure-health --storage-account stazurehealthfunc
-
-# Deploy the function
-func azure functionapp publish func-azure-health
-```
-
-### Configure Application Settings
-
-```bash
-az functionapp config appsettings set --name func-azure-health \
-  --resource-group rg-azure-health \
-  --settings "AZURE_SUBSCRIPTION_ID=your-subscription-id"
-```
-
-### Enable Managed Identity
-
-```bash
-az functionapp identity assign --name func-azure-health --resource-group rg-azure-health
-```
-
-Grant the managed identity appropriate permissions to read Service Health data.
-
-## Monitoring
-
-### Application Insights
-
-Configure Application Insights connection string in `local.settings.json` or Azure application settings:
-
-```json
-{
-  "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=...;IngestionEndpoint=..."
-}
-```
-
-### Logs
-
-View logs in real-time:
-
-```bash
-func azure functionapp logstream func-azure-health
-```
-
-Or in Azure Portal:
-- Navigate to your Function App
-- Select "Log stream" or "Application Insights"
-
-## Security
-
-### Authentication
-
-The function uses function-level authentication by default. The function key is required to invoke the API.
-
-### Managed Identity
-
-When deployed to Azure, the function uses Managed Identity to authenticate with Azure services. Ensure the managed identity has the following roles:
-- Reader role on subscriptions to monitor
-- Monitoring Reader role for Service Health data
-
-### Secrets Management
-
-- Never commit `local.settings.json` to source control
-- Use Azure Key Vault for sensitive configuration
-- Rotate function keys regularly
-
-## Troubleshooting
-
-### Common Issues
-
-**Module not found errors:**
-```powershell
-# Ensure requirements.psd1 is properly configured
-# Try clearing the module cache
-Remove-Item -Path "$env:HOME/.azure/functions/managedDependencies" -Recurse -Force
-```
-
-**Authentication failures:**
-```powershell
-# Reconnect to Azure
-Connect-AzAccount
-Set-AzContext -SubscriptionId "your-subscription-id"
-```
-
-**Function timeout:**
-- Adjust `functionTimeout` in `host.json`
-- Optimize Resource Graph queries
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Resources
-
-- [Azure Functions PowerShell Developer Guide](https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-powershell)
-- [Azure Resource Health Documentation](https://docs.microsoft.com/en-us/azure/service-health/resource-health-overview)
-- [Azure Resource Graph Documentation](https://docs.microsoft.com/en-us/azure/governance/resource-graph/)
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For issues and questions:
-- Open an issue in the GitHub repository
-- Check existing issues and documentation
-
-## Acknowledgments
-
-Built with enterprise patterns and Azure best practices in mind.
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for detailed deployment instructions.

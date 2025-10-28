@@ -102,23 +102,25 @@ cd pwsh-azure-health
 
 ### 2. Configure Local Settings
 
-The `local.settings.json` file is not tracked in Git for security. You need to configure it manually:
+The `local.settings.json` file is not tracked in Git for security. You need to configure it manually inside the `src/` folder:
 
-1. The file should already exist in the project root
-2. Update the `AZURE_SUBSCRIPTION_ID` value:
-
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "powershell",
-    "FUNCTIONS_WORKER_RUNTIME_VERSION": "7.4",
-    "AZURE_SUBSCRIPTION_ID": "your-subscription-id-here",
-    "APPLICATIONINSIGHTS_CONNECTION_STRING": ""
-  }
-}
-```
+1. Copy the template file:
+   ```bash
+   cp src/local.settings.json.template src/local.settings.json
+   ```
+2. Update the `AZURE_SUBSCRIPTION_ID` value in `src/local.settings.json`:
+   ```json
+   {
+     "IsEncrypted": false,
+     "Values": {
+       "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+       "FUNCTIONS_WORKER_RUNTIME": "powershell",
+       "FUNCTIONS_WORKER_RUNTIME_VERSION": "7.4",
+       "AZURE_SUBSCRIPTION_ID": "your-subscription-id-here",
+       "APPLICATIONINSIGHTS_CONNECTION_STRING": ""
+     }
+   }
+   ```
 
 ### 3. Azure Authentication
 
@@ -151,8 +153,10 @@ Install-Module -Name Az.Monitor -Repository PSGallery -Force -Scope CurrentUser
 
 ### Start the Function Host
 
+Run the function host from the repository root and point it to the `src/` directory:
+
 ```bash
-func start
+func start --script-root src
 ```
 
 Expected output:
@@ -182,7 +186,7 @@ Invoke-RestMethod -Uri "http://localhost:7071/api/GetServiceHealth?SubscriptionI
 
 1. Open the project in VS Code
 2. Press F5 or go to Run > Start Debugging
-3. Set breakpoints in PowerShell files
+3. Set breakpoints in PowerShell files under `src/`
 4. Make a request to the function
 5. Execution will pause at breakpoints
 
@@ -196,49 +200,5 @@ Invoke-RestMethod -Uri "http://localhost:7071/api/GetServiceHealth?SubscriptionI
 Remove-Item -Path "$env:HOME/.azure/functions/managedDependencies" -Recurse -Force
 
 # Restart the function host
-func start
+func start --script-root src
 ```
-
-### Issue: "Authentication failed"
-
-**Solution:**
-```powershell
-# Clear Azure context and reconnect
-Clear-AzContext -Force
-Connect-AzAccount
-Set-AzContext -SubscriptionId "your-subscription-id"
-```
-
-### Issue: "Function timeout"
-
-**Solution:**
-Increase timeout in `host.json`:
-```json
-{
-  "functionTimeout": "00:15:00"
-}
-```
-
-### Issue: "Port already in use"
-
-**Solution:**
-```bash
-# Use a different port
-func start --port 7072
-```
-
-Or kill the process using port 7071:
-```bash
-# macOS/Linux
-lsof -ti:7071 | xargs kill -9
-
-# Windows
-netstat -ano | findstr :7071
-taskkill /PID <PID> /F
-```
-
-## Next Steps
-
-- Review the [API Documentation](API.md)
-- Learn about [Deployment](DEPLOYMENT.md)
-- Check [Best Practices](BEST_PRACTICES.md)

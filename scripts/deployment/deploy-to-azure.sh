@@ -136,8 +136,8 @@ echo -e "${GREEN}✓ Roles assigned${NC}"
 
 # Deploy function code
 echo -e "${YELLOW}Deploying function code...${NC}"
-cd "$(dirname "$0")/.."
-func azure functionapp publish $FUNCTION_APP
+cd "$(dirname "$0")/../.."
+func azure functionapp publish $FUNCTION_APP --script-root src
 echo -e "${GREEN}✓ Function code deployed${NC}"
 
 # Get function key
@@ -158,7 +158,5 @@ if [ -n "$FUNCTION_KEY" ]; then
     echo "Function Key: $FUNCTION_KEY"
     echo ""
     echo "Test with:"
-    echo "curl \"https://${FUNCTION_APP}.azurewebsites.net/api/GetServiceHealth?code=${FUNCTION_KEY}&SubscriptionId=${SUBSCRIPTION_ID}\""
+    echo "  curl \"https://${FUNCTION_APP}.azurewebsites.net/api/GetServiceHealth?code=${FUNCTION_KEY}\""
 fi
-echo ""
-echo -e "${YELLOW}Note: It may take a few minutes for the function to be ready${NC}"

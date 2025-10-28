@@ -8,26 +8,26 @@ This project provides an enterprise-ready Azure Functions application for monito
 
 ### Core Azure Functions Infrastructure
 
-1. **host.json** - Function app configuration
+1. **src/host.json** - Function app configuration
    - Application Insights integration
    - Function timeout settings (10 minutes)
    - HTTP route prefix configuration
    - Extension bundle v4 configuration
 
-2. **requirements.psd1** - PowerShell module dependencies
+2. **src/requirements.psd1** - PowerShell module dependencies
    - Az module (v12.*)
    - Az.ResourceGraph (v1.*)
    - Az.Monitor (v5.*)
    - Automatic managed dependency installation
 
-3. **profile.ps1** - PowerShell startup script
+3. **src/profile.ps1** - PowerShell startup script
    - Managed Identity authentication
    - Cold start initialization
    - Shared utility functions
 
 ### Sample Function
 
-**GetServiceHealth** - HTTP-triggered function
+**src/GetServiceHealth** - HTTP-triggered function
 - Retrieves Azure Service Health events via Resource Graph
 - Supports GET and POST methods
 - Query parameters or JSON body input
@@ -54,21 +54,21 @@ This project provides an enterprise-ready Azure Functions application for monito
    - Consistent indentation
    - Approved verbs enforcement
 
-4. **local.settings.json.template** - Local configuration template
+4. **src/local.settings.json.template** - Local configuration template
    - PowerShell 7.4 runtime
    - Development storage
    - Subscription ID placeholder
 
 ### Deployment & Operations
 
-1. **scripts/deploy-to-azure.sh** - Automated Azure deployment
+1. **scripts/deployment/deploy-to-azure.sh** - Automated Azure deployment
    - Creates resource group
    - Provisions Function App
    - Configures Application Insights
    - Enables Managed Identity
    - Assigns RBAC roles
 
-2. **scripts/setup-local-dev.ps1** - Local setup automation
+2. **scripts/local/setup-local-dev.ps1** - Local setup automation
    - Validates prerequisites
    - Installs PowerShell modules
    - Checks Azure authentication
@@ -101,18 +101,33 @@ This project provides an enterprise-ready Azure Functions application for monito
 
 ```
 pwsh-azure-health/
-├── .vscode/                       # VS Code configuration
 ├── docs/                          # Documentation
 │   ├── API.md
 │   ├── BEST_PRACTICES.md
 │   ├── DEPLOYMENT.md
 │   └── SETUP.md
-├── GetServiceHealth/              # Sample function
-│   ├── function.json
-│   └── run.ps1
 ├── scripts/                       # Automation scripts
-│   ├── deploy-to-azure.sh
-│   └── setup-local-dev.ps1
+│   ├── ci/
+│   ├── deployment/
+│   │   └── deploy-to-azure.sh
+│   └── local/
+│       └── setup-local-dev.ps1
+├── src/                           # Function app source
+│   ├── GetServiceHealth/
+│   │   ├── function.json
+│   │   └── run.ps1
+│   ├── shared/
+│   │   ├── Modules/
+│   │   │   └── ServiceHealth.psm1
+│   │   └── Scripts/
+│   │       └── HttpHelpers.ps1
+│   ├── host.json
+│   ├── local.settings.json.template
+│   ├── profile.ps1
+│   └── requirements.psd1
+├── tests/
+│   └── unit/
+│       └── ServiceHealth.Tests.ps1
 ├── .editorconfig
 ├── .funcignore
 ├── .gitignore
@@ -120,11 +135,7 @@ pwsh-azure-health/
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── QUICKSTART.md
-├── README.md
-├── host.json
-├── local.settings.json.template
-├── profile.ps1
-└── requirements.psd1
+└── README.md
 ```
 
 ## Enterprise Features

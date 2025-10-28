@@ -19,6 +19,17 @@ if ($env:MSI_SECRET) {
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias
 
-# You can also define functions or aliases that can be referenced in any of your PowerShell functions.
+$profileRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$sharedPath = Join-Path $profileRoot 'shared'
+
+# Import shared modules so they are available to every function.
+Get-ChildItem -Path (Join-Path $sharedPath 'Modules') -Filter '*.psm1' -File -ErrorAction SilentlyContinue | ForEach-Object {
+    Import-Module $_.FullName -Force
+}
+
+# Dot source shared scripts to make helper functions available.
+Get-ChildItem -Path (Join-Path $sharedPath 'Scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue | ForEach-Object {
+    . $_.FullName
+}
 
 Write-Host "PowerShell Azure Health Functions Profile loaded."
