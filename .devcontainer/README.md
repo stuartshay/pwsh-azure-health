@@ -13,7 +13,7 @@ The DevContainer includes all required tools and dependencies:
 - **Node.js 20** - Required by Azure Functions Core Tools
 - **Git** - Version control
 - **PowerShell Modules**:
-  - Az (latest)
+  - Az (12.0.0)
   - Az.ResourceGraph (latest)
   - Az.Monitor (latest)
   - Pester (>=5.4.0) - Testing framework
