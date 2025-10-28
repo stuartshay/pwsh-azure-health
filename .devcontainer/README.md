@@ -6,17 +6,18 @@ This directory contains the DevContainer configuration for the Azure Health Moni
 
 The DevContainer includes all required tools and dependencies:
 
-- **PowerShell 7.4** - PowerShell runtime
+- **PowerShell 7.5.4** - PowerShell runtime
 - **.NET 8 SDK** - Required by Azure Functions
 - **Azure Functions Core Tools v4** - Local function development and testing
 - **Azure CLI** - Azure resource management
-- **Node.js 20** - Required by Azure Functions Core Tools
+- **Node.js 24 LTS** - Required by Azure Functions Core Tools
 - **Git** - Version control
 - **PowerShell Modules**:
-  - Az (12.0.0)
+  - Az (14.0.0+)
   - Az.ResourceGraph (latest)
   - Az.Monitor (latest)
   - Pester (5.0-5.9) - Testing framework
+  - PSScriptAnalyzer (latest) - Code quality
 
 ## VS Code Extensions
 

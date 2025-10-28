@@ -7,7 +7,7 @@ describe 'Get-ServiceHealthEvents' -Tag 'unit' {
         Import-Module Az.Accounts -ErrorAction SilentlyContinue
         Import-Module Az.ResourceGraph -ErrorAction SilentlyContinue
     }
-    
+
     BeforeEach {
         # Mock Get-AzContext to return a valid context (simulates being logged in)
         Mock -CommandName Get-AzContext -ModuleName ServiceHealth -MockWith {
@@ -17,7 +17,7 @@ describe 'Get-ServiceHealthEvents' -Tag 'unit' {
                 }
             }
         }
-        
+
         Mock -CommandName Set-AzContext -ModuleName ServiceHealth -MockWith {
             [pscustomobject]@{
                 Subscription = [pscustomobject]@{
@@ -25,7 +25,7 @@ describe 'Get-ServiceHealthEvents' -Tag 'unit' {
                 }
             }
         }
-        
+
         Mock -CommandName Search-AzGraph -ModuleName ServiceHealth -MockWith {
             @(
                 [pscustomobject]@{

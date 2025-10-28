@@ -1,5 +1,5 @@
 # Use the official PowerShell image as base
-ARG VARIANT="7.4"
+ARG VARIANT="7.5.4-ubuntu-22.04"
 FROM mcr.microsoft.com/powershell:${VARIANT}
 
 # Install common dependencies
@@ -29,17 +29,11 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js (required for Azure Functions Core Tools)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install Azure Functions Core Tools
-RUN wget -q https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb \
-    && dpkg -i packages-microsoft-prod.deb \
-    && rm packages-microsoft-prod.deb \
-    && apt-get update \
-    && apt-get install -y azure-functions-core-tools-4 \
-    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+# Note: Azure Functions Core Tools will be installed via npm in postCreateCommand
 
 # Set the default user
 USER $USERNAME
