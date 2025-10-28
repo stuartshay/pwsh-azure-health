@@ -27,7 +27,7 @@ pwsh -Command "
     Write-Host 'Installing Az.Monitor module...'
     Install-Module -Name Az.Monitor -Repository PSGallery -Force -Scope CurrentUser
     Write-Host 'Installing Pester module...'
-    Install-Module -Name Pester -Repository PSGallery -Force -Scope CurrentUser -MinimumVersion 5.0.0 -MaximumVersion 5.9.99
+    Install-Module -Name Pester -Repository PSGallery -Force -Scope CurrentUser -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
     Write-Host 'PowerShell modules installed successfully!'
 "
 
