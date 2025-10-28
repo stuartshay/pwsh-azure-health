@@ -236,6 +236,8 @@ This project enforces strict enterprise development standards using pre-commit h
 - **YAML/JSON Validation**: Syntax checking for configuration files
 - **Merge Conflict Detection**: Prevents committing files with conflict markers
 
+📖 **See [docs/CODE_QUALITY.md](docs/CODE_QUALITY.md) for complete documentation**
+
 **Setting up pre-commit:**
 
 ```bash
