@@ -1,3 +1,51 @@
+<#
+.SYNOPSIS
+    Retrieves Azure Service Health events for a specified subscription.
+
+.DESCRIPTION
+    The Get-ServiceHealthEvents function queries Azure Resource Graph to retrieve
+    Service Health events (Service Issues and Planned Maintenance) for a given subscription.
+    Events can be filtered by a time range, either by specifying the number of days back
+    or an explicit start time.
+
+.PARAMETER SubscriptionId
+    The Azure subscription ID to query for Service Health events. This parameter is required.
+
+.PARAMETER DaysBack
+    The number of days to look back for Service Health events. Valid range is 1-90 days.
+    Default value is 7 days. This parameter is ignored if StartTime is specified.
+
+.PARAMETER StartTime
+    An explicit start time for filtering Service Health events. If not specified,
+    the function uses DaysBack to calculate the start time.
+
+.EXAMPLE
+    Get-ServiceHealthEvents -SubscriptionId "00000000-0000-0000-0000-000000000000"
+
+    Retrieves Service Health events for the specified subscription from the last 7 days.
+
+.EXAMPLE
+    Get-ServiceHealthEvents -SubscriptionId "00000000-0000-0000-0000-000000000000" -DaysBack 30
+
+    Retrieves Service Health events for the specified subscription from the last 30 days.
+
+.EXAMPLE
+    Get-ServiceHealthEvents -SubscriptionId "00000000-0000-0000-0000-000000000000" -StartTime (Get-Date).AddDays(-14)
+
+    Retrieves Service Health events for the specified subscription starting from 14 days ago.
+
+.OUTPUTS
+    PSCustomObject
+    Returns an array of custom objects with the following properties:
+    - Id: The event resource ID
+    - EventType: ServiceIssue or PlannedMaintenance
+    - Status: Current status of the event
+    - Title: Event title
+    - Summary: Event summary description
+    - Level: Severity level
+    - ImpactedServices: List of affected Azure services
+    - LastUpdateTime: Last time the event was updated
+#>
 function Get-ServiceHealthEvents {
     [CmdletBinding()]
     param(
