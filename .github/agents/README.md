@@ -83,7 +83,7 @@ To modify an existing agent or create a new one:
 
 ## Additional Resources
 
-- [GitHub Copilot Custom Agents Documentation](https://docs.github.com/en/copilot/reference/custom-agents-configuration)
+- [GitHub Copilot Custom Agents Documentation](https://docs.github.com/en/copilot/custom-agents)
 - [Project Contributing Guidelines](../../CONTRIBUTING.md)
 - [Project Documentation](../../docs/)
 
