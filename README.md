@@ -85,7 +85,13 @@ sudo apt-get install azure-functions-core-tools-4
 
 ### 3. Configure Local Settings
 
-Copy the `local.settings.json` template and configure your Azure subscription:
+Copy the `local.settings.json.template` to `local.settings.json` and configure your Azure subscription:
+
+```bash
+cp local.settings.json.template local.settings.json
+```
+
+Then edit `local.settings.json` with your subscription ID:
 
 ```json
 {
@@ -99,6 +105,8 @@ Copy the `local.settings.json` template and configure your Azure subscription:
   }
 }
 ```
+
+**Note:** The `local.settings.json` file is excluded from source control for security. Always use the template to create your local configuration.
 
 ### 4. Install PowerShell Modules
 

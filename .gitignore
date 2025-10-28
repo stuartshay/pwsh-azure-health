@@ -70,7 +70,6 @@ __azurite_db*__.json
 *.psd1~
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
