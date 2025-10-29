@@ -13,6 +13,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     lsb-release \
     apt-transport-https \
     software-properties-common \
+    python3 \
+    python3-pip \
+    python3-venv \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user

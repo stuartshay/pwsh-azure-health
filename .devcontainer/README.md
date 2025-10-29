@@ -11,13 +11,46 @@ The DevContainer includes all required tools and dependencies:
 - **Azure Functions Core Tools v4** - Local function development and testing
 - **Azure CLI** - Azure resource management
 - **Node.js 24 LTS** - Required by Azure Functions Core Tools
+- **Python 3** - Required for pre-commit framework
 - **Git** - Version control
+- **pre-commit** - Git hook framework for code quality
 - **PowerShell Modules**:
   - Az (14.0.0+)
   - Az.ResourceGraph (latest)
   - Az.Monitor (latest)
   - Pester (5.0-5.9) - Testing framework
   - PSScriptAnalyzer (latest) - Code quality
+
+## Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality. Hooks are automatically installed during dev container setup and will run before each commit.
+
+### Available Hooks:
+- **Trailing whitespace removal**
+- **End-of-file fixer**
+- **YAML validation**
+- **JSON validation**
+- **Large file detection** (>500KB)
+- **Merge conflict detection**
+- **Private key detection**
+- **GitLeaks** - Secret scanning
+- **PSScriptAnalyzer** - PowerShell linting
+- **Pester tests** - Run on pre-push
+
+### Manual Usage:
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run trailing-whitespace --all-files
+
+# Skip hooks for one commit
+git commit --no-verify
+
+# Update hooks to latest versions
+pre-commit autoupdate
+```
 
 ## VS Code Extensions
 

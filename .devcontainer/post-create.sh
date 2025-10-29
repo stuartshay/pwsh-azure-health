@@ -16,6 +16,16 @@ func --version
 dotnet --version
 az version
 
+# Install pre-commit framework
+echo "Installing pre-commit..."
+pip3 install --user pre-commit
+export PATH="$HOME/.local/bin:$PATH"
+
+# Install pre-commit hooks
+echo "Installing pre-commit hooks..."
+pre-commit install
+pre-commit install --hook-type pre-push
+
 # Install PowerShell modules
 echo "Installing PowerShell modules..."
 pwsh -Command "
@@ -45,6 +55,10 @@ fi
 echo "=================================="
 echo "DevContainer setup complete! 🎉"
 echo "=================================="
+echo ""
+echo "Pre-commit hooks are installed and will run automatically on commits."
+echo "To skip pre-commit hooks: git commit --no-verify"
+echo "To run hooks manually: pre-commit run --all-files"
 echo ""
 echo "Next steps:"
 echo "1. Update src/local.settings.json with your Azure subscription ID"
