@@ -8,21 +8,51 @@ echo "=================================="
 # Note: Base tools installed via Dev Container Features:
 # - common-utils: git, curl, wget, sudo, non-root user
 # - python: Python 3.10, pip, venv
-# - node: Node.js 24
+# - node: Node.js 24 (via nvm)
 # - azure-cli: Azure CLI
 # - dotnet: .NET 8 SDK
+# - docker-in-docker: Docker daemon
+# - github-cli: gh CLI tool
+# - pre-commit: pre-commit framework
 
-# Ensure node/npm are in PATH (features may set it in different locations)
-export PATH="/usr/local/share/nvm/current/bin:$PATH"
-export PATH="/usr/local/bin:$PATH"
+# Wait for nvm to be available (features may still be initializing)
+echo "Waiting for Node.js installation to complete..."
+sleep 5
+
+# Find and set nvm/node paths
+if [ -d "/usr/local/share/nvm" ]; then
+    export NVM_DIR="/usr/local/share/nvm"
+    # Source nvm if available
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+fi
+
+# Try common node/npm locations
+for node_path in \
+    "/usr/local/share/nvm/current/bin" \
+    "/usr/local/lib/node_modules/npm/bin" \
+    "/usr/local/bin" \
+    "$HOME/.nvm/current/bin"; do
+    if [ -d "$node_path" ] && [ -x "$node_path/npm" ]; then
+        export PATH="$node_path:$PATH"
+        echo "Found npm at: $node_path"
+        break
+    fi
+done
 
 # Verify npm is available
 if ! command -v npm &> /dev/null; then
-    echo "ERROR: npm not found. Checking common locations..."
-    which node || echo "node not found"
-    ls -la /usr/local/share/nvm/ || echo "nvm directory not found"
+    echo "ERROR: npm not found after searching common locations."
+    echo "Searching for node/npm..."
+    find /usr/local -name "npm" -type f 2>/dev/null || echo "npm not found in /usr/local"
+    find /home -name "npm" -type f 2>/dev/null || echo "npm not found in /home"
+    echo "PATH: $PATH"
+    echo "Please check that the Node.js feature installed correctly."
     exit 1
 fi
+
+echo "✅ Found npm: $(which npm)"
+echo "✅ npm version: $(npm --version)"
+echo "✅ node version: $(node --version)"
 
 # Install Azure Functions Core Tools via npm
 echo "Installing Azure Functions Core Tools..."
