@@ -55,8 +55,10 @@ echo "✅ npm version: $(npm --version)"
 echo "✅ node version: $(node --version)"
 
 # Install Azure Functions Core Tools via npm
+# Use full path to npm since sudo doesn't inherit PATH
 echo "Installing Azure Functions Core Tools..."
-sudo npm install -g azure-functions-core-tools@4 --unsafe-perm true
+NPM_PATH=$(which npm)
+sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azure-functions-core-tools@4 --unsafe-perm true
 
 # Note: pre-commit is installed via Dev Container Feature
 # Verify pre-commit is available
