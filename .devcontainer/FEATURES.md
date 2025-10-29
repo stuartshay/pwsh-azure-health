@@ -84,6 +84,79 @@ Now using official Dev Container Features from https://containers.dev/features
 ### 5. .NET SDK (`ghcr.io/devcontainers/features/dotnet:2`)
 **Already using** - No changes needed
 
+### 6. Pre-commit (`ghcr.io/prulloac/devcontainer-features/pre-commit:1`)
+**Replaces:**
+- Manual pre-commit installation via pip/pipx
+
+**Configuration:**
+```json
+{
+  "version": "latest"
+}
+```
+
+**Benefits:**
+- Pre-commit framework installed via feature
+- Proper PATH configuration
+- Automatic updates
+
+### 7. Docker-in-Docker (`ghcr.io/devcontainers/features/docker-in-docker:2`)
+**Provides:**
+- Docker daemon inside the container
+- Docker CLI and Compose v2
+
+**Configuration:**
+```json
+{
+  "version": "latest",
+  "moby": true,
+  "dockerDashComposeVersion": "v2"
+}
+```
+
+### 8. GitHub CLI (`ghcr.io/devcontainers/features/github-cli:1`)
+**Provides:**
+- gh command for GitHub operations
+
+**Configuration:**
+```json
+{
+  "version": "latest",
+  "installDirectlyFromGitHubRelease": true
+}
+```
+
+### 9. Azure Developer CLI (`ghcr.io/azure/azure-dev/azd:0`)
+**Provides:**
+- azd command for Azure development
+
+**Configuration:**
+```json
+{
+  "version": "latest"
+}
+```
+
+### 10. Azure Functions Core Tools (`ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1`)
+**Replaces:**
+- Manual npm installation of azure-functions-core-tools
+- Retry logic for network issues
+- Complex PATH management
+
+**Configuration:**
+```json
+{
+  "version": "4"
+}
+```
+
+**Benefits:**
+- Faster installation (pre-compiled binaries)
+- No npm network dependency during build
+- More reliable than npm global install
+- Proper PATH configuration
+- Community-maintained feature
+
 ## What Remains in Custom Scripts
 
 ### Dockerfile
@@ -92,8 +165,8 @@ Now using official Dev Container Features from https://containers.dev/features
 - Comments documenting feature usage
 
 ### post-create.sh
-- Azure Functions Core Tools (npm install) - No official feature available
-- Pre-commit framework setup - Project-specific configuration
+- Azurite (npm install) - Lightweight, npm is fine for this
+- Pre-commit hooks installation - Project-specific configuration
 - PowerShell modules installation - Application-specific dependencies
 - local.settings.json creation - Project template
 
@@ -153,9 +226,9 @@ To adopt this pattern in other projects:
 
 ## Future Considerations
 
-Consider creating a custom feature for:
-- Azure Functions Core Tools installation
+~~Consider creating a custom feature for:~~
+- ~~Azure Functions Core Tools installation~~ ✅ Now using community feature!
 - PowerShell module installation pattern
-- Pre-commit with specific hooks
+- Pre-commit with specific hooks ✅ Now using community feature!
 
-This would make the pattern reusable across multiple Azure Functions projects.
+This pattern is now highly reusable across multiple Azure Functions projects with minimal custom code.

@@ -15,6 +15,8 @@ echo "=================================="
 # - docker-in-docker: Docker daemon
 # - github-cli: gh CLI tool
 # - pre-commit: pre-commit framework
+# - azure-functions-core-tools: Azure Functions Core Tools v4
+# - azd: Azure Developer CLI
 
 # Wait for nvm to be available (features may still be initializing)
 echo "Waiting for Node.js installation to complete..."
@@ -55,31 +57,13 @@ echo "✅ Found npm: $(which npm)"
 echo "✅ npm version: $(npm --version)"
 echo "✅ node version: $(node --version)"
 
-# Install Azure Functions Core Tools via npm
-# Note: --unsafe-perm is deprecated in npm 11.x, removed
-# Use full path to npm since sudo doesn't inherit PATH
-echo "Installing Azure Functions Core Tools..."
-NPM_PATH=$(which npm)
-
-# Retry logic for network issues
-MAX_RETRIES=3
-RETRY_COUNT=0
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
-    if sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azure-functions-core-tools@4; then
-        echo "✅ Azure Functions Core Tools installed successfully"
-        break
-    else
-        RETRY_COUNT=$((RETRY_COUNT + 1))
-        if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-            echo "⚠️  Installation failed, retrying in 5 seconds..."
-            sleep 5
-        else
-            echo "❌ Failed to install Azure Functions Core Tools after $MAX_RETRIES attempts"
-            echo "You can install it manually later: npm install -g azure-functions-core-tools@4"
-        fi
-    fi
-done
+# Note: Azure Functions Core Tools is installed via DevContainer Feature
+# Verify it's available
+if command -v func &> /dev/null; then
+    echo "✅ Azure Functions Core Tools: $(func --version)"
+else
+    echo "⚠️  Azure Functions Core Tools not found"
+fi
 
 # Install Azurite for local Azure Storage emulation
 echo "Installing Azurite..."
@@ -152,7 +136,6 @@ echo "1. Update src/local.settings.json with your Azure subscription ID"
 echo "2. Authenticate with Azure: az login"
 echo "3. Start the function app: func start --script-root src"
 echo ""
-echo "If any tools failed to install, you can retry with:"
-echo "  npm install -g azure-functions-core-tools@4"
+echo "If Azurite failed to install, you can retry with:"
 echo "  npm install -g azurite"
 echo ""

@@ -46,6 +46,9 @@
     },
     "ghcr.io/azure/azure-dev/azd:0": {
       "version": "latest"
+    },
+    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
+      "version": "4"
     }
   },
   "customizations": {

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Manual installation script for development tools
 # Use this if post-create.sh fails or to reinstall tools
+# Note: Azure Functions Core Tools is installed via DevContainer Feature
 
 set -e
 
@@ -18,15 +19,15 @@ echo "✅ npm version: $(npm --version)"
 echo "✅ node version: $(node --version)"
 echo ""
 
-# Install Azure Functions Core Tools
-echo "Installing Azure Functions Core Tools..."
-if npm install -g azure-functions-core-tools@4; then
-    echo "✅ Azure Functions Core Tools installed"
+# Check Azure Functions Core Tools (should be from feature)
+echo "Checking Azure Functions Core Tools..."
+if command -v func &> /dev/null; then
+    echo "✅ Azure Functions Core Tools already installed via feature"
     func --version
 else
-    echo "❌ Failed to install Azure Functions Core Tools"
-    echo "This may be due to network connectivity issues."
-    echo "You can try again later or check: https://github.com/Azure/azure-functions-core-tools"
+    echo "⚠️  Azure Functions Core Tools not found"
+    echo "This should be installed via DevContainer Feature."
+    echo "Try rebuilding the container: Dev Containers: Rebuild Container"
 fi
 echo ""
 
