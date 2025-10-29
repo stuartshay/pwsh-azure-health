@@ -66,8 +66,8 @@ sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azurite --unsafe-perm true
 
 # Start Azurite in the background
 echo "Starting Azurite..."
-mkdir -p ~/.azurite
-azurite --silent --location ~/.azurite --debug ~/.azurite/debug.log &
+mkdir -p /workspaces/pwsh-azure-health/.azurite
+azurite --silent --location /workspaces/pwsh-azure-health/.azurite --debug /workspaces/pwsh-azure-health/.azurite/debug.log &
 echo "✅ Azurite started on ports 10000 (Blob), 10001 (Queue), 10002 (Table)"
 
 # Note: pre-commit is installed via Dev Container Feature

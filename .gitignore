@@ -64,6 +64,10 @@ __azurite_db*__.json
 .python_packages
 .venv
 
+# Azurite local storage (exclude all except README)
+.azurite/*
+!.azurite/README.md
+
 # PowerShell
 *.ps1~
 *.psm1~
