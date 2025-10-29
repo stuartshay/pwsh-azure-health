@@ -28,6 +28,17 @@ Dev Containers: Rebuild Container
 
 **Time**: ~5-10 minutes for full rebuild
 
+**Note**: If the build fails due to network issues (e.g., Azure Functions Core Tools download), you can manually install tools after the container starts:
+
+```bash
+# Manual installation script
+./scripts/local/install-dev-tools.sh
+
+# Or install individually
+npm install -g azure-functions-core-tools@4
+npm install -g azurite
+```
+
 ### 2. Verify Azurite After Rebuild
 
 After the rebuild completes, verify Azurite is running:
@@ -43,7 +54,7 @@ netstat -tlnp | grep -E '10000|10001|10002'
 curl http://127.0.0.1:10000/devstoreaccount1?comp=list
 
 # View logs if needed
-cat ~/.azurite/debug.log
+cat /workspaces/pwsh-azure-health/.azurite/debug.log
 ```
 
 **Expected**: You should see azurite running and ports 10000-10002 listening
