@@ -28,12 +28,12 @@ fi
 echo "Installing Azure Functions Core Tools..."
 sudo npm install -g azure-functions-core-tools@4 --unsafe-perm true
 
-# Install pre-commit framework
-echo "Installing pre-commit..."
-pip3 install --user pre-commit
-
-# Add pip user bin to PATH for current session
-export PATH="$HOME/.local/bin:$PATH"
+# Note: pre-commit is installed via Dev Container Feature
+# Verify pre-commit is available
+if ! command -v pre-commit &> /dev/null; then
+    echo "ERROR: pre-commit not found. The feature may not have installed correctly."
+    exit 1
+fi
 
 # Install pre-commit hooks
 echo "Installing pre-commit hooks..."
