@@ -131,7 +131,6 @@ After completing the steps above, verify:
 
 # Or directly
 azurite --silent --location ~/.azurite --debug ~/.azurite/debug.log \
-  --blobPort 10000 --queuePort 10001 --tablePort 10002 \
   --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 &
 ```
 
