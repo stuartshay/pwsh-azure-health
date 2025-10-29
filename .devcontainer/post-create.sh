@@ -60,6 +60,16 @@ echo "Installing Azure Functions Core Tools..."
 NPM_PATH=$(which npm)
 sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azure-functions-core-tools@4 --unsafe-perm true
 
+# Install Azurite for local Azure Storage emulation
+echo "Installing Azurite..."
+sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azurite --unsafe-perm true
+
+# Start Azurite in the background
+echo "Starting Azurite..."
+mkdir -p ~/.azurite
+azurite --silent --location ~/.azurite --debug ~/.azurite/debug.log &
+echo "✅ Azurite started on ports 10000 (Blob), 10001 (Queue), 10002 (Table)"
+
 # Note: pre-commit is installed via Dev Container Feature
 # Verify pre-commit is available
 if ! command -v pre-commit &> /dev/null; then
