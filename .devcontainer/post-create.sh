@@ -12,6 +12,18 @@ echo "=================================="
 # - azure-cli: Azure CLI
 # - dotnet: .NET 8 SDK
 
+# Ensure node/npm are in PATH (features may set it in different locations)
+export PATH="/usr/local/share/nvm/current/bin:$PATH"
+export PATH="/usr/local/bin:$PATH"
+
+# Verify npm is available
+if ! command -v npm &> /dev/null; then
+    echo "ERROR: npm not found. Checking common locations..."
+    which node || echo "node not found"
+    ls -la /usr/local/share/nvm/ || echo "nvm directory not found"
+    exit 1
+fi
+
 # Install Azure Functions Core Tools via npm
 echo "Installing Azure Functions Core Tools..."
 sudo npm install -g azure-functions-core-tools@4 --unsafe-perm true

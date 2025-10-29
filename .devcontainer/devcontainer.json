@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "VARIANT": "7.5.4-ubuntu-22.04"
+      "VARIANT": "7.5-ubuntu-22.04"
     }
   },
   "features": {
@@ -51,6 +51,9 @@
     }
   },
   "forwardPorts": [7071],
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/usr/local/share/nvm/current/bin"
+  },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "vscode"
 }
