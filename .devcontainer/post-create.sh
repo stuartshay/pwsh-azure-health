@@ -1,4 +1,5 @@
 #!/bin/bash
+# Exit on error for critical failures, but allow some steps to fail gracefully
 set -e
 
 echo "=================================="
@@ -55,20 +56,50 @@ echo "✅ npm version: $(npm --version)"
 echo "✅ node version: $(node --version)"
 
 # Install Azure Functions Core Tools via npm
+# Note: --unsafe-perm is deprecated in npm 11.x, removed
 # Use full path to npm since sudo doesn't inherit PATH
 echo "Installing Azure Functions Core Tools..."
 NPM_PATH=$(which npm)
-sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azure-functions-core-tools@4 --unsafe-perm true
+
+# Retry logic for network issues
+MAX_RETRIES=3
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
+    if sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azure-functions-core-tools@4; then
+        echo "✅ Azure Functions Core Tools installed successfully"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+            echo "⚠️  Installation failed, retrying in 5 seconds..."
+            sleep 5
+        else
+            echo "❌ Failed to install Azure Functions Core Tools after $MAX_RETRIES attempts"
+            echo "You can install it manually later: npm install -g azure-functions-core-tools@4"
+        fi
+    fi
+done
 
 # Install Azurite for local Azure Storage emulation
 echo "Installing Azurite..."
-sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azurite --unsafe-perm true
+if sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azurite; then
+    echo "✅ Azurite installed successfully"
+else
+    echo "❌ Failed to install Azurite"
+    echo "You can install it manually later: npm install -g azurite"
+fi
 
 # Start Azurite in the background
 echo "Starting Azurite..."
 mkdir -p /workspaces/pwsh-azure-health/.azurite
-azurite --silent --location /workspaces/pwsh-azure-health/.azurite --debug /workspaces/pwsh-azure-health/.azurite/debug.log &
-echo "✅ Azurite started on ports 10000 (Blob), 10001 (Queue), 10002 (Table)"
+if command -v azurite &> /dev/null; then
+    azurite --silent --location /workspaces/pwsh-azure-health/.azurite --debug /workspaces/pwsh-azure-health/.azurite/debug.log &
+    echo "✅ Azurite started on ports 10000 (Blob), 10001 (Queue), 10002 (Table)"
+else
+    echo "⚠️  Azurite not available, skipping auto-start"
+    echo "You can start it manually later: ./scripts/local/start-azurite.sh"
+fi
 
 # Note: pre-commit is installed via Dev Container Feature
 # Verify pre-commit is available
@@ -120,4 +151,8 @@ echo "Next steps:"
 echo "1. Update src/local.settings.json with your Azure subscription ID"
 echo "2. Authenticate with Azure: az login"
 echo "3. Start the function app: func start --script-root src"
+echo ""
+echo "If any tools failed to install, you can retry with:"
+echo "  npm install -g azure-functions-core-tools@4"
+echo "  npm install -g azurite"
 echo ""
