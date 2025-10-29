@@ -11,9 +11,21 @@ The DevContainer includes all required tools and dependencies:
 - **Azure Functions Core Tools v4** - Local function development and testing
 - **Azure CLI** - Azure resource management
 - **Node.js 24 LTS** - Required by Azure Functions Core Tools
-- **Python 3** - Required for pre-commit framework
+- **Python 3.10** - Required for pre-commit framework
 - **Git** - Version control
 - **pre-commit** - Git hook framework for code quality
+
+## Dev Container Features
+
+This DevContainer uses [Dev Container Features](https://containers.dev/features) for dependency management:
+
+- **common-utils** - Git, curl, wget, sudo, non-root user (vscode)
+- **python** - Python 3.10, pip, venv
+- **node** - Node.js 24 LTS
+- **azure-cli** - Azure CLI
+- **dotnet** - .NET 8 SDK
+
+See [FEATURES.md](FEATURES.md) for detailed information about the feature migration.
 - **PowerShell Modules**:
   - Az (14.0.0+)
   - Az.ResourceGraph (latest)

@@ -5,20 +5,22 @@ echo "=================================="
 echo "Setting up DevContainer environment..."
 echo "=================================="
 
+# Note: Base tools installed via Dev Container Features:
+# - common-utils: git, curl, wget, sudo, non-root user
+# - python: Python 3.10, pip, venv
+# - node: Node.js 24
+# - azure-cli: Azure CLI
+# - dotnet: .NET 8 SDK
+
 # Install Azure Functions Core Tools via npm
 echo "Installing Azure Functions Core Tools..."
 sudo npm install -g azure-functions-core-tools@4 --unsafe-perm true
 
-# Verify tools are installed
-echo "Verifying installed tools..."
-pwsh --version
-func --version
-dotnet --version
-az version
-
 # Install pre-commit framework
 echo "Installing pre-commit..."
 pip3 install --user pre-commit
+
+# Add pip user bin to PATH for current session
 export PATH="$HOME/.local/bin:$PATH"
 
 # Install pre-commit hooks
