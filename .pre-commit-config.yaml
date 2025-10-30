@@ -39,7 +39,8 @@ repos:
         name: PSScriptAnalyzer
         entry: >
           pwsh -NoProfile -Command
-          "Invoke-ScriptAnalyzer -Path . -Recurse
+          "Import-Module PSScriptAnalyzer -ErrorAction Stop;
+          Invoke-ScriptAnalyzer -Path . -Recurse
           -Settings ./.PSScriptAnalyzerSettings.psd1
           -ReportSummary -EnableExit"
         language: system
