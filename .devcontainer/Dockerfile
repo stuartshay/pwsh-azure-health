@@ -1,5 +1,6 @@
 # Use the official PowerShell image as base
-ARG VARIANT="7.5.4-ubuntu-22.04"
+# Valid tags: lts-ubuntu-22.04, ubuntu-22.04, 7.4-ubuntu-22.04, latest
+ARG VARIANT="lts-ubuntu-22.04"
 FROM mcr.microsoft.com/powershell:${VARIANT}
 
 # Note: Most dependencies are installed via Dev Container Features:

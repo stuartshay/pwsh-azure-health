@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "VARIANT": "7.5.4-ubuntu-22.04"
+      "VARIANT": "lts-ubuntu-22.04"
     }
   },
   "features": {
