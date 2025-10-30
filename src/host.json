@@ -5,7 +5,7 @@
       "samplingSettings": {
         "isEnabled": true,
         "excludedTypes": "Request",
-        "samplingPercentage": 30
+        "samplingPercentage": 100
       }
     },
     "logLevel": {
