@@ -67,7 +67,7 @@ fi
 
 # Install Azurite for local Azure Storage emulation
 echo "Installing Azurite..."
-if sudo -E env "PATH=$PATH" "$NPM_PATH" install -g azurite; then
+if sudo -E env PATH="$PATH" "$NPM_PATH" install -g azurite; then
     echo "✅ Azurite installed successfully"
 else
     echo "❌ Failed to install Azurite"
