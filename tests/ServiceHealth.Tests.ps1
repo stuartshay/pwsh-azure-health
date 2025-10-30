@@ -1,10 +1,41 @@
-[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Test mocks use parameters for filter matching')]\nparam()\n\nusing namespace System.Net
+using namespace System.Net
 
-$projectRoot = Split-Path $PSScriptRoot -Parent
-$srcRoot = Join-Path -Path $projectRoot -ChildPath 'src'
+[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Test mocks use parameters for filter matching')]
+param()
 
-. (Join-Path -Path $srcRoot -ChildPath 'GetServiceHealth' -AdditionalChildPath 'run.ps1')
-. (Join-Path -Path $srcRoot -ChildPath 'GetServiceHealthTimer' -AdditionalChildPath 'run.ps1')
+BeforeAll {
+    $testRoot = $PSScriptRoot
+    if (-not $testRoot) {
+        $testRoot = $pwd.Path
+    }
+    $projectRoot = Split-Path $testRoot -Parent
+    $srcRoot = Join-Path -Path $projectRoot -ChildPath 'src'
+
+    # Define HttpResponseContext type for testing (normally provided by Azure Functions runtime)
+    if (-not ([System.Management.Automation.PSTypeName]'HttpResponseContext').Type) {
+        Add-Type -TypeDefinition @'
+            public class HttpResponseContext {
+                public int StatusCode { get; set; }
+                public object Body { get; set; }
+                public System.Collections.Hashtable Headers { get; set; }
+            }
+'@
+    }
+
+    # Load shared modules
+    Get-ChildItem -Path (Join-Path -Path $srcRoot -ChildPath 'shared' -AdditionalChildPath 'Modules') -Filter '*.psm1' -File -ErrorAction SilentlyContinue | ForEach-Object {
+        Import-Module $_.FullName -Force
+    }
+
+    # Dot source shared scripts
+    Get-ChildItem -Path (Join-Path -Path $srcRoot -ChildPath 'shared' -AdditionalChildPath 'Scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue | ForEach-Object {
+        . $_.FullName
+    }
+
+    # Dot source function scripts
+    . (Join-Path -Path $srcRoot -ChildPath 'GetServiceHealth' -AdditionalChildPath 'run.ps1')
+    . (Join-Path -Path $srcRoot -ChildPath 'GetServiceHealthTimer' -AdditionalChildPath 'run.ps1')
+}
 
 Describe 'GetServiceHealth HTTP function' {
     BeforeEach {
