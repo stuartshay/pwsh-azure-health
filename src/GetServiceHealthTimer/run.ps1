@@ -67,16 +67,16 @@ function Invoke-GetServiceHealthTimer {
         return
     }
 
-    $newEvents = @()
-    foreach ($healthEvent in $events) {
-        $key = if ($healthEvent.TrackingId) { $healthEvent.TrackingId } elseif ($healthEvent.Id) { $healthEvent.Id } else { [guid]::NewGuid().ToString() }
+    $newEvents = New-Object 'System.Collections.Generic.List[object]'
+    foreach ($event in $events) {
+        $key = if ($event.TrackingId) { $event.TrackingId } elseif ($event.Id) { $event.Id } else { [guid]::NewGuid().ToString() }
         if (-not $knownKeys.ContainsKey($key)) {
             $knownKeys[$key] = $true
-            $newEvents += $healthEvent
+            $newEvents.Add($event)
         }
     }
 
-    if (-not $newEvents) {
+    if (-not $newEvents.Count) {
         Write-Information "No new Service Health events detected for subscription $subscriptionId." -InformationAction Continue
         return
     }
