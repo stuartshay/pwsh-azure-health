@@ -58,7 +58,8 @@
         "ms-vscode.powershell",
         "ms-vscode.azure-account",
         "editorconfig.editorconfig",
-        "azurite.azurite"
+        "azurite.azurite",
+        "ms-azuretools.vscode-azurestorage"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "pwsh",
