@@ -4,7 +4,7 @@
     IncludeDefaultRules = $true
 
     # Severity levels to check
-    Severity = @('Error', 'Warning', 'Information')
+    Severity            = @('Error', 'Warning', 'Information')
 
     # Exclude specific rules if needed
     ExcludeRules = @(
@@ -15,46 +15,48 @@
         # Unused parameter warnings in test mocks are false positives
         'PSReviewUnusedParameter',
         # Write-Host is acceptable in profile.ps1 files for colored prompts
-        'PSAvoidUsingWriteHost'
+        'PSAvoidUsingWriteHost',
+        # Whitespace consistency can be overly strict for configuration files
+        'PSUseConsistentWhitespace'
     )
 
     # Custom rules
-    Rules = @{
-        PSUseApprovedVerbs = @{
+    Rules               = @{
+        PSUseApprovedVerbs               = @{
             Enable = $true
         }
-        PSAvoidUsingCmdletAliases = @{
+        PSAvoidUsingCmdletAliases        = @{
             Enable = $true
         }
         PSAvoidUsingPositionalParameters = @{
             Enable = $true
         }
-        PSUseConsistentIndentation = @{
-            Enable = $true
-            IndentationSize = 4
+        PSUseConsistentIndentation       = @{
+            Enable              = $true
+            IndentationSize     = 4
             PipelineIndentation = 'IncreaseIndentationForFirstPipeline'
-            Kind = 'space'
+            Kind                = 'space'
         }
-        PSUseConsistentWhitespace = @{
-            Enable = $true
-            CheckInnerBrace = $true
-            CheckOpenBrace = $true
-            CheckOpenParen = $true
-            CheckOperator = $true
-            CheckPipe = $true
+        PSUseConsistentWhitespace        = @{
+            Enable                          = $true
+            CheckInnerBrace                 = $true
+            CheckOpenBrace                  = $true
+            CheckOpenParen                  = $true
+            CheckOperator                   = $true
+            CheckPipe                       = $true
             CheckPipeForRedundantWhitespace = $false
-            CheckSeparator = $true
-            CheckParameter = $false
+            CheckSeparator                  = $true
+            CheckParameter                  = $false
         }
-        PSUseCorrectCasing = @{
+        PSUseCorrectCasing               = @{
             Enable = $true
         }
-        PSProvideCommentHelp = @{
-            Enable = $true
-            ExportedOnly = $false
-            BlockComment = $true
+        PSProvideCommentHelp             = @{
+            Enable                  = $true
+            ExportedOnly            = $false
+            BlockComment            = $true
             VSCodeSnippetCorrection = $true
-            Placement = 'before'
+            Placement               = 'before'
         }
     }
 }

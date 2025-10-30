@@ -123,10 +123,10 @@ function Invoke-GetServiceHealthTimer {
 
     $payload = [ordered]@{
         subscriptionId = $subscriptionId
-        cachedAt = (Get-Date).ToUniversalTime().ToString('o')
-        lastEventTime = $latestUpdate
-        trackingIds = $deduped | ForEach-Object { if ($_.TrackingId) { $_.TrackingId } elseif ($_.Id) { $_.Id } } | Where-Object { $_ }
-        events = $deduped
+        cachedAt       = (Get-Date).ToUniversalTime().ToString('o')
+        lastEventTime  = $latestUpdate
+        trackingIds    = $deduped | ForEach-Object { if ($_.TrackingId) { $_.TrackingId } elseif ($_.Id) { $_.Id } } | Where-Object { $_ }
+        events         = $deduped
     }
 
     try {

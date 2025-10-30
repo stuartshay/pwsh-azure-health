@@ -29,14 +29,14 @@ Describe 'Get-ServiceHealthEvents' -Tag 'unit' {
         Mock -CommandName Search-AzGraph -ModuleName ServiceHealth -MockWith {
             @(
                 [pscustomobject]@{
-                    id = '/subscriptions/0000/resourceGroups/rg/providers/microsoft.resourcehealth/events/1'
-                    eventType = 'ServiceIssue'
-                    status = 'Active'
-                    title = 'Test issue'
-                    summary = 'Service issue summary'
-                    level = 'Warning'
+                    id               = '/subscriptions/0000/resourceGroups/rg/providers/microsoft.resourcehealth/events/1'
+                    eventType        = 'ServiceIssue'
+                    status           = 'Active'
+                    title            = 'Test issue'
+                    summary          = 'Service issue summary'
+                    level            = 'Warning'
                     impactedServices = @('Compute')
-                    lastUpdateTime = [datetime]::UtcNow
+                    lastUpdateTime   = [datetime]::UtcNow
                 }
             )
         }

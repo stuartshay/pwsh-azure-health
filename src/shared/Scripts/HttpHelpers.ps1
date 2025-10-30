@@ -21,8 +21,8 @@ function New-HttpJsonResponse {
     if ($PSCmdlet.ShouldProcess("HTTP Response", "Create")) {
         return [HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body = $Body
-            Headers = @{
+            Body       = $Body
+            Headers    = @{
                 'Content-Type' = 'application/json'
             }
         }

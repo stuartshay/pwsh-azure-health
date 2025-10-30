@@ -20,7 +20,7 @@ function Get-BlobCacheContext {
     $context = New-AzStorageContext -ConnectionString $connectionString
 
     return [pscustomobject]@{
-        Context = $context
+        Context       = $context
         ContainerName = $ContainerName
     }
 }

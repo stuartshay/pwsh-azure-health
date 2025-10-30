@@ -33,8 +33,8 @@ function Invoke-ServiceHealthRequest {
             Write-Information "No cached Service Health payload was found." -InformationAction Continue
             return [HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NoContent
-                Body = $null
-                Headers = @{}
+                Body       = $null
+                Headers    = @{}
             }
         }
 
