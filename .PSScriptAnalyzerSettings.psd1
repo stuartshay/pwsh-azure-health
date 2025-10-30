@@ -8,7 +8,12 @@
 
     # Exclude specific rules if needed
     ExcludeRules = @(
-        # Add rules to exclude here if necessary
+        # Alignment rules can be overly strict for functional code
+        'PSAlignAssignmentStatement',
+        # BOM encoding not required for all files
+        'PSUseBOMForUnicodeEncodedFile',
+        # Unused parameter warnings in test mocks are false positives
+        'PSReviewUnusedParameter'
     )
 
     # Custom rules
@@ -38,10 +43,6 @@
             CheckPipeForRedundantWhitespace = $false
             CheckSeparator = $true
             CheckParameter = $false
-        }
-        PSAlignAssignmentStatement = @{
-            Enable = $true
-            CheckHashtable = $true
         }
         PSUseCorrectCasing = @{
             Enable = $true

@@ -3,7 +3,7 @@
 #
 @{
     # Minimal module set for Service Health polling and storage access
-    'Az.Accounts'      = '3.*'
-    'Az.Storage'       = '5.*'
+    'Az.Accounts' = '3.*'
+    'Az.Storage' = '5.*'
     'Az.ResourceGraph' = '1.*'
 }

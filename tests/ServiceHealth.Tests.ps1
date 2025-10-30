@@ -1,10 +1,10 @@
-using namespace System.Net
+[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Test mocks use parameters for filter matching')]\nparam()\n\nusing namespace System.Net
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
-$srcRoot = Join-Path $projectRoot 'src'
+$srcRoot = Join-Path -Path $projectRoot -ChildPath 'src'
 
-. (Join-Path $srcRoot 'GetServiceHealth' 'run.ps1')
-. (Join-Path $srcRoot 'GetServiceHealthTimer' 'run.ps1')
+. (Join-Path -Path $srcRoot -ChildPath 'GetServiceHealth' -AdditionalChildPath 'run.ps1')
+. (Join-Path -Path $srcRoot -ChildPath 'GetServiceHealthTimer' -AdditionalChildPath 'run.ps1')
 
 Describe 'GetServiceHealth HTTP function' {
     BeforeEach {
@@ -23,8 +23,8 @@ Describe 'GetServiceHealth HTTP function' {
     It 'returns cached payload when available' {
         $cachedPayload = [pscustomobject]@{
             subscriptionId = '00000000-0000-0000-0000-000000000000'
-            cachedAt       = (Get-Date).ToString('o')
-            events         = @()
+            cachedAt = (Get-Date).ToString('o')
+            events = @()
         }
 
         Mock -CommandName Get-BlobCacheItem -MockWith { return $cachedPayload }
@@ -49,14 +49,14 @@ Describe 'GetServiceHealthTimer function' {
     It 'writes cache when new events are returned' {
         $existingCache = [pscustomobject]@{
             subscriptionId = $env:AZURE_SUBSCRIPTION_ID
-            cachedAt       = (Get-Date).AddMinutes(-15).ToString('o')
-            lastEventTime  = (Get-Date).AddMinutes(-15).ToString('o')
-            trackingIds    = @('track-1')
-            events         = @(
+            cachedAt = (Get-Date).AddMinutes(-15).ToString('o')
+            lastEventTime = (Get-Date).AddMinutes(-15).ToString('o')
+            trackingIds = @('track-1')
+            events = @(
                 [pscustomobject]@{
-                    Id         = 'event-1'
+                    Id = 'event-1'
                     TrackingId = 'track-1'
-                    Title      = 'Existing event'
+                    Title = 'Existing event'
                     LastUpdateTime = (Get-Date).AddHours(-1)
                 }
             )
@@ -64,15 +64,15 @@ Describe 'GetServiceHealthTimer function' {
 
         $newServiceEvents = @(
             [pscustomobject]@{
-                Id             = 'event-1'
-                TrackingId     = 'track-1'
-                Title          = 'Existing event update'
+                Id = 'event-1'
+                TrackingId = 'track-1'
+                Title = 'Existing event update'
                 LastUpdateTime = (Get-Date).AddMinutes(-5)
             },
             [pscustomobject]@{
-                Id             = 'event-2'
-                TrackingId     = 'track-2'
-                Title          = 'New event'
+                Id = 'event-2'
+                TrackingId = 'track-2'
+                Title = 'New event'
                 LastUpdateTime = (Get-Date).AddMinutes(-2)
             }
         )
@@ -80,7 +80,11 @@ Describe 'GetServiceHealthTimer function' {
         $script:capturedContent = $null
 
         Mock -CommandName Get-BlobCacheItem -MockWith { return $existingCache }
-        Mock -CommandName Get-ServiceHealthEvents -MockWith { param($SubscriptionId, $StartTime) return $newServiceEvents }
+        Mock -CommandName Get-ServiceHealthEvents -MockWith {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Parameters used by mock filter')]
+            param($SubscriptionId, $StartTime)
+            return $newServiceEvents
+        }
         Mock -CommandName Set-BlobCacheItem -MockWith {
             param($ContainerName, $BlobName, $Content)
             $script:capturedContent = $Content
@@ -97,14 +101,14 @@ Describe 'GetServiceHealthTimer function' {
     It 'does not write cache when no new events are returned' {
         $existingCache = [pscustomobject]@{
             subscriptionId = $env:AZURE_SUBSCRIPTION_ID
-            cachedAt       = (Get-Date).AddMinutes(-15).ToString('o')
-            lastEventTime  = (Get-Date).AddMinutes(-15).ToString('o')
-            trackingIds    = @('track-1')
-            events         = @(
+            cachedAt = (Get-Date).AddMinutes(-15).ToString('o')
+            lastEventTime = (Get-Date).AddMinutes(-15).ToString('o')
+            trackingIds = @('track-1')
+            events = @(
                 [pscustomobject]@{
-                    Id             = 'event-1'
-                    TrackingId     = 'track-1'
-                    Title          = 'Existing event'
+                    Id = 'event-1'
+                    TrackingId = 'track-1'
+                    Title = 'Existing event'
                     LastUpdateTime = (Get-Date).AddHours(-1)
                 }
             )
@@ -112,15 +116,18 @@ Describe 'GetServiceHealthTimer function' {
 
         $serviceEvents = @(
             [pscustomobject]@{
-                Id             = 'event-1'
-                TrackingId     = 'track-1'
-                Title          = 'Existing event'
+                Id = 'event-1'
+                TrackingId = 'track-1'
+                Title = 'Existing event'
                 LastUpdateTime = (Get-Date).AddMinutes(-5)
             }
         )
 
         Mock -CommandName Get-BlobCacheItem -MockWith { return $existingCache }
-        Mock -CommandName Get-ServiceHealthEvents -MockWith { param($SubscriptionId, $StartTime) return $serviceEvents }
+        Mock -CommandName Get-ServiceHealthEvents -MockWith {
+            param($SubscriptionId, $StartTime)
+            return $serviceEvents
+        }
         Mock -CommandName Set-BlobCacheItem -MockWith { }
 
         Invoke-GetServiceHealthTimer -Timer $null

@@ -1,10 +1,17 @@
 param($Timer)
 
+<#
+.SYNOPSIS
+    Timer-triggered function to poll Azure Service Health events.
+.PARAMETER Timer
+    The timer trigger metadata.
+#>
 function Invoke-GetServiceHealthTimer {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Timer', Justification = 'Required by Azure Functions runtime')]
     param($Timer)
 
-    Write-Host "GetServiceHealthTimer triggered at $(Get-Date -Format o)."
+    Write-Information "GetServiceHealthTimer triggered at $(Get-Date -Format o)." -InformationAction Continue
 
     $subscriptionId = $env:AZURE_SUBSCRIPTION_ID
     if (-not $subscriptionId) {
@@ -28,8 +35,8 @@ function Invoke-GetServiceHealthTimer {
 
     if ($cache -and $cache.events) {
         $existingEvents = @($cache.events)
-        foreach ($event in $existingEvents) {
-            $key = if ($event.TrackingId) { $event.TrackingId } elseif ($event.Id) { $event.Id } else { $null }
+        foreach ($healthEvent in $existingEvents) {
+            $key = if ($healthEvent.TrackingId) { $healthEvent.TrackingId } elseif ($healthEvent.Id) { $healthEvent.Id } else { $null }
             if ($key -and -not $knownKeys.ContainsKey($key)) {
                 $knownKeys[$key] = $true
             }
@@ -56,24 +63,30 @@ function Invoke-GetServiceHealthTimer {
     }
 
     if (-not $events) {
-        Write-Host "No Service Health events returned for subscription $subscriptionId."
+        Write-Information "No Service Health events returned for subscription $subscriptionId." -InformationAction Continue
         return
     }
 
     $newEvents = @()
-    foreach ($event in $events) {
-        $key = if ($event.TrackingId) { $event.TrackingId } elseif ($event.Id) { $event.Id } else { [guid]::NewGuid().ToString() }
+    foreach ($healthEvent in $events) {
+        $key = if ($healthEvent.TrackingId) { $healthEvent.TrackingId } elseif ($healthEvent.Id) { $healthEvent.Id } else { [guid]::NewGuid().ToString() }
         if (-not $knownKeys.ContainsKey($key)) {
             $knownKeys[$key] = $true
-            $newEvents += $event
+            $newEvents += $healthEvent
         }
     }
 
     if (-not $newEvents) {
-        Write-Host "No new Service Health events detected for subscription $subscriptionId."
+        Write-Information "No new Service Health events detected for subscription $subscriptionId." -InformationAction Continue
         return
     }
 
+    <#
+    .SYNOPSIS
+        Gets normalized timestamp from event.
+    .PARAMETER value
+        The timestamp value.
+    #>
     function Get-EventTimestamp {
         param($value)
 
@@ -93,11 +106,11 @@ function Invoke-GetServiceHealthTimer {
 
     $deduped = @()
     $seen = @{}
-    foreach ($event in $sorted) {
-        $key = if ($event.TrackingId) { $event.TrackingId } elseif ($event.Id) { $event.Id } else { [guid]::NewGuid().ToString() }
+    foreach ($healthEvent in $sorted) {
+        $key = if ($healthEvent.TrackingId) { $healthEvent.TrackingId } elseif ($healthEvent.Id) { $healthEvent.Id } else { [guid]::NewGuid().ToString() }
         if (-not $seen.ContainsKey($key)) {
             $seen[$key] = $true
-            $deduped += $event
+            $deduped += $healthEvent
         }
     }
 
@@ -110,15 +123,15 @@ function Invoke-GetServiceHealthTimer {
 
     $payload = [ordered]@{
         subscriptionId = $subscriptionId
-        cachedAt       = (Get-Date).ToUniversalTime().ToString('o')
-        lastEventTime  = $latestUpdate
-        trackingIds    = $deduped | ForEach-Object { if ($_.TrackingId) { $_.TrackingId } elseif ($_.Id) { $_.Id } } | Where-Object { $_ }
-        events         = $deduped
+        cachedAt = (Get-Date).ToUniversalTime().ToString('o')
+        lastEventTime = $latestUpdate
+        trackingIds = $deduped | ForEach-Object { if ($_.TrackingId) { $_.TrackingId } elseif ($_.Id) { $_.Id } } | Where-Object { $_ }
+        events = $deduped
     }
 
     try {
         Set-BlobCacheItem -ContainerName $containerName -BlobName $blobName -Content $payload
-        Write-Host "Cached $($newEvents.Count) new Service Health event(s) for subscription $subscriptionId."
+        Write-Information "Cached $($newEvents.Count) new Service Health event(s) for subscription $subscriptionId." -InformationAction Continue
     }
     catch {
         Write-Error "Failed to write Service Health cache: $($_.Exception.Message)"
