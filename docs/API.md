@@ -223,7 +223,7 @@ function getServiceHealth() {
   if (cachedData && (now - cacheTimestamp) < CACHE_DURATION) {
     return cachedData;
   }
-  
+
   // Fetch new data
   const data = await fetch('/api/GetServiceHealth?...');
   cachedData = data;

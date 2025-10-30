@@ -39,6 +39,15 @@ echo "   Start it via: Command Palette > 'Azurite: Start'"
 echo "   Or click the Azurite icon in the VS Code status bar"
 echo ""
 
+echo "Checking PowerShell..."
+if command -v pwsh &> /dev/null; then
+    echo "✅ PowerShell version: $(pwsh -NoLogo -Command '$PSVersionTable.PSVersion.ToString()')"
+else
+    echo "⚠️  PowerShell (pwsh) not found"
+    echo "   Install it for Debian/Ubuntu with: ./scripts/local/install-powershell.sh"
+fi
+echo ""
+
 echo "=================================="
 echo "Tool check complete!"
 echo "=================================="

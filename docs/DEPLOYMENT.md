@@ -8,6 +8,20 @@ This guide covers deploying the Azure Health Monitoring Functions to Azure.
 - Azure CLI installed and authenticated
 - Function code ready for deployment
 
+## Required Application Settings
+
+Configure these settings before the first deployment. Values marked *(example)* can be adjusted to match your environment.
+
+| Setting | Description |
+| --- | --- |
+| `AZURE_SUBSCRIPTION_ID` | Subscription that will be queried for Service Health. |
+| `TIMER_CRON` | Timer trigger schedule, e.g. `0 */15 * * * *` (15 minute polling). |
+| `CACHE_CONTAINER` | Blob container name for cached payloads, e.g. `servicehealth-cache`. |
+| `WEBSITE_RUN_FROM_PACKAGE` | Set to `1` for package deployments. |
+| EasyAuth (App Service Authentication) | Enable AAD authentication with `Unauthenticated requests: HTTP 401`. |
+
+> 💡 The HTTP function is now read-only and serves the cached payload written by the timer trigger. If no cache exists it returns `204 No Content`.
+
 ## Deployment Options
 
 ### Option 1: Azure CLI (Recommended)
@@ -127,45 +141,19 @@ func azure functionapp publish $FUNCTION_APP --script-root src
 
 ### Option 3: GitHub Actions (CI/CD)
 
-Create `.github/workflows/deploy.yml`:
+The repository includes `.github/workflows/ci.yml` which runs PSScriptAnalyzer, Pester unit tests, and deploys the function app using OIDC. To enable the workflow:
 
-```yaml
-name: Deploy Azure Function
+1. Create an Azure AD application with federated credentials for your GitHub repository (Azure portal → Entra ID → App registrations → *Your app* → Certificates & secrets → Federated credentials).
+2. Grant the app permissions to deploy (e.g. `Website Contributor` on the Function App resource group and `Storage Blob Data Contributor` on the storage account if needed).
+3. In GitHub repository settings add the following secrets/variables:
+   - `AZURE_CLIENT_ID` – The application (client) ID from Azure AD.
+   - `AZURE_TENANT_ID` – The tenant ID.
+   - `AZURE_SUBSCRIPTION_ID` – Subscription used for deployment.
+   - `AZURE_RESOURCE_GROUP` – Resource group containing the Function App.
+   - `FUNCTION_APP_NAME` – Name of the Function App instance.
+4. Push to `master` to execute linting, tests, and deployment.
 
-on:
-  push:
-    branches:
-      - main
-
-env:
-  AZURE_FUNCTIONAPP_NAME: 'func-azure-health'
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'src'
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v3
-
-    - name: 'Setup Node.js'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-
-    - name: 'Install Azure Functions Core Tools'
-      run: |
-        npm install -g azure-functions-core-tools@4 --unsafe-perm true
-
-    - name: 'Login to Azure'
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: 'Deploy Azure Function'
-      run: |
-        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --script-root ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-```
+The workflow packages the `src/` directory and relies on `WEBSITE_RUN_FROM_PACKAGE=1` for zero-downtime deployments.
 
 ## Post-Deployment Configuration
 

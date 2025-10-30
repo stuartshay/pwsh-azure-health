@@ -11,7 +11,7 @@ This document outlines best practices for developing, deploying, and maintaining
    # Good
    Get-ServiceHealth
    Set-AlertConfiguration
-   
+
    # Bad
    Fetch-ServiceHealth
    Change-AlertConfiguration
@@ -35,7 +35,7 @@ This document outlines best practices for developing, deploying, and maintaining
        [Parameter(Mandatory = $true)]
        [ValidateNotNullOrEmpty()]
        [string]$SubscriptionId,
-       
+
        [ValidateRange(1, 90)]
        [int]$DaysBack = 7
    )
@@ -47,7 +47,7 @@ This document outlines best practices for developing, deploying, and maintaining
    Write-Information "Processing request" -InformationAction Continue
    Write-Information "SubscriptionId: $subscriptionId" -InformationAction Continue
    Write-Information "DaysBack: $daysBack" -InformationAction Continue
-   
+
    # Include timing information
    $startTime = Get-Date
    # ... processing ...
@@ -250,7 +250,7 @@ This document outlines best practices for developing, deploying, and maintaining
    ```powershell
    # Use queue triggers for background processing
    param($QueueItem, $TriggerMetadata)
-   
+
    # Process queue message
    Process-ServiceHealthEvent -Event $QueueItem
    ```
@@ -283,7 +283,7 @@ Describe "Get-ServiceHealth" {
         $result = Get-ServiceHealth -SubscriptionId "test-id"
         $result | Should -Not -BeNullOrEmpty
     }
-    
+
     It "Should throw error for invalid subscription" {
         { Get-ServiceHealth -SubscriptionId "" } | Should -Throw
     }

@@ -64,6 +64,16 @@ git commit --no-verify
 pre-commit autoupdate
 ```
 
+## PowerShell Profile
+
+A custom PowerShell profile is automatically installed that displays:
+- **Git branch** - Shows the current Git branch in green
+- **Azure subscription** - Shows the active Azure subscription in yellow when logged in
+
+The profile is stored in `.devcontainer/profile.ps1` and automatically copied to `~/.config/powershell/Microsoft.PowerShell_profile.ps1` when the container is created.
+
+Example prompt: `PS ~/project [main] [Az: BizSpark] PS>`
+
 ## VS Code Extensions
 
 The following extensions are automatically installed:

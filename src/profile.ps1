@@ -32,4 +32,4 @@ Get-ChildItem -Path (Join-Path $sharedPath 'Scripts') -Filter '*.ps1' -File -Err
     . $_.FullName
 }
 
-Write-Host "PowerShell Azure Health Functions Profile loaded."
+Write-Information "PowerShell Azure Health Functions Profile loaded." -InformationAction Continue

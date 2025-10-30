@@ -48,6 +48,7 @@
 #>
 function Get-ServiceHealthEvents {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Events is the appropriate plural noun for this cmdlet')]
     param(
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -76,6 +77,7 @@ ServiceHealthResources
 | where properties.status == 'Active' or todatetime(properties.lastUpdateTime) >= datetime('$isoStart')
 | project
     id,
+    trackingId = properties.trackingId,
     eventType = properties.eventType,
     status = properties.status,
     title = properties.title,
@@ -91,14 +93,15 @@ ServiceHealthResources
 
     return $results | ForEach-Object {
         [pscustomobject]@{
-            Id               = $_.id
-            EventType        = $_.eventType
-            Status           = $_.status
-            Title            = $_.title
-            Summary          = $_.summary
-            Level            = $_.level
+            Id = $_.id
+            TrackingId = $_.trackingId
+            EventType = $_.eventType
+            Status = $_.status
+            Title = $_.title
+            Summary = $_.summary
+            Level = $_.level
             ImpactedServices = $_.impactedServices
-            LastUpdateTime   = $_.lastUpdateTime
+            LastUpdateTime = $_.lastUpdateTime
         }
     }
 }

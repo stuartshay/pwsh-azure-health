@@ -1,4 +1,4 @@
-name: Lint and Test
+name: CI
 
 on:
   push:
@@ -7,13 +7,16 @@ on:
   pull_request:
     branches:
       - master
-  workflow_dispatch:
 
 permissions:
   contents: read
+  id-token: write
+
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: src
 
 jobs:
-  lint_and_test:
+  lint_test:
     name: Lint and Test
     runs-on: ubuntu-latest
     steps:
@@ -75,3 +78,41 @@ jobs:
           name: test-results
           path: artifacts/test-results.xml
           retention-days: 14
+
+  deploy:
+    name: Deploy
+    needs: lint_test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PowerShell
+        run: |
+          wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Package Functions
+        run: |
+          cd $AZURE_FUNCTIONAPP_PACKAGE_PATH
+          zip -r ../functionapp.zip .
+
+      - name: Deploy package
+        run: |
+          az functionapp deployment source config-zip \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ secrets.FUNCTION_APP_NAME }}" \
+            --src functionapp.zip

@@ -1,3 +1,4 @@
+# encoding: utf-8
 <#
 .SYNOPSIS
     Sets up local development environment for Azure Health Functions.
@@ -12,39 +13,40 @@
 [CmdletBinding()]
 param()
 
-Write-Host "Setting up local development environment..." -ForegroundColor Cyan
+Write-Information "Setting up local development environment..." -InformationAction Continue
 
 # Check PowerShell version
-Write-Host "`nChecking PowerShell version..." -ForegroundColor Yellow
+Write-Information "`nChecking PowerShell version..." -InformationAction Continue
 $psVersion = $PSVersionTable.PSVersion
 if ($psVersion.Major -lt 7) {
-    Write-Host "ERROR: PowerShell 7 or later is required. Current version: $psVersion" -ForegroundColor Red
-    Write-Host "Download from: https://github.com/PowerShell/PowerShell" -ForegroundColor Yellow
+    Write-Information "ERROR: PowerShell 7 or later is required. Current version: $psVersion" -InformationAction Continue
+    Write-Information "Download from: https://github.com/PowerShell/PowerShell" -InformationAction Continue
     exit 1
 }
-Write-Host "  ✓ PowerShell version: $psVersion" -ForegroundColor Green
+Write-Information "  ✓ PowerShell version: $psVersion" -InformationAction Continue
 
 # Check Azure Functions Core Tools
-Write-Host "`nChecking Azure Functions Core Tools..." -ForegroundColor Yellow
+Write-Information "`nChecking Azure Functions Core Tools..." -InformationAction Continue
 $funcVersion = func --version 2>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Azure Functions Core Tools not found" -ForegroundColor Red
-    Write-Host "Install from: https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local" -ForegroundColor Yellow
+    Write-Information "ERROR: Azure Functions Core Tools not found" -InformationAction Continue
+    Write-Information "Install from: https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local" -InformationAction Continue
     exit 1
 }
-Write-Host "  ✓ Azure Functions Core Tools version: $funcVersion" -ForegroundColor Green
+Write-Information "  ✓ Azure Functions Core Tools version: $funcVersion" -InformationAction Continue
 
 # Check .NET SDK
-Write-Host "`nChecking .NET SDK..." -ForegroundColor Yellow
+Write-Information "`nChecking .NET SDK..." -InformationAction Continue
 $dotnetVersion = dotnet --version 2>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: .NET SDK not found. It's recommended for development." -ForegroundColor Yellow
-} else {
-    Write-Host "  ✓ .NET SDK version: $dotnetVersion" -ForegroundColor Green
+    Write-Information "WARNING: .NET SDK not found. It's recommended for development." -InformationAction Continue
+}
+else {
+    Write-Information "  ✓ .NET SDK version: $dotnetVersion" -InformationAction Continue
 }
 
 # Install PowerShell modules
-Write-Host "`nInstalling PowerShell modules..." -ForegroundColor Yellow
+Write-Information "`nInstalling PowerShell modules..." -InformationAction Continue
 $modules = @(
     @{ Name = "Az"; Version = "12.*" }
     @{ Name = "Az.ResourceGraph"; Version = "1.*" }
@@ -52,55 +54,62 @@ $modules = @(
 )
 
 foreach ($module in $modules) {
-    Write-Host "  Installing $($module.Name)..." -ForegroundColor Cyan
+    Write-Information "  Installing $($module.Name)..." -InformationAction Continue
     try {
         $installedModule = Get-Module -ListAvailable -Name $module.Name | Select-Object -First 1
         if ($installedModule) {
-            Write-Host "    Module already installed: $($installedModule.Version)" -ForegroundColor Gray
-        } else {
-            Install-Module -Name $module.Name -Repository PSGallery -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
-            Write-Host "    ✓ Installed $($module.Name)" -ForegroundColor Green
+            Write-Information "    Module already installed: $($installedModule.Version)" -InformationAction Continue
         }
-    } catch {
-        Write-Host "    ERROR: Failed to install $($module.Name): $_" -ForegroundColor Red
+        else {
+            Install-Module -Name $module.Name -Repository PSGallery -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
+            Write-Information "    ✓ Installed $($module.Name)" -InformationAction Continue
+        }
+    }
+    catch {
+        Write-Information "    ERROR: Failed to install $($module.Name): $_" -InformationAction Continue
     }
 }
 
 # Validate local.settings.json
-Write-Host "`nValidating local.settings.json..." -ForegroundColor Yellow
+Write-Information "`nValidating local.settings.json..." -InformationAction Continue
 $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$localSettingsPath = Join-Path $repoRoot "src" "local.settings.json"
+$localSettingsPath = Join-Path -Path $repoRoot -ChildPath "src" -AdditionalChildPath "local.settings.json"
 if (Test-Path $localSettingsPath) {
     try {
         $localSettings = Get-Content $localSettingsPath | ConvertFrom-Json
         if ([string]::IsNullOrWhiteSpace($localSettings.Values.AZURE_SUBSCRIPTION_ID)) {
-            Write-Host "  WARNING: AZURE_SUBSCRIPTION_ID not configured in local.settings.json" -ForegroundColor Yellow
-        } else {
-            Write-Host "  ✓ local.settings.json configured" -ForegroundColor Green
+            Write-Information "  WARNING: AZURE_SUBSCRIPTION_ID not configured in local.settings.json" -InformationAction Continue
         }
-    } catch {
-        Write-Host "  ERROR: Invalid local.settings.json format" -ForegroundColor Red
+        else {
+            Write-Information "  ✓ local.settings.json configured" -InformationAction Continue
+        }
     }
-} else {
-    Write-Host "  ERROR: local.settings.json not found in src/" -ForegroundColor Red
+    catch {
+        Write-Information "  ERROR: Invalid local.settings.json format" -InformationAction Continue
+    }
+}
+else {
+    Write-Information "  ERROR: local.settings.json not found in src/" -InformationAction Continue
 }
 
 # Test Azure authentication
-Write-Host "`nTesting Azure authentication..." -ForegroundColor Yellow
+Write-Information "`nTesting Azure authentication..." -InformationAction Continue
 try {
     $context = Get-AzContext -ErrorAction SilentlyContinue
     if ($context) {
-        Write-Host "  ✓ Authenticated as: $($context.Account)" -ForegroundColor Green
-        Write-Host "  ✓ Subscription: $($context.Subscription.Name)" -ForegroundColor Green
-    } else {
-        Write-Host "  WARNING: Not authenticated with Azure. Run 'Connect-AzAccount'" -ForegroundColor Yellow
+        Write-Information "  ✓ Authenticated as: $($context.Account)" -InformationAction Continue
+        Write-Information "  ✓ Subscription: $($context.Subscription.Name)" -InformationAction Continue
     }
-} catch {
-    Write-Host "  WARNING: Azure PowerShell modules not loaded" -ForegroundColor Yellow
+    else {
+        Write-Information "  WARNING: Not authenticated with Azure. Run 'Connect-AzAccount'" -InformationAction Continue
+    }
+}
+catch {
+    Write-Information "  WARNING: Azure PowerShell modules not loaded" -InformationAction Continue
 }
 
-Write-Host "`n✓ Setup complete!" -ForegroundColor Green
-Write-Host "`nNext steps:" -ForegroundColor Cyan
-Write-Host "  1. Configure AZURE_SUBSCRIPTION_ID in src/local.settings.json" -ForegroundColor White
-Write-Host "  2. Run 'Connect-AzAccount' to authenticate" -ForegroundColor White
-Write-Host "  3. Run 'func start --script-root src' to start the function app" -ForegroundColor White
+Write-Information "`n✓ Setup complete!" -InformationAction Continue
+Write-Information "`nNext steps:" -InformationAction Continue
+Write-Information "  1. Configure AZURE_SUBSCRIPTION_ID in src/local.settings.json" -InformationAction Continue
+Write-Information "  2. Run 'Connect-AzAccount' to authenticate" -InformationAction Continue
+Write-Information "  3. Run 'func start --script-root src' to start the function app" -InformationAction Continue

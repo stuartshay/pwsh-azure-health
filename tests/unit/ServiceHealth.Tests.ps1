@@ -1,7 +1,7 @@
-$modulePath = Join-Path $PSScriptRoot '..' '..' 'src' 'shared' 'Modules' 'ServiceHealth.psm1'
+$modulePath = Join-Path -Path $PSScriptRoot -ChildPath '..' -AdditionalChildPath @('..', 'src', 'shared', 'Modules', 'ServiceHealth.psm1')
 Import-Module $modulePath -Force
 
-describe 'Get-ServiceHealthEvents' -Tag 'unit' {
+Describe 'Get-ServiceHealthEvents' -Tag 'unit' {
     BeforeAll {
         # Import Az.Accounts to ensure cmdlets are available for mocking
         Import-Module Az.Accounts -ErrorAction SilentlyContinue

@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "VARIANT": "lts-ubuntu-22.04"
+      "VARIANT": "latest"
     }
   },
   "features": {
@@ -54,12 +54,15 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "pspester.pester-test",
         "ms-azuretools.vscode-azurefunctions",
         "ms-vscode.powershell",
         "ms-vscode.azure-account",
         "editorconfig.editorconfig",
         "azurite.azurite",
-        "ms-azuretools.vscode-azurestorage"
+        "ms-azuretools.vscode-azurestorage",
+        "github.copilot",
+        "saoudrizwan.claude-dev"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "pwsh",

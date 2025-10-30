@@ -2,55 +2,59 @@ using namespace System.Net
 
 param($Request, $TriggerMetadata)
 
-Write-Host "Processing Azure Service Health request."
+<#
+.SYNOPSIS
+    Processes Azure Service Health cache requests.
+.DESCRIPTION
+    Retrieves cached Service Health data from blob storage and returns it via HTTP response.
+.PARAMETER Request
+    The HTTP request object.
+.PARAMETER TriggerMetadata
+    Metadata about the trigger.
+#>
+function Invoke-ServiceHealthRequest {
+    [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Request', Justification = 'Required by Azure Functions runtime')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'TriggerMetadata', Justification = 'Required by Azure Functions runtime')]
+    param(
+        $Request,
+        $TriggerMetadata
+    )
 
-$subscriptionId = $Request.Query.SubscriptionId
-if (-not $subscriptionId -and $Request.Body) {
-    if ($Request.Body -is [string] -and $Request.Body.Trim().StartsWith('{', [System.StringComparison]::Ordinal)) {
-        try {
-            $parsedBody = $Request.Body | ConvertFrom-Json -ErrorAction Stop
-            $subscriptionId = $parsedBody.SubscriptionId
-        }
-        catch {
-            Write-Warning "Unable to parse request body as JSON: $($_.Exception.Message)"
-        }
-    }
-    elseif ($Request.Body -isnot [string] -and $Request.Body.PSObject.Properties['SubscriptionId']) {
-        $subscriptionId = $Request.Body.SubscriptionId
-    }
-}
+    Write-Information "Processing Azure Service Health cache request." -InformationAction Continue
 
-if (-not $subscriptionId) {
-    $subscriptionId = $env:AZURE_SUBSCRIPTION_ID
-}
+    $containerName = if ($env:CACHE_CONTAINER) { $env:CACHE_CONTAINER } else { 'servicehealth-cache' }
+    $blobName = 'servicehealth.json'
 
-try {
-    if (-not $subscriptionId) {
-        $message = "Please pass a SubscriptionId on the query string or in the request body, or configure AZURE_SUBSCRIPTION_ID in application settings."
-        $response = New-HttpJsonResponse -StatusCode ([HttpStatusCode]::BadRequest) -Body @{ error = $message }
-    }
-    else {
-        Write-Host "Retrieving Azure Service Health for subscription: $subscriptionId"
+    try {
+        $cache = Get-BlobCacheItem -ContainerName $containerName -BlobName $blobName
 
-        $events = Get-ServiceHealthEvents -SubscriptionId $subscriptionId
-
-        $body = [ordered]@{
-            subscriptionId = $subscriptionId
-            retrievedAt    = (Get-Date).ToString('o')
-            eventCount     = @($events).Count
-            events         = $events
+        if (-not $cache) {
+            Write-Information "No cached Service Health payload was found." -InformationAction Continue
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::NoContent
+                Body       = $null
+                Headers    = @{}
+            }
         }
 
-        Write-Host "Successfully retrieved $(@($events).Count) Service Health events."
-        $response = New-HttpJsonResponse -StatusCode ([HttpStatusCode]::OK) -Body $body
+        Write-Information "Returning cached Service Health payload." -InformationAction Continue
+        return New-HttpJsonResponse -StatusCode ([HttpStatusCode]::OK) -Body $cache
     }
-}
-catch {
-    Write-Error "Error occurred while retrieving Service Health: $($_.Exception.Message)"
-    $response = New-HttpJsonResponse -StatusCode ([HttpStatusCode]::InternalServerError) -Body @{
-        error   = "An error occurred while retrieving Azure Service Health data."
-        details = $_.Exception.Message
+    catch {
+        Write-Error "Failed to read cached Service Health payload: $($_.Exception.Message)"
+        return New-HttpJsonResponse -StatusCode ([HttpStatusCode]::InternalServerError) -Body @{
+            error = 'Unable to read cached Service Health data.'
+        }
     }
 }
 
-Push-OutputBinding -Name Response -Value $response
+if ($MyInvocation.InvocationName -ne '.') {
+    $response = Invoke-ServiceHealthRequest -Request $Request -TriggerMetadata $TriggerMetadata
+    Push-OutputBinding -Name Response -Value $response
+}
+
+if ($MyInvocation.InvocationName -ne '.') {
+    $response = Invoke-ServiceHealthRequest -Request $Request -TriggerMetadata $TriggerMetadata
+    Push-OutputBinding -Name Response -Value $response
+}

@@ -102,6 +102,12 @@ pwsh -Command "
     Write-Host 'PowerShell modules installed successfully!'
 "
 
+# Install PowerShell profile with Git and Azure subscription display
+echo "Installing PowerShell profile..."
+mkdir -p ~/.config/powershell
+cp /workspaces/pwsh-azure-health/.devcontainer/profile.ps1 ~/.config/powershell/Microsoft.PowerShell_profile.ps1
+echo "✅ PowerShell profile installed"
+
 # Create local.settings.json if it doesn't exist
 if [ ! -f "src/local.settings.json" ]; then
     echo "Creating local.settings.json from template..."
