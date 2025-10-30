@@ -13,7 +13,9 @@
         # BOM encoding not required for all files
         'PSUseBOMForUnicodeEncodedFile',
         # Unused parameter warnings in test mocks are false positives
-        'PSReviewUnusedParameter'
+        'PSReviewUnusedParameter',
+        # Write-Host is acceptable in profile.ps1 files for colored prompts
+        'PSAvoidUsingWriteHost'
     )
 
     # Custom rules
