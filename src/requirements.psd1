@@ -2,13 +2,8 @@
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
 @{
-    # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'.
-    # To use the Az module in your function app, please uncomment the line below.
-    'Az' = '14.*'
-    
-    # Azure Resource Graph module for querying Azure resources
+    # Minimal module set for Service Health polling and storage access
+    'Az.Accounts'      = '3.*'
+    'Az.Storage'       = '5.*'
     'Az.ResourceGraph' = '1.*'
-    
-    # Azure Monitor module for health data
-    'Az.Monitor' = '5.*'
 }

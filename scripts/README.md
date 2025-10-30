@@ -2,6 +2,18 @@
 
 This directory contains utility scripts for the Azure Health Monitoring Functions project.
 
+## Directory Layout
+
+- `ci/` – helpers that run in GitHub Actions or other continuous integration contexts.
+- `deployment/` – tooling used to publish the Functions app to Azure.
+- `local/` – local workstation helpers (environment validation, bootstrap installers, etc.).
+- `install-hooks.sh`, `pre-commit-hook.sh` – git hook wiring and the consolidated check runner.
+
+Agent-oriented automation does not yet have its own folder; today, the "agent" helpers we
+maintain are simply the same local setup scripts developers rely on. If we later add
+dedicated automation that does not belong to the local or deployment experiences, we can
+introduce a scoped directory (for example, `agents/`) to keep the structure balanced.
+
 ## Pre-Commit Hooks
 
 ### Setup
@@ -51,3 +63,5 @@ git commit --no-verify
 ### Local Development
 
 - `local/setup-local-dev.ps1` - Local development environment setup
+- `local/install-dev-tools.sh` - Verifies tooling and points to installers
+- `local/install-powershell.sh` - Installs PowerShell 7 on Debian/Ubuntu hosts

@@ -76,6 +76,7 @@ ServiceHealthResources
 | where properties.status == 'Active' or todatetime(properties.lastUpdateTime) >= datetime('$isoStart')
 | project
     id,
+    trackingId = properties.trackingId,
     eventType = properties.eventType,
     status = properties.status,
     title = properties.title,
@@ -92,6 +93,7 @@ ServiceHealthResources
     return $results | ForEach-Object {
         [pscustomobject]@{
             Id               = $_.id
+            TrackingId       = $_.trackingId
             EventType        = $_.eventType
             Status           = $_.status
             Title            = $_.title
