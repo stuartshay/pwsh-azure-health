@@ -17,6 +17,7 @@ echo "=================================="
 # - pre-commit: pre-commit framework
 # - azure-functions-core-tools: Azure Functions Core Tools v4
 # - azd: Azure Developer CLI
+# Note: Azurite is installed via VS Code extension (azurite.azurite)
 
 # Wait for nvm to be available (features may still be initializing)
 echo "Waiting for Node.js installation to complete..."
@@ -65,25 +66,12 @@ else
     echo "⚠️  Azure Functions Core Tools not found"
 fi
 
-# Install Azurite for local Azure Storage emulation
-echo "Installing Azurite..."
-if sudo -E env PATH="$PATH" "$NPM_PATH" install -g azurite; then
-    echo "✅ Azurite installed successfully"
-else
-    echo "❌ Failed to install Azurite"
-    echo "You can install it manually later: npm install -g azurite"
-fi
-
-# Start Azurite in the background
-echo "Starting Azurite..."
+# Note: Azurite is managed via VS Code extension (azurite.azurite)
+# Create the workspace directory for Azurite data
+echo "Creating Azurite workspace directory..."
 mkdir -p /workspaces/pwsh-azure-health/.azurite
-if command -v azurite &> /dev/null; then
-    azurite --silent --location /workspaces/pwsh-azure-health/.azurite --debug /workspaces/pwsh-azure-health/.azurite/debug.log &
-    echo "✅ Azurite started on ports 10000 (Blob), 10001 (Queue), 10002 (Table)"
-else
-    echo "⚠️  Azurite not available, skipping auto-start"
-    echo "You can start it manually later: ./scripts/local/start-azurite.sh"
-fi
+echo "✅ Azurite directory ready at /workspaces/pwsh-azure-health/.azurite"
+echo "ℹ️  Start Azurite via Command Palette: 'Azurite: Start' or use the status bar"
 
 # Note: pre-commit is installed via Dev Container Feature
 # Verify pre-commit is available
@@ -132,10 +120,8 @@ echo "To skip pre-commit hooks: git commit --no-verify"
 echo "To run hooks manually: pre-commit run --all-files"
 echo ""
 echo "Next steps:"
-echo "1. Update src/local.settings.json with your Azure subscription ID"
-echo "2. Authenticate with Azure: az login"
-echo "3. Start the function app: func start --script-root src"
-echo ""
-echo "If Azurite failed to install, you can retry with:"
-echo "  npm install -g azurite"
+echo "1. Start Azurite: Command Palette > 'Azurite: Start' or click status bar"
+echo "2. Update src/local.settings.json with your Azure subscription ID"
+echo "3. Authenticate with Azure: az login"
+echo "4. Start the function app: func start --script-root src"
 echo ""

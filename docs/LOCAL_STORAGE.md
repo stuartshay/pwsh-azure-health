@@ -1,6 +1,6 @@
 # Local Azure Storage with Azurite
 
-This project uses [Azurite](https://github.com/Azure/Azurite) to emulate Azure Storage services locally for development and testing.
+This project uses [Azurite](https://github.com/Azure/Azurite) to emulate Azure Storage services locally for development and testing via the VS Code extension.
 
 ## What is Azurite?
 
@@ -13,15 +13,12 @@ It allows you to develop and test Azure Functions locally without connecting to 
 
 ## Automatic Setup
 
-Azurite is automatically configured when you build the DevContainer:
+Azurite is automatically configured via the VS Code extension when you build the DevContainer:
 
-1. **Installation**: Azurite is installed via npm during the post-create phase
-2. **Auto-Start**: Azurite starts automatically in the background
-3. **Data Directory**: Data is stored in `~/.azurite`
-4. **Ports**: The following ports are forwarded:
-   - 10000 - Blob Service
-   - 10001 - Queue Service
-   - 10002 - Table Service
+1. **Extension Installation**: The `azurite.azurite` extension is installed automatically
+2. **Workspace Configuration**: Data directory set to `${workspaceFolder}/.azurite`
+3. **Port Forwarding**: Ports 10000-10002 are forwarded in devcontainer.json
+4. **Settings**: Silent mode and debug logging pre-configured
 
 ## Connection String
 
@@ -35,7 +32,30 @@ The Azure Functions project is pre-configured with the Azurite connection string
 }
 ```
 
-## Manual Management
+## Starting and Stopping Azurite
+
+### Start Azurite
+
+**Via VS Code (Recommended):**
+- **Command Palette**: Press `F1` or `Ctrl+Shift+P`, then type `Azurite: Start`
+- **Status Bar**: Click the Azurite icon in the VS Code status bar (bottom right)
+
+**Via Command Line (Alternative):**
+```bash
+# Using the helper script
+./scripts/local/start-azurite.sh
+```
+
+### Stop Azurite
+
+**Via VS Code:**
+- **Command Palette**: `Azurite: Close` or `Azurite: Clean`
+- **Status Bar**: Click the running Azurite icon
+
+**Via Command Line:**
+```bash
+pkill -f azurite
+```
 
 ### Check if Azurite is Running
 
@@ -46,39 +66,20 @@ ps aux | grep azurite
 ### View Azurite Logs
 
 ```bash
-cat ~/.azurite/debug.log
-```
-
-### Start Azurite Manually
-
-If Azurite isn't running, you can start it manually:
-
-```bash
-./scripts/local/start-azurite.sh
-```
-
-Or directly:
-
-```bash
-azurite --silent --location ~/.azurite --debug ~/.azurite/debug.log \
-  --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 &
-```
-
-### Stop Azurite
-
-```bash
-pkill -f azurite
+cat /workspaces/pwsh-azure-health/.azurite/debug.log
 ```
 
 ### Clear Azurite Data
 
 To reset all local storage data:
 
+**Via VS Code:**
+- **Command Palette**: `Azurite: Clean` (stops and clears all data)
+
+**Via Command Line:**
 ```bash
 pkill -f azurite
-rm -rf ~/.azurite
-mkdir -p ~/.azurite
-./scripts/local/start-azurite.sh
+find /workspaces/pwsh-azure-health/.azurite -mindepth 1 ! -name 'README.md' -delete
 ```
 
 ## Verify Connectivity
@@ -109,8 +110,14 @@ You can connect [Azure Storage Explorer](https://azure.microsoft.com/en-us/produ
 
 ### "Connection refused" errors
 
-If you get connection errors, verify Azurite is running:
+If you get connection errors:
 
+**Solution 1 - Start via VS Code:**
+```
+F1 > Azurite: Start
+```
+
+**Solution 2 - Verify manually:**
 ```bash
 # Check process
 ps aux | grep azurite
@@ -118,9 +125,7 @@ ps aux | grep azurite
 # Check ports
 netstat -tlnp | grep -E '10000|10001|10002'
 
-# Restart if needed
-pkill -f azurite
-./scripts/local/start-azurite.sh
+# Restart if needed via VS Code or command line
 ```
 
 ### Port conflicts

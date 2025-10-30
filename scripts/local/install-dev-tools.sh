@@ -2,11 +2,12 @@
 # Manual installation script for development tools
 # Use this if post-create.sh fails or to reinstall tools
 # Note: Azure Functions Core Tools is installed via DevContainer Feature
+# Note: Azurite is installed via VS Code extension (azurite.azurite)
 
 set -e
 
 echo "=================================="
-echo "Installing Development Tools"
+echo "Checking Development Tools"
 echo "=================================="
 
 # Check npm is available
@@ -31,21 +32,14 @@ else
 fi
 echo ""
 
-# Install Azurite
-echo "Installing Azurite..."
-if npm install -g azurite; then
-    echo "✅ Azurite installed"
-    azurite --version
-else
-    echo "❌ Failed to install Azurite"
-    echo "You can try again later or check: https://github.com/Azure/Azurite"
-fi
+# Check Azurite extension
+echo "Checking Azurite..."
+echo "ℹ️  Azurite is managed via VS Code extension (azurite.azurite)"
+echo "   Start it via: Command Palette > 'Azurite: Start'"
+echo "   Or click the Azurite icon in the VS Code status bar"
 echo ""
 
 echo "=================================="
-echo "Installation complete!"
+echo "Tool check complete!"
 echo "=================================="
-echo ""
-echo "To start Azurite: ./scripts/local/start-azurite.sh"
-echo "To start Functions: cd src && func start"
 echo ""
