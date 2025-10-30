@@ -228,26 +228,36 @@ This project uses EditorConfig for consistent formatting:
 
 ### Code Quality and Pre-Commit Hooks
 
-This project enforces strict enterprise development standards using pre-commit hooks. All commits are automatically validated for:
+This project uses [pre-commit](https://pre-commit.com/) framework to enforce code quality standards. All commits are automatically validated for:
 
 - **PowerShell Linting**: PSScriptAnalyzer checks for code quality and best practices
-- **File Quality**: Trailing whitespace, end-of-file fixes, large file detection
-- **Security**: Pattern-based secret detection to prevent credential leaks
+- **File Quality**: Trailing whitespace, end-of-file fixes, line ending consistency
+- **Security**: GitLeaks scans for secrets, passwords, and API keys
 - **YAML/JSON Validation**: Syntax checking for configuration files
+- **Large File Detection**: Prevents committing files >500KB
 - **Merge Conflict Detection**: Prevents committing files with conflict markers
+- **Branch Protection**: Blocks direct commits to master/main branches
+- **Unit Tests**: Pester tests run on pre-push
 
-📖 **See [docs/CODE_QUALITY.md](docs/CODE_QUALITY.md) for complete documentation**
+📖 **See [docs/PRE_COMMIT.md](docs/PRE_COMMIT.md) for complete documentation**
 
-**Setting up pre-commit:**
+**Quick Start:**
+
+If using DevContainer, pre-commit is automatically installed. Otherwise:
 
 ```bash
-# Run the setup script to install hooks
-./scripts/install-hooks.sh
+# Install pre-commit
+pip install pre-commit
+
+# Install hooks
+pre-commit install
+pre-commit install --hook-type pre-push
+
+# Run manually on all files
+pre-commit run --all-files
 ```
 
-The hooks will automatically run on every commit. If any issues are found, the commit will be blocked until they are resolved.
-
-**To skip hooks for a specific commit (not recommended):**
+**Skip hooks for a specific commit (use sparingly):**
 ```bash
 git commit --no-verify
 ```

@@ -3,10 +3,27 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "VARIANT": "7.4"
+      "VARIANT": "lts-ubuntu-22.04"
     }
   },
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "upgradePackages": true,
+      "username": "vscode",
+      "uid": "1000",
+      "gid": "1000"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.10",
+      "installTools": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24",
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": false
+    },
     "ghcr.io/devcontainers/features/azure-cli:1": {
       "version": "latest",
       "installBicep": false
@@ -14,6 +31,24 @@
     "ghcr.io/devcontainers/features/dotnet:2": {
       "version": "8.0",
       "installUsingApt": true
+    },
+    "ghcr.io/prulloac/devcontainer-features/pre-commit:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest",
+      "installDirectlyFromGitHubRelease": true
+    },
+    "ghcr.io/azure/azure-dev/azd:0": {
+      "version": "latest"
+    },
+    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
+      "version": "4"
     }
   },
   "customizations": {
@@ -22,18 +57,26 @@
         "ms-azuretools.vscode-azurefunctions",
         "ms-vscode.powershell",
         "ms-vscode.azure-account",
-        "editorconfig.editorconfig"
+        "editorconfig.editorconfig",
+        "azurite.azurite",
+        "ms-azuretools.vscode-azurestorage"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "pwsh",
-        "powershell.powerShellDefaultVersion": "PowerShell 7.4 or higher",
+        "powershell.powerShellDefaultVersion": "PowerShell 7.5 or higher",
         "files.eol": "\n",
         "files.insertFinalNewline": true,
-        "files.trimTrailingWhitespace": true
+        "files.trimTrailingWhitespace": true,
+        "azurite.location": "${workspaceFolder}/.azurite",
+        "azurite.silent": true,
+        "azurite.debug": "${workspaceFolder}/.azurite/debug.log"
       }
     }
   },
-  "forwardPorts": [7071],
+  "forwardPorts": [7071, 10000, 10001, 10002],
+  "remoteEnv": {
+    "PATH": "/usr/local/share/nvm/current/bin:/usr/local/bin:${containerEnv:PATH}"
+  },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "vscode"
 }

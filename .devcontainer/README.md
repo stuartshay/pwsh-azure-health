@@ -6,17 +6,63 @@ This directory contains the DevContainer configuration for the Azure Health Moni
 
 The DevContainer includes all required tools and dependencies:
 
-- **PowerShell 7.4** - PowerShell runtime
+- **PowerShell 7.5.4** - PowerShell runtime
 - **.NET 8 SDK** - Required by Azure Functions
 - **Azure Functions Core Tools v4** - Local function development and testing
 - **Azure CLI** - Azure resource management
-- **Node.js 20** - Required by Azure Functions Core Tools
+- **Node.js 24 LTS** - Required by Azure Functions Core Tools
+- **Python 3.10** - Required for pre-commit framework
 - **Git** - Version control
+- **pre-commit** - Git hook framework for code quality
+
+## Dev Container Features
+
+This DevContainer uses [Dev Container Features](https://containers.dev/features) for dependency management:
+
+- **common-utils** - Git, curl, wget, sudo, non-root user (vscode)
+- **python** - Python 3.10, pip, venv
+- **node** - Node.js 24 LTS
+- **azure-cli** - Azure CLI
+- **dotnet** - .NET 8 SDK
+
+See [FEATURES.md](FEATURES.md) for detailed information about the feature migration.
 - **PowerShell Modules**:
-  - Az (12.0.0)
+  - Az (14.0.0+)
   - Az.ResourceGraph (latest)
   - Az.Monitor (latest)
   - Pester (5.0-5.9) - Testing framework
+  - PSScriptAnalyzer (latest) - Code quality
+
+## Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality. Hooks are automatically installed during dev container setup and will run before each commit.
+
+### Available Hooks:
+- **Trailing whitespace removal**
+- **End-of-file fixer**
+- **YAML validation**
+- **JSON validation**
+- **Large file detection** (>500KB)
+- **Merge conflict detection**
+- **Private key detection**
+- **GitLeaks** - Secret scanning
+- **PSScriptAnalyzer** - PowerShell linting
+- **Pester tests** - Run on pre-push
+
+### Manual Usage:
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run trailing-whitespace --all-files
+
+# Skip hooks for one commit
+git commit --no-verify
+
+# Update hooks to latest versions
+pre-commit autoupdate
+```
 
 ## VS Code Extensions
 
