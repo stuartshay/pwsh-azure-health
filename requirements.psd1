@@ -12,17 +12,17 @@
     'Az.Accounts'       = @{ Version = '3.*' }
     'Az.Storage'        = @{ Version = '7.*' }
     'Az.ResourceGraph'  = @{ Version = '1.*' }
-    
+
     # Additional Azure modules for development and infrastructure
     'Az.Resources'      = @{ Version = '7.*' }
     'Az.Monitor'        = @{ Version = '5.*' }
     'Az.Functions'      = @{ Version = '4.*' }
     'Az.Websites'       = @{ Version = '3.*' }
-    
+
     # Testing and code quality modules
     'Pester'            = @{ Version = '5.*'; MaximumVersion = '5.99.99' }
     'PSScriptAnalyzer'  = @{ Version = '1.*' }
-    
+
     # Optional: Helpful development modules
     # 'PowerShellGet'   = @{ Version = '3.*' }
 }

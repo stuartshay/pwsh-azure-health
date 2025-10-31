@@ -17,7 +17,7 @@
 param(
     [Parameter()]
     [string]$ResourceGroup = 'rg-azure-health-dev',
-    
+
     [Parameter()]
     [string]$ExemptionName = 'azure-health-function-auth-exemption'
 )
@@ -70,7 +70,7 @@ try {
         --scope $rgId `
         --description "Temporary exemption for Azure Health Monitoring Function App development. Authentication will be configured post-deployment." `
         --output json | ConvertFrom-Json
-    
+
     Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Green
     Write-Host "  ✓ Policy Exemption Created Successfully!" -ForegroundColor Green
     Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Green

@@ -114,22 +114,22 @@ if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
     pwsh -Command "
         Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
         Write-Host 'Loading module requirements from requirements.psd1...'
-        
+
         \$requirements = Import-PowerShellDataFile '${WORKSPACE_DIR}/requirements.psd1'
         \$totalModules = \$requirements.Count
         \$current = 0
-        
+
         foreach (\$module in \$requirements.GetEnumerator()) {
             \$current++
             Write-Host "[\$current/\$totalModules] Installing \$(\$module.Key)..." -ForegroundColor Cyan
-            
+
             \$installParams = @{
                 Name       = \$module.Key
                 Repository = 'PSGallery'
                 Force      = \$true
                 Scope      = 'CurrentUser'
             }
-            
+
             if (\$module.Value -is [hashtable]) {
                 if (\$module.Value.Version) {
                     \$installParams['MinimumVersion'] = \$module.Value.Version
@@ -140,12 +140,12 @@ if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
             } else {
                 \$installParams['MinimumVersion'] = \$module.Value
             }
-            
+
             # Add AllowClobber for Az modules
             if (\$module.Key -like 'Az.*') {
                 \$installParams['AllowClobber'] = \$true
             }
-            
+
             try {
                 Install-Module @installParams -ErrorAction Stop
                 Write-Host "  ✓ \$(\$module.Key) installed successfully" -ForegroundColor Green
@@ -153,11 +153,11 @@ if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
                 Write-Warning "  ✗ Failed to install \$(\$module.Key): \$_"
             }
         }
-        
+
         Write-Host ''
         Write-Host 'PowerShell modules installation complete!' -ForegroundColor Green
         Write-Host 'Installed modules:' -ForegroundColor Cyan
-        Get-InstalledModule | Where-Object { \$requirements.ContainsKey(\$_.Name) } | 
+        Get-InstalledModule | Where-Object { \$requirements.ContainsKey(\$_.Name) } |
             Format-Table Name, Version -AutoSize
     "
 else

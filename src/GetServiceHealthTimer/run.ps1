@@ -68,11 +68,11 @@ function Invoke-GetServiceHealthTimer {
     }
 
     $newEvents = New-Object 'System.Collections.Generic.List[object]'
-    foreach ($event in $events) {
-        $key = if ($event.TrackingId) { $event.TrackingId } elseif ($event.Id) { $event.Id } else { [guid]::NewGuid().ToString() }
+    foreach ($healthEvent in $events) {
+        $key = if ($healthEvent.TrackingId) { $healthEvent.TrackingId } elseif ($healthEvent.Id) { $healthEvent.Id } else { [guid]::NewGuid().ToString() }
         if (-not $knownKeys.ContainsKey($key)) {
             $knownKeys[$key] = $true
-            $newEvents.Add($event)
+            $newEvents.Add($healthEvent)
         }
     }
 
