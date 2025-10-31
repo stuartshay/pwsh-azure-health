@@ -1,0 +1,13 @@
+# Gitleaks ignore file - exceptions for known false positives
+# https://github.com/gitleaks/gitleaks#gitleaksignore
+
+# Azurite (local Azure Storage Emulator) - well-known public development key
+# This is NOT a secret - it's the standard Azurite connection string used by everyone
+# Source: https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite
+Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+
+# Azure GUIDs (Subscription ID, Tenant ID) in .env file
+# These are identifiers, not secrets - they're required for Azure SDK configuration
+# The .env file is gitignored and never committed
+09e01a7d-07d4-43ee-80c7-8b2c0d7ec41f
+c725ad9b-4d37-4c38-b78d-3859e706283d
