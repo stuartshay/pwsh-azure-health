@@ -34,10 +34,10 @@ echo ""
 
 # Update AZURE_SUBSCRIPTION_ID if empty
 if grep -q "^AZURE_SUBSCRIPTION_ID=\s*$" "$ENV_FILE"; then
-    sed -i "s|^AZURE_SUBSCRIPTION_ID=.*|AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID|" "$ENV_FILE"
+    sed -i.bak "s|^AZURE_SUBSCRIPTION_ID=.*|AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID|" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
     echo "✓ Updated AZURE_SUBSCRIPTION_ID"
 elif grep -q "^AZURE_SUBSCRIPTION_ID=$" "$ENV_FILE"; then
-    sed -i "s|^AZURE_SUBSCRIPTION_ID=$|AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID|" "$ENV_FILE"
+    sed -i.bak "s|^AZURE_SUBSCRIPTION_ID=$|AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID|" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
     echo "✓ Updated AZURE_SUBSCRIPTION_ID"
 else
     echo "○ AZURE_SUBSCRIPTION_ID already set"
@@ -45,10 +45,10 @@ fi
 
 # Update AZURE_TENANT_ID if empty
 if grep -q "^AZURE_TENANT_ID=\s*$" "$ENV_FILE"; then
-    sed -i "s|^AZURE_TENANT_ID=.*|AZURE_TENANT_ID=$TENANT_ID|" "$ENV_FILE"
+    sed -i.bak "s|^AZURE_TENANT_ID=.*|AZURE_TENANT_ID=$TENANT_ID|" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
     echo "✓ Updated AZURE_TENANT_ID"
 elif grep -q "^AZURE_TENANT_ID=$" "$ENV_FILE"; then
-    sed -i "s|^AZURE_TENANT_ID=$|AZURE_TENANT_ID=$TENANT_ID|" "$ENV_FILE"
+    sed -i.bak "s|^AZURE_TENANT_ID=$|AZURE_TENANT_ID=$TENANT_ID|" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
     echo "✓ Updated AZURE_TENANT_ID"
 else
     echo "○ AZURE_TENANT_ID already set"
