@@ -33,7 +33,7 @@ echo "  Tenant: $TENANT_ID"
 echo ""
 
 # Update AZURE_SUBSCRIPTION_ID if empty
-if grep -q "^AZURE_SUBSCRIPTION_ID=\s*$" "$ENV_FILE"; then
+if grep -q "^AZURE_SUBSCRIPTION_ID=[[:space:]]*$" "$ENV_FILE"; then
     sed -i.bak "s|^AZURE_SUBSCRIPTION_ID=.*|AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID|" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
     echo "✓ Updated AZURE_SUBSCRIPTION_ID"
 elif grep -q "^AZURE_SUBSCRIPTION_ID=$" "$ENV_FILE"; then
@@ -44,7 +44,7 @@ else
 fi
 
 # Update AZURE_TENANT_ID if empty
-if grep -q "^AZURE_TENANT_ID=\s*$" "$ENV_FILE"; then
+if grep -q "^AZURE_TENANT_ID=[[:space:]]*$" "$ENV_FILE"; then
     sed -i.bak "s|^AZURE_TENANT_ID=.*|AZURE_TENANT_ID=$TENANT_ID|" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
     echo "✓ Updated AZURE_TENANT_ID"
 elif grep -q "^AZURE_TENANT_ID=$" "$ENV_FILE"; then
