@@ -37,8 +37,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Navigate to infrastructure directory
-$infraDir = Join-Path $PSScriptRoot '..' 'infrastructure'
+# Navigate to infrastructure directory (go up two levels from scripts/infrastructure)
+$infraDir = Join-Path $PSScriptRoot '..' '..' 'infrastructure'
 Push-Location $infraDir
 
 try {
