@@ -66,6 +66,27 @@ else
     echo "⚠️  Azure Functions Core Tools not found"
 fi
 
+# Install/fix Bicep CLI
+echo "Setting up Bicep CLI..."
+if [ -f "$HOME/.azure/bin/bicep" ]; then
+    # Remove potentially corrupted bicep binary
+    rm -f "$HOME/.azure/bin/bicep"
+fi
+
+# Install Bicep for Linux x64
+mkdir -p "$HOME/.azure/bin"
+curl -sSL -o "$HOME/.azure/bin/bicep" https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+chmod +x "$HOME/.azure/bin/bicep"
+
+# Verify Bicep installation
+if command -v bicep &> /dev/null; then
+    echo "✅ Bicep CLI: $(bicep --version)"
+elif [ -x "$HOME/.azure/bin/bicep" ]; then
+    echo "✅ Bicep CLI: $($HOME/.azure/bin/bicep --version)"
+else
+    echo "⚠️  Bicep CLI installation may have failed"
+fi
+
 # Note: Azurite is managed via VS Code extension (azurite.azurite)
 # Create the workspace directory for Azurite data
 echo "Creating Azurite workspace directory..."
