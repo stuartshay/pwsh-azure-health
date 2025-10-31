@@ -90,8 +90,9 @@ fi
 # Note: Azurite is managed via VS Code extension (azurite.azurite)
 # Create the workspace directory for Azurite data
 echo "Creating Azurite workspace directory..."
-mkdir -p /workspaces/pwsh-azure-health/.azurite
-echo "✅ Azurite directory ready at /workspaces/pwsh-azure-health/.azurite"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
+mkdir -p "${WORKSPACE_DIR}/.azurite"
+echo "✅ Azurite directory ready at ${WORKSPACE_DIR}/.azurite"
 echo "ℹ️  Start Azurite via Command Palette: 'Azurite: Start' or use the status bar"
 
 # Note: pre-commit is installed via Dev Container Feature
@@ -106,28 +107,73 @@ echo "Installing pre-commit hooks..."
 pre-commit install
 pre-commit install --hook-type pre-push
 
-# Install PowerShell modules
+# Install PowerShell modules from requirements.psd1
 echo "Installing PowerShell modules..."
-pwsh -Command "
-    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-    Write-Host 'Installing Az module...'
-    Install-Module -Name Az -Repository PSGallery -Force -AllowClobber -Scope CurrentUser -MinimumVersion 14.0.0
-    Write-Host 'Installing Az.ResourceGraph module...'
-    Install-Module -Name Az.ResourceGraph -Repository PSGallery -Force -Scope CurrentUser
-    Write-Host 'Installing Az.Monitor module...'
-    Install-Module -Name Az.Monitor -Repository PSGallery -Force -Scope CurrentUser
-    Write-Host 'Installing Pester module...'
-    Install-Module -Name Pester -Repository PSGallery -Force -Scope CurrentUser -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
-    Write-Host 'Installing PSScriptAnalyzer module...'
-    Install-Module -Name PSScriptAnalyzer -Repository PSGallery -Force -Scope CurrentUser
-    Write-Host 'PowerShell modules installed successfully!'
-"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
+if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
+    pwsh -Command "
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+        Write-Host 'Loading module requirements from requirements.psd1...'
+        
+        \$requirements = Import-PowerShellDataFile '${WORKSPACE_DIR}/requirements.psd1'
+        \$totalModules = \$requirements.Count
+        \$current = 0
+        
+        foreach (\$module in \$requirements.GetEnumerator()) {
+            \$current++
+            Write-Host "[\$current/\$totalModules] Installing \$(\$module.Key)..." -ForegroundColor Cyan
+            
+            \$installParams = @{
+                Name       = \$module.Key
+                Repository = 'PSGallery'
+                Force      = \$true
+                Scope      = 'CurrentUser'
+            }
+            
+            if (\$module.Value -is [hashtable]) {
+                if (\$module.Value.Version) {
+                    \$installParams['MinimumVersion'] = \$module.Value.Version
+                }
+                if (\$module.Value.MaximumVersion) {
+                    \$installParams['MaximumVersion'] = \$module.Value.MaximumVersion
+                }
+            } else {
+                \$installParams['MinimumVersion'] = \$module.Value
+            }
+            
+            # Add AllowClobber for Az modules
+            if (\$module.Key -like 'Az.*') {
+                \$installParams['AllowClobber'] = \$true
+            }
+            
+            try {
+                Install-Module @installParams -ErrorAction Stop
+                Write-Host "  ✓ \$(\$module.Key) installed successfully" -ForegroundColor Green
+            } catch {
+                Write-Warning "  ✗ Failed to install \$(\$module.Key): \$_"
+            }
+        }
+        
+        Write-Host ''
+        Write-Host 'PowerShell modules installation complete!' -ForegroundColor Green
+        Write-Host 'Installed modules:' -ForegroundColor Cyan
+        Get-InstalledModule | Where-Object { \$requirements.ContainsKey(\$_.Name) } | 
+            Format-Table Name, Version -AutoSize
+    "
+else
+    echo "⚠️  requirements.psd1 not found, skipping PowerShell module installation"
+fi
 
 # Install PowerShell profile with Git and Azure subscription display
 echo "Installing PowerShell profile..."
 mkdir -p ~/.config/powershell
-cp /workspaces/pwsh-azure-health/.devcontainer/profile.ps1 ~/.config/powershell/Microsoft.PowerShell_profile.ps1
-echo "✅ PowerShell profile installed"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
+if [ -f "${WORKSPACE_DIR}/.devcontainer/profile.ps1" ]; then
+    cp "${WORKSPACE_DIR}/.devcontainer/profile.ps1" ~/.config/powershell/Microsoft.PowerShell_profile.ps1
+    echo "✅ PowerShell profile installed"
+else
+    echo "⚠️  PowerShell profile not found, skipping"
+fi
 
 # Create local.settings.json if it doesn't exist
 if [ ! -f "src/local.settings.json" ]; then
