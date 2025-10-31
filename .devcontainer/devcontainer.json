@@ -28,6 +28,9 @@
       "version": "latest",
       "installBicep": false
     },
+    "ghcr.io/rchaganti/devcontainer-features/azure-bicep:1": {
+      "version": "latest"
+    },
     "ghcr.io/devcontainers/features/dotnet:2": {
       "version": "8.0",
       "installUsingApt": true
@@ -59,6 +62,7 @@
         "ms-vscode.powershell",
         "ms-vscode.azure-account",
         "editorconfig.editorconfig",
+        "ms-azuretools.vscode-bicep",
         "azurite.azurite",
         "ms-azuretools.vscode-azurestorage",
         "github.copilot",
