@@ -123,7 +123,7 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
       powerShellVersion: '7.4'
       appSettings: [
         {
-          name: 'AzureWebJobsStorage__accountName'
+          name: 'AzureWebJobsStorage__accountname'
           value: storageAccount.name
         }
         {
