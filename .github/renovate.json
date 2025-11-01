@@ -1,0 +1,76 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "schedule": [
+    "before 6am on Monday"
+  ],
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "commitMessagePrefix": "chore(deps):",
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "PowerShell module dependencies in .psd1 files",
+      "matchFileNames": [
+        "**/*.psd1"
+      ],
+      "matchManagers": [
+        "regex"
+      ],
+      "enabled": true
+    },
+    {
+      "description": "Pre-commit hooks",
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "enabled": true,
+      "labels": [
+        "dependencies",
+        "pre-commit"
+      ]
+    },
+    {
+      "description": "Bicep API versions",
+      "matchFileNames": [
+        "infrastructure/**/*.bicep"
+      ],
+      "matchManagers": [
+        "regex"
+      ],
+      "enabled": true,
+      "labels": [
+        "dependencies",
+        "bicep"
+      ]
+    }
+  ],
+  "regexManagers": [
+    {
+      "description": "Update PowerShell modules in .psd1 files",
+      "fileMatch": [
+        "(^|/)requirements\\.psd1$"
+      ],
+      "matchStrings": [
+        "'(?<depName>[^']+)'\\s*=\\s*'(?<currentValue>[^']+)'"
+      ],
+      "datasourceTemplate": "powershell-gallery",
+      "versioningTemplate": "nuget"
+    },
+    {
+      "description": "Update Azure API versions in Bicep files",
+      "fileMatch": [
+        "\\.bicep$"
+      ],
+      "matchStrings": [
+        "@(?<currentValue>\\d{4}-\\d{2}-\\d{2}(-preview)?)"
+      ],
+      "depNameTemplate": "azure-api-version",
+      "datasourceTemplate": "azure-api-versions"
+    }
+  ]
+}
