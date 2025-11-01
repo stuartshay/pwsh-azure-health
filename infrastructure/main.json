@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "5952673311397918744"
+      "templateHash": "11738432317190586902"
     }
   },
   "parameters": {
@@ -175,8 +175,8 @@
               "value": "[variables('storageAccountName')]"
             },
             {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING__accountName",
-              "value": "[variables('storageAccountName')]"
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value, environment().suffixes.storage)]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
