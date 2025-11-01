@@ -105,7 +105,7 @@ if [ ! -z "$WORKFLOW_FILES" ]; then
         for file in $WORKFLOW_FILES; do
             if [ -f "$file" ]; then
                 echo "  Validating $file..."
-                if ! actionlint "$file" 2>&1; then
+                if ! actionlint "$file" > /dev/null 2>&1; then
                     echo -e "${RED}✗${NC} Invalid workflow: $file"
                     WORKFLOW_VALID=1
                 fi
