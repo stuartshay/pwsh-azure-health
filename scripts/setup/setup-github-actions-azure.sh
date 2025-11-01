@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      sed -n '2,27p' "$0" | sed 's/^# //'
+      sed -n '2,28p' "$0" | sed 's/^# //'
       exit 0
       ;;
     *)
@@ -195,12 +195,23 @@ fi
 # Step 3: Configure Federated Credentials
 print_header "Step 3: Configuring Federated Credentials"
 
-# Function to create or update federated credential
+# Function to detect the default branch name
+detect_default_branch() {
+  local default_branch
+  default_branch=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d' ' -f5)
+  if [ -z "$default_branch" ]; then
+    # Fallback to master if detection fails
+    default_branch="master"
+  fi
+  echo "$default_branch"
+}
+
+# Function to create federated credentials
 create_federated_credential() {
   local cred_name="$1"
   local subject="$2"
   local description="$3"
-  
+
   # Check if credential already exists
   if az ad app federated-credential show --id "$APP_ID" --federated-credential-id "$cred_name" &> /dev/null; then
     print_info "Federated credential '$cred_name' already exists - skipping"
@@ -218,11 +229,15 @@ create_federated_credential() {
   fi
 }
 
+# Detect the default branch name
+DEFAULT_BRANCH=$(detect_default_branch)
+print_info "Detected default branch: $DEFAULT_BRANCH"
+
 # Create credentials for different contexts
 create_federated_credential \
-  "github-pwsh-azure-health-master" \
-  "repo:$GITHUB_ORG/$GITHUB_REPO:ref:refs/heads/master" \
-  "GitHub Actions - master branch"
+  "github-pwsh-azure-health-${DEFAULT_BRANCH}" \
+  "repo:$GITHUB_ORG/$GITHUB_REPO:ref:refs/heads/${DEFAULT_BRANCH}" \
+  "GitHub Actions - ${DEFAULT_BRANCH} branch"
 
 create_federated_credential \
   "github-pwsh-azure-health-develop" \
@@ -249,7 +264,7 @@ print_header "Step 4: Assigning Azure Permissions"
 
 if [ "$PERMISSION_SCOPE" == "subscription" ]; then
   print_info "Assigning Contributor role at subscription level..."
-  
+
   # Check if role assignment already exists
   if az role assignment list --assignee "$APP_ID" --role "Contributor" --scope "/subscriptions/$SUBSCRIPTION_ID" --query "[0].id" -o tsv | grep -q .; then
     print_info "Contributor role already assigned at subscription level"
@@ -262,18 +277,18 @@ if [ "$PERMISSION_SCOPE" == "subscription" ]; then
   fi
 else
   print_info "Assigning Contributor role at resource group level..."
-  
+
   # Create resource groups if they don't exist
   for ENV in dev prod; do
     RG_NAME="rg-azure-health-$ENV"
-    
+
     if az group exists --name "$RG_NAME" | grep -q "true"; then
       print_info "Resource group '$RG_NAME' already exists"
     else
       az group create --name "$RG_NAME" --location eastus --tags environment="$ENV" project="azure-health" > /dev/null
       print_success "Created resource group: $RG_NAME"
     fi
-    
+
     # Assign role
     if az role assignment list --assignee "$APP_ID" --role "Contributor" --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME" --query "[0].id" -o tsv | grep -q .; then
       print_info "Contributor role already assigned to $RG_NAME"

@@ -56,7 +56,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      sed -n '2,18p' "$0" | sed 's/^# //'
+      sed -n '2,21p' "$0" | sed 's/^# //'
       exit 0
       ;;
     *)
@@ -158,8 +158,22 @@ fi
 # Check Federated Credentials
 print_header "4. Checking Federated Credentials"
 
+# Detect the default branch name
+detect_default_branch() {
+  local default_branch
+  default_branch=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d' ' -f5)
+  if [ -z "$default_branch" ]; then
+    # Fallback to master if detection fails
+    default_branch="master"
+  fi
+  echo "$default_branch"
+}
+
+DEFAULT_BRANCH=$(detect_default_branch)
+print_info "Checking for default branch: $DEFAULT_BRANCH"
+
 REQUIRED_SUBJECTS=(
-  "repo:$GITHUB_ORG/$GITHUB_REPO:ref:refs/heads/master"
+  "repo:$GITHUB_ORG/$GITHUB_REPO:ref:refs/heads/$DEFAULT_BRANCH"
   "repo:$GITHUB_ORG/$GITHUB_REPO:ref:refs/heads/develop"
   "repo:$GITHUB_ORG/$GITHUB_REPO:pull_request"
   "repo:$GITHUB_ORG/$GITHUB_REPO:environment:dev"
@@ -170,7 +184,7 @@ CREDS=$(az ad app federated-credential list --id "$APP_ID" --query "[].subject" 
 
 for subject in "${REQUIRED_SUBJECTS[@]}"; do
   if echo "$CREDS" | grep -q "$subject"; then
-    check_pass "Federated credential configured for: ${subject##*:}"
+    check_pass "Federated credential configured for: $subject"
   else
     check_fail "Missing federated credential for: $subject"
   fi
@@ -199,7 +213,7 @@ print_header "6. Checking GitHub Secrets"
 
 if [ "$GH_CLI_AVAILABLE" = true ] && gh auth status &> /dev/null; then
   SECRETS=$(gh secret list --repo "$GITHUB_ORG/$GITHUB_REPO" 2>/dev/null || echo "")
-  
+
   if [ -n "$SECRETS" ]; then
     # Check required secrets
     for secret in "AZURE_CLIENT_ID" "AZURE_TENANT_ID" "AZURE_SUBSCRIPTION_ID"; do
@@ -209,7 +223,7 @@ if [ "$GH_CLI_AVAILABLE" = true ] && gh auth status &> /dev/null; then
         check_fail "GitHub secret '$secret' is missing"
       fi
     done
-    
+
     # Check optional secrets for CI workflow
     for secret in "AZURE_RESOURCE_GROUP" "FUNCTION_APP_NAME"; do
       if echo "$SECRETS" | grep -q "$secret"; then

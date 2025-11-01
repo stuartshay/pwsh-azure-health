@@ -78,7 +78,7 @@ Setup Complete!
 
 **Purpose:** Validates that Azure AD application and GitHub secrets are configured correctly
 
-Automates the configuration of Azure AD application and federated credentials for GitHub Actions OIDC authentication.
+Validates that Azure AD application, federated credentials, and GitHub secrets are properly configured for GitHub Actions OIDC authentication.
 
 **Prerequisites:**
 - Azure CLI installed and authenticated
