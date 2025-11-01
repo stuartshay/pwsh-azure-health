@@ -130,8 +130,8 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
           value: storageAccount.name
         }
         {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING__accountName'
-          value: storageAccount.name
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
         }
         {
           name: 'WEBSITE_CONTENTSHARE'
