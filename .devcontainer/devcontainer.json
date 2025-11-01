@@ -89,8 +89,9 @@
   },
   "forwardPorts": [7071, 10000, 10001, 10002],
   "remoteEnv": {
-    "PATH": "/usr/local/share/nvm/current/bin:/usr/local/bin:${containerEnv:PATH}"
+    "PATH": "/usr/local/share/nvm/current/bin:/usr/local/bin:${containerEnv:PATH}",
+    "WORKSPACE_DIR": "${containerWorkspaceFolder}"
   },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "remoteUser": "vscode"
 }
