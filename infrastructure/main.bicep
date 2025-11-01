@@ -72,7 +72,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
   name: 'default'
 }
 
-resource cacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+resource cacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-01-01' = {
   parent: blobService
   name: cacheContainerName
   properties: {
