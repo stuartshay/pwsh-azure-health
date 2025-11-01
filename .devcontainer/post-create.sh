@@ -27,6 +27,7 @@ sleep 5
 if [ -d "/usr/local/share/nvm" ]; then
     export NVM_DIR="/usr/local/share/nvm"
     # Source nvm if available
+    # shellcheck source=/dev/null
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 fi
 
@@ -82,7 +83,7 @@ chmod +x "$HOME/.azure/bin/bicep"
 if command -v bicep &> /dev/null; then
     echo "✅ Bicep CLI: $(bicep --version)"
 elif [ -x "$HOME/.azure/bin/bicep" ]; then
-    echo "✅ Bicep CLI: $($HOME/.azure/bin/bicep --version)"
+    echo "✅ Bicep CLI: $("$HOME"/.azure/bin/bicep --version)"
 else
     echo "⚠️  Bicep CLI installation may have failed"
 fi
@@ -111,55 +112,55 @@ pre-commit install --hook-type pre-push
 echo "Installing PowerShell modules..."
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
 if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
-    pwsh -Command "
+    # shellcheck disable=SC2016
+    pwsh -NoProfile -Command '
         Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-        Write-Host 'Loading module requirements from requirements.psd1...'
+        Write-Host "Loading module requirements from requirements.psd1..."
 
-        \$requirements = Import-PowerShellDataFile '${WORKSPACE_DIR}/requirements.psd1'
-        \$totalModules = \$requirements.Count
-        \$current = 0
+        $requirements = Import-PowerShellDataFile "'"${WORKSPACE_DIR}"'/requirements.psd1"
+        $totalModules = $requirements.Count
+        $current = 0
 
-        foreach (\$module in \$requirements.GetEnumerator()) {
-            \$current++
-            Write-Host "[\$current/\$totalModules] Installing \$(\$module.Key)..." -ForegroundColor Cyan
+        foreach ($module in $requirements.GetEnumerator()) {
+            $current++
+            Write-Host "[$current/$totalModules] Installing $($module.Key)..." -ForegroundColor Cyan
 
-            \$installParams = @{
-                Name       = \$module.Key
-                Repository = 'PSGallery'
-                Force      = \$true
-                Scope      = 'CurrentUser'
+            $installParams = @{
+                Name       = $module.Key
+                Repository = "PSGallery"
+                Force      = $true
+                Scope      = "CurrentUser"
             }
 
-            if (\$module.Value -is [hashtable]) {
-                if (\$module.Value.Version) {
-                    \$installParams['MinimumVersion'] = \$module.Value.Version
+            if ($module.Value -is [hashtable]) {
+                if ($module.Value.Version) {
+                    $installParams["MinimumVersion"] = $module.Value.Version
                 }
-                if (\$module.Value.MaximumVersion) {
-                    \$installParams['MaximumVersion'] = \$module.Value.MaximumVersion
+                if ($module.Value.MaximumVersion) {
+                    $installParams["MaximumVersion"] = $module.Value.MaximumVersion
                 }
             } else {
-                \$installParams['MinimumVersion'] = \$module.Value
+                $installParams["MinimumVersion"] = $module.Value
             }
 
             # Add AllowClobber for Az modules
-            if (\$module.Key -like 'Az.*') {
-                \$installParams['AllowClobber'] = \$true
+            if ($module.Key -like "Az.*") {
+                $installParams["AllowClobber"] = $true
             }
 
             try {
                 Install-Module @installParams -ErrorAction Stop
-                Write-Host "  ✓ \$(\$module.Key) installed successfully" -ForegroundColor Green
+                Write-Host "  ✓ $($module.Key) installed successfully" -ForegroundColor Green
             } catch {
-                Write-Warning "  ✗ Failed to install \$(\$module.Key): \$_"
+                Write-Warning "  ✗ Failed to install $($module.Key): $_"
             }
         }
 
-        Write-Host ''
-        Write-Host 'PowerShell modules installation complete!' -ForegroundColor Green
-        Write-Host 'Installed modules:' -ForegroundColor Cyan
-        Get-InstalledModule | Where-Object { \$requirements.ContainsKey(\$_.Name) } |
-            Format-Table Name, Version -AutoSize
-    "
+        Write-Host ""
+        Write-Host "PowerShell modules installation complete!" -ForegroundColor Green
+        Write-Host "Installed modules:" -ForegroundColor Cyan
+        Get-InstalledModule | Where-Object { $requirements.ContainsKey($_.Name) } | Format-Table Name, Version -AutoSize
+    '
 else
     echo "⚠️  requirements.psd1 not found, skipping PowerShell module installation"
 fi

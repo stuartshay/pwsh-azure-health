@@ -107,7 +107,7 @@ jobs:
 
       - name: Package Functions
         run: |
-          cd $AZURE_FUNCTIONAPP_PACKAGE_PATH
+          cd "$AZURE_FUNCTIONAPP_PACKAGE_PATH"
           zip -r ../functionapp.zip .
 
       - name: Deploy package

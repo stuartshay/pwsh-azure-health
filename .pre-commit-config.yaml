@@ -38,13 +38,19 @@ repos:
     hooks:
       - id: actionlint
 
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+
   - repo: local
     hooks:
       - id: bicep-build
         name: Bicep Build Validation
         entry: >
           bash -c 'for file in "$@"; do
-          echo "Validating $file...";
+          echo "Building $file...";
           az bicep build --file "$file" --stdout > /dev/null || exit 1;
           done' --
         language: system
@@ -100,5 +106,5 @@ ci:
   autoupdate_branch: ''
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
-  skip: [pester-tests, psscriptanalyzer, bicep-build]
+  skip: [pester-tests, psscriptanalyzer, bicep-lint, bicep-build]
   submodules: false

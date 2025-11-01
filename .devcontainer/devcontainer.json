@@ -55,6 +55,9 @@
     },
     "ghcr.io/devcontainers-extra/features/actionlint:1": {
       "version": "latest"
+    },
+    "ghcr.io/lukewiwa/features/shellcheck:0": {
+      "version": "latest"
     }
   },
   "customizations": {
@@ -69,7 +72,8 @@
         "azurite.azurite",
         "ms-azuretools.vscode-azurestorage",
         "github.copilot",
-        "saoudrizwan.claude-dev"
+        "saoudrizwan.claude-dev",
+        "openai.chatgpt"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "pwsh",
@@ -79,14 +83,15 @@
         "files.trimTrailingWhitespace": true,
         "azurite.location": "${workspaceFolder}/.azurite",
         "azurite.silent": true,
-        "azurite.debug": "${workspaceFolder}/.azurite/debug.log"
+        "azurite.debug": false
       }
     }
   },
   "forwardPorts": [7071, 10000, 10001, 10002],
   "remoteEnv": {
-    "PATH": "/usr/local/share/nvm/current/bin:/usr/local/bin:${containerEnv:PATH}"
+    "PATH": "/usr/local/share/nvm/current/bin:/usr/local/bin:${containerEnv:PATH}",
+    "WORKSPACE_DIR": "${containerWorkspaceFolder}"
   },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "remoteUser": "vscode"
 }
