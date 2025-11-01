@@ -40,7 +40,7 @@ var commonTags = {
 }
 
 // Storage Account for Function App
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: storageAccountName
   location: location
   tags: commonTags
@@ -67,12 +67,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 // Blob service and container for cache
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-resource cacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+resource cacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-01-01' = {
   parent: blobService
   name: cacheContainerName
   properties: {
@@ -95,7 +95,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // App Service Plan (Consumption)
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: appServicePlanName
   location: location
   tags: commonTags
@@ -111,7 +111,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
 }
 
 // Function App
-resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
+resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   name: functionAppName
   location: location
   tags: commonTags
