@@ -95,7 +95,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // App Service Plan (Consumption)
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: appServicePlanName
   location: location
   tags: commonTags
