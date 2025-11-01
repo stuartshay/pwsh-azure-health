@@ -40,7 +40,7 @@ var commonTags = {
 }
 
 // Storage Account for Function App
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: storageAccountName
   location: location
   tags: commonTags
