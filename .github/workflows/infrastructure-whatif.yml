@@ -36,15 +36,15 @@ jobs:
           RESOURCE_GROUP="rg-azure-health-dev"
 
           # Create resource group if it doesn't exist (for what-if to work)
-          if ! az group exists --name $RESOURCE_GROUP > /dev/null 2>&1; then
+          if ! az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
             echo "Creating resource group for what-if: $RESOURCE_GROUP"
-            az group create --name $RESOURCE_GROUP --location eastus --tags environment=dev
+            az group create --name "$RESOURCE_GROUP" --location eastus --tags environment=dev
           fi
 
           echo "Running what-if for Dev environment..."
           whatif_output=$(az deployment group what-if \
             --name "whatif-$(date +%Y%m%d-%H%M%S)" \
-            --resource-group $RESOURCE_GROUP \
+            --resource-group "$RESOURCE_GROUP" \
             --template-file infrastructure/main.bicep \
             --parameters infrastructure/main.bicepparam \
             --parameters environment=dev \
@@ -53,11 +53,13 @@ jobs:
           # Save output to file for comment
           echo "$whatif_output" > /tmp/whatif-dev.txt
 
-          echo "## Dev Environment What-If" >> /tmp/whatif-summary.md
-          echo '```' >> /tmp/whatif-summary.md
-          echo "$whatif_output" >> /tmp/whatif-summary.md
-          echo '```' >> /tmp/whatif-summary.md
-          echo "" >> /tmp/whatif-summary.md
+          {
+            echo "## Dev Environment What-If"
+            echo '```'
+            echo "$whatif_output"
+            echo '```'
+            echo ""
+          } >> /tmp/whatif-summary.md
 
       - name: Run What-If for Prod environment
         id: whatif_prod
@@ -66,15 +68,15 @@ jobs:
           RESOURCE_GROUP="rg-azure-health-prod"
 
           # Create resource group if it doesn't exist (for what-if to work)
-          if ! az group exists --name $RESOURCE_GROUP > /dev/null 2>&1; then
+          if ! az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
             echo "Creating resource group for what-if: $RESOURCE_GROUP"
-            az group create --name $RESOURCE_GROUP --location eastus --tags environment=prod
+            az group create --name "$RESOURCE_GROUP" --location eastus --tags environment=prod
           fi
 
           echo "Running what-if for Prod environment..."
           whatif_output=$(az deployment group what-if \
             --name "whatif-$(date +%Y%m%d-%H%M%S)" \
-            --resource-group $RESOURCE_GROUP \
+            --resource-group "$RESOURCE_GROUP" \
             --template-file infrastructure/main.bicep \
             --parameters infrastructure/main.bicepparam \
             --parameters environment=prod \
@@ -83,10 +85,12 @@ jobs:
           # Save output to file for comment
           echo "$whatif_output" > /tmp/whatif-prod.txt
 
-          echo "## Prod Environment What-If" >> /tmp/whatif-summary.md
-          echo '```' >> /tmp/whatif-summary.md
-          echo "$whatif_output" >> /tmp/whatif-summary.md
-          echo '```' >> /tmp/whatif-summary.md
+          {
+            echo "## Prod Environment What-If"
+            echo '```'
+            echo "$whatif_output"
+            echo '```'
+          } >> /tmp/whatif-summary.md
 
       - name: Comment PR with What-If results
         uses: actions/github-script@v8

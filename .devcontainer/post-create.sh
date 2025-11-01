@@ -111,7 +111,7 @@ pre-commit install --hook-type pre-push
 echo "Installing PowerShell modules..."
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
 if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
-    pwsh -Command "
+    pwsh -NoProfile -Command "
         Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
         Write-Host 'Loading module requirements from requirements.psd1...'
 
@@ -121,7 +121,7 @@ if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
 
         foreach (\$module in \$requirements.GetEnumerator()) {
             \$current++
-            Write-Host "[\$current/\$totalModules] Installing \$(\$module.Key)..." -ForegroundColor Cyan
+            Write-Host \"[\$current/\$totalModules] Installing \$(\$module.Key)...\" -ForegroundColor Cyan
 
             \$installParams = @{
                 Name       = \$module.Key
@@ -148,17 +148,16 @@ if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
 
             try {
                 Install-Module @installParams -ErrorAction Stop
-                Write-Host "  ✓ \$(\$module.Key) installed successfully" -ForegroundColor Green
+                Write-Host \"  ✓ \$(\$module.Key) installed successfully\" -ForegroundColor Green
             } catch {
-                Write-Warning "  ✗ Failed to install \$(\$module.Key): \$_"
+                Write-Warning \"  ✗ Failed to install \$(\$module.Key): \$_\"
             }
         }
 
         Write-Host ''
         Write-Host 'PowerShell modules installation complete!' -ForegroundColor Green
         Write-Host 'Installed modules:' -ForegroundColor Cyan
-        Get-InstalledModule | Where-Object { \$requirements.ContainsKey(\$_.Name) } |
-            Format-Table Name, Version -AutoSize
+        Get-InstalledModule | Where-Object { \$requirements.ContainsKey(\$_.Name) } | Format-Table Name, Version -AutoSize
     "
 else
     echo "⚠️  requirements.psd1 not found, skipping PowerShell module installation"

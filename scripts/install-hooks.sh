@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Setup script to install pre-commit hooks
 
-HOOK_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/pre-commit-hook.sh"
 GIT_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.git/hooks"
 PRE_COMMIT_HOOK="$GIT_HOOK_DIR/pre-commit"
 

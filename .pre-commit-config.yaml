@@ -38,6 +38,12 @@ repos:
     hooks:
       - id: actionlint
 
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+
   - repo: local
     hooks:
       - id: bicep-lint
