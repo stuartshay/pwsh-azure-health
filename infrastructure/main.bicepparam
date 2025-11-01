@@ -1,4 +1,4 @@
-# Azure Health Monitoring - Bicep Parameters (Development)
+// Azure Health Monitoring - Bicep Parameters (Development)
 
 using './main.bicep'
 
