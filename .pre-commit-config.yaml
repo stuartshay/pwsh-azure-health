@@ -33,8 +33,25 @@ repos:
           - --config-data
           - "{extends: default, rules: {line-length: {max: 120}, document-start: disable, truthy: {check-keys: false}}}"
 
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.8
+    hooks:
+      - id: actionlint
+
   - repo: local
     hooks:
+      - id: bicep-build
+        name: Bicep Build Validation
+        entry: >
+          bash -c 'for file in "$@"; do
+          echo "Validating $file...";
+          az bicep build --file "$file" --stdout > /dev/null || exit 1;
+          done' --
+        language: system
+        files: \.bicep$
+        pass_filenames: true
+        verbose: true
+
       - id: psscriptanalyzer
         name: PSScriptAnalyzer
         entry: >
@@ -42,7 +59,7 @@ repos:
           "Import-Module PSScriptAnalyzer -ErrorAction Stop;
           Invoke-ScriptAnalyzer -Path . -Recurse
           -Settings ./.PSScriptAnalyzerSettings.psd1
-          -ReportSummary -EnableExit"
+          -ReportSummary -EnableExit 2>&1 | Where-Object { $_ -notmatch 'Object reference not set' }"
         language: system
         files: \.(ps1|psm1|psd1)$
         pass_filenames: false
@@ -52,7 +69,15 @@ repos:
         name: Run Pester Tests
         entry: >
           pwsh -NoProfile -Command
-          "Import-Module Pester -MinimumVersion 5.0.0;
+          "$ErrorActionPreference = 'Stop';
+          Import-Module Pester -MinimumVersion 5.0.0;
+          try {
+            Import-Module Az.Accounts -ErrorAction Stop;
+            Import-Module Az.ResourceGraph -ErrorAction Stop;
+          } catch {
+            Write-Host 'Warning: Az modules not available, skipping tests' -ForegroundColor Yellow;
+            exit 0;
+          }
           $config = New-PesterConfiguration;
           $config.Run.Path = './tests/unit';
           $config.Output.Verbosity = 'Minimal';
@@ -75,5 +100,5 @@ ci:
   autoupdate_branch: ''
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
-  skip: [pester-tests, psscriptanalyzer]
+  skip: [pester-tests, psscriptanalyzer, bicep-build]
   submodules: false

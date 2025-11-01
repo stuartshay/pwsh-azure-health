@@ -52,6 +52,9 @@
     },
     "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
       "version": "4"
+    },
+    "ghcr.io/devcontainers-extra/features/actionlint:1": {
+      "version": "latest"
     }
   },
   "customizations": {

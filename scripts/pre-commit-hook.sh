@@ -73,6 +73,50 @@ for file in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.json$
 done
 print_status $JSON_VALID "JSON validation"
 
+# Check Bicep files
+echo ""
+echo "🔧 Validating Bicep files..."
+BICEP_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.bicep$' || true)
+BICEP_VALID=0
+if [ ! -z "$BICEP_FILES" ]; then
+    if command -v az > /dev/null 2>&1; then
+        for file in $BICEP_FILES; do
+            if [ -f "$file" ]; then
+                echo "  Validating $file..."
+                if ! az bicep build --file "$file" --stdout > /dev/null 2>&1; then
+                    echo -e "${RED}✗${NC} Invalid Bicep: $file"
+                    BICEP_VALID=1
+                fi
+            fi
+        done
+    else
+        echo -e "${YELLOW}⚠${NC} Azure CLI not installed, skipping Bicep validation"
+    fi
+fi
+print_status $BICEP_VALID "Bicep validation"
+
+# Check GitHub Actions workflow files
+echo ""
+echo "⚙️  Validating GitHub Actions workflows..."
+WORKFLOW_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\.github/workflows/.*\.yml$' || true)
+WORKFLOW_VALID=0
+if [ ! -z "$WORKFLOW_FILES" ]; then
+    if command -v actionlint > /dev/null 2>&1; then
+        for file in $WORKFLOW_FILES; do
+            if [ -f "$file" ]; then
+                echo "  Validating $file..."
+                if ! actionlint "$file" > /dev/null 2>&1; then
+                    echo -e "${RED}✗${NC} Invalid workflow: $file"
+                    WORKFLOW_VALID=1
+                fi
+            fi
+        done
+    else
+        echo -e "${YELLOW}⚠${NC} actionlint not installed, skipping workflow validation"
+    fi
+fi
+print_status $WORKFLOW_VALID "GitHub Actions validation"
+
 # Check for trailing whitespace and fix it
 echo ""
 echo "🧹 Checking for trailing whitespace..."

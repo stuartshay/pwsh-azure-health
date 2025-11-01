@@ -1,0 +1,143 @@
+name: Infrastructure What-If
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/infrastructure-*.yml'
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  whatif:
+    name: Bicep What-If Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run What-If for Dev environment
+        id: whatif_dev
+        continue-on-error: true
+        run: |
+          RESOURCE_GROUP="rg-azure-health-dev"
+
+          # Create resource group if it doesn't exist (for what-if to work)
+          if ! az group exists --name $RESOURCE_GROUP > /dev/null 2>&1; then
+            echo "Creating resource group for what-if: $RESOURCE_GROUP"
+            az group create --name $RESOURCE_GROUP --location eastus --tags environment=dev
+          fi
+
+          echo "Running what-if for Dev environment..."
+          whatif_output=$(az deployment group what-if \
+            --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+            --resource-group $RESOURCE_GROUP \
+            --template-file infrastructure/main.bicep \
+            --parameters infrastructure/main.bicepparam \
+            --parameters environment=dev \
+            --result-format FullResourcePayloads 2>&1 || true)
+
+          # Save output to file for comment
+          echo "$whatif_output" > /tmp/whatif-dev.txt
+
+          echo "## Dev Environment What-If" >> /tmp/whatif-summary.md
+          echo '```' >> /tmp/whatif-summary.md
+          echo "$whatif_output" >> /tmp/whatif-summary.md
+          echo '```' >> /tmp/whatif-summary.md
+          echo "" >> /tmp/whatif-summary.md
+
+      - name: Run What-If for Prod environment
+        id: whatif_prod
+        continue-on-error: true
+        run: |
+          RESOURCE_GROUP="rg-azure-health-prod"
+
+          # Create resource group if it doesn't exist (for what-if to work)
+          if ! az group exists --name $RESOURCE_GROUP > /dev/null 2>&1; then
+            echo "Creating resource group for what-if: $RESOURCE_GROUP"
+            az group create --name $RESOURCE_GROUP --location eastus --tags environment=prod
+          fi
+
+          echo "Running what-if for Prod environment..."
+          whatif_output=$(az deployment group what-if \
+            --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+            --resource-group $RESOURCE_GROUP \
+            --template-file infrastructure/main.bicep \
+            --parameters infrastructure/main.bicepparam \
+            --parameters environment=prod \
+            --result-format FullResourcePayloads 2>&1 || true)
+
+          # Save output to file for comment
+          echo "$whatif_output" > /tmp/whatif-prod.txt
+
+          echo "## Prod Environment What-If" >> /tmp/whatif-summary.md
+          echo '```' >> /tmp/whatif-summary.md
+          echo "$whatif_output" >> /tmp/whatif-summary.md
+          echo '```' >> /tmp/whatif-summary.md
+
+      - name: Comment PR with What-If results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read the what-if summary
+            let summary = '';
+            try {
+              summary = fs.readFileSync('/tmp/whatif-summary.md', 'utf8');
+            } catch (error) {
+              summary = '⚠️ Could not generate what-if preview. Check workflow logs for details.';
+            }
+
+            const body = `## 🔍 Infrastructure What-If Preview
+
+            This PR modifies infrastructure files. Here's a preview of what would change when deployed:
+
+            ${summary}
+
+            ---
+            <sub>💡 This preview shows potential changes to both **dev** and **prod**
+            environments based on the current Bicep templates.</sub>
+            `;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Infrastructure What-If Preview')
+            );
+
+            // Update or create comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

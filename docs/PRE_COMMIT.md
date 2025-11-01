@@ -54,6 +54,10 @@ pre-commit install --hook-type pre-push
 ### YAML Linting
 - **yamllint**: Advanced YAML validation with custom rules
 
+### Bicep and Infrastructure
+- **actionlint**: Validates GitHub Actions workflow files for syntax and best practices
+- **Bicep Build Validation**: Validates Bicep infrastructure templates using `az bicep build`
+
 ### PowerShell Specific
 - **PSScriptAnalyzer**: Lints PowerShell code for best practices and errors
 - **Pester Tests**: Runs unit tests before pushing (pre-push hook only)
@@ -76,6 +80,8 @@ Run a specific hook:
 ```bash
 pre-commit run trailing-whitespace --all-files
 pre-commit run psscriptanalyzer --all-files
+pre-commit run bicep-build --all-files
+pre-commit run actionlint --all-files
 ```
 
 Run hooks on staged files only:
@@ -95,7 +101,7 @@ git commit --no-verify -m "Emergency fix"
 SKIP=psscriptanalyzer git commit -m "WIP: work in progress"
 
 # Skip multiple hooks
-SKIP=psscriptanalyzer,pester-tests git commit -m "WIP"
+SKIP=psscriptanalyzer,pester-tests,bicep-build git commit -m "WIP"
 ```
 
 ### Updating Hooks
@@ -144,6 +150,8 @@ Ensure the required tools are installed:
 - PowerShell: `pwsh --version`
 - Python: `python3 --version`
 - Pester: `pwsh -Command "Get-Module -ListAvailable Pester"`
+- Azure CLI: `az --version`
+- actionlint: `actionlint --version`
 
 ### PSScriptAnalyzer Issues
 
@@ -157,6 +165,20 @@ pwsh -Command "Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./.PSScriptAnaly
 Run tests manually to debug:
 ```bash
 pwsh -Command "Import-Module Pester; Invoke-Pester -Path ./tests/unit -Output Detailed"
+```
+
+### Bicep Validation Issues
+
+Run Bicep build manually to see detailed errors:
+```bash
+az bicep build --file infrastructure/main.bicep
+```
+
+### GitHub Actions Workflow Issues
+
+Run actionlint manually to see detailed output:
+```bash
+actionlint .github/workflows/*.yml
 ```
 
 ### Reset Hooks
