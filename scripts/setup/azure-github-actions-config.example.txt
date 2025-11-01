@@ -1,0 +1,37 @@
+# Example GitHub Actions Azure Configuration
+# This is a sample output from setup-github-actions-azure.sh
+
+GitHub Actions Azure Configuration
+===================================
+Generated: Wed Nov  1 15:00:00 UTC 2025
+
+Azure Configuration:
+  Subscription ID: 12345678-1234-1234-1234-123456789abc
+  Tenant ID: 87654321-4321-4321-4321-cba987654321
+  Application ID: abcdef12-3456-7890-abcd-ef1234567890
+  Application Name: github-pwsh-azure-health
+  Permission Scope: subscription
+
+GitHub Configuration:
+  Organization: stuartshay
+  Repository: pwsh-azure-health
+
+GitHub Secrets (add these to your repository):
+  AZURE_CLIENT_ID: abcdef12-3456-7890-abcd-ef1234567890
+  AZURE_TENANT_ID: 87654321-4321-4321-4321-cba987654321
+  AZURE_SUBSCRIPTION_ID: 12345678-1234-1234-1234-123456789abc
+  AZURE_RESOURCE_GROUP: rg-azure-health-prod (for ci.yml)
+  FUNCTION_APP_NAME: <your-function-app-name> (for ci.yml)
+
+Secrets URL: https://github.com/stuartshay/pwsh-azure-health/settings/secrets/actions
+
+Documentation: docs/GITHUB_ACTIONS_SETUP.md
+
+---
+IMPORTANT SECURITY NOTES:
+- This file contains sensitive information
+- Do NOT commit this file to Git
+- Keep this file secure
+- The Application ID (Client ID) is considered sensitive
+- Only share with authorized team members
+---
