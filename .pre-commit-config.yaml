@@ -40,11 +40,23 @@ repos:
 
   - repo: local
     hooks:
+      - id: bicep-lint
+        name: Bicep Linter
+        entry: >
+          bash -c 'for file in "$@"; do
+          echo "Linting $file...";
+          az bicep lint --file "$file" --diagnostics-format sarif > /dev/null || exit 1;
+          done' --
+        language: system
+        files: \.bicep$
+        pass_filenames: true
+        verbose: true
+
       - id: bicep-build
         name: Bicep Build Validation
         entry: >
           bash -c 'for file in "$@"; do
-          echo "Validating $file...";
+          echo "Building $file...";
           az bicep build --file "$file" --stdout > /dev/null || exit 1;
           done' --
         language: system
@@ -100,5 +112,5 @@ ci:
   autoupdate_branch: ''
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
-  skip: [pester-tests, psscriptanalyzer, bicep-build]
+  skip: [pester-tests, psscriptanalyzer, bicep-lint, bicep-build]
   submodules: false
