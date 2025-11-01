@@ -51,7 +51,7 @@ repos:
         entry: >
           bash -c 'for file in "$@"; do
           echo "Linting $file...";
-          az bicep lint --file "$file" --diagnostics-format sarif > /dev/null || exit 1;
+          az bicep lint --file "$file" || exit 1;
           done' --
         language: system
         files: \.bicep$
