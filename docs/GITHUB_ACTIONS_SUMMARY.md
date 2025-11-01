@@ -96,15 +96,15 @@ Once configured, these workflows will work automatically:
    ```bash
    # Create a test branch
    git checkout -b test-github-actions
-   
+
    # Make a small change to infrastructure
    echo "# Test change" >> infrastructure/README.md
-   
+
    # Commit and push
    git add infrastructure/README.md
    git commit -m "Test: trigger infrastructure-whatif workflow"
    git push origin test-github-actions
-   
+
    # Create a PR and check the workflow runs
    ```
 

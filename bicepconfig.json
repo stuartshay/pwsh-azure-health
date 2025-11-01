@@ -10,9 +10,6 @@
         "max-outputs": {
           "level": "warning"
         },
-        "max-parameters": {
-          "level": "warning"
-        },
         "max-resources": {
           "level": "warning"
         },

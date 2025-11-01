@@ -289,7 +289,7 @@ The configured service principal has:
 
 **Cause:** Insufficient Azure permissions.
 
-**Solution:** 
+**Solution:**
 1. Verify role assignment: `az role assignment list --assignee "$APP_ID"`
 2. Ensure the service principal has Contributor role
 3. Check the scope matches where you're trying to create resources
@@ -298,7 +298,7 @@ The configured service principal has:
 
 **Cause:** Using resource group-level permissions but group doesn't exist.
 
-**Solution:** 
+**Solution:**
 1. Create the resource group manually: `az group create --name <name> --location eastus`
 2. Or grant subscription-level Contributor role
 

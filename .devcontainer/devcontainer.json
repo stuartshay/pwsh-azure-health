@@ -69,7 +69,8 @@
         "azurite.azurite",
         "ms-azuretools.vscode-azurestorage",
         "github.copilot",
-        "saoudrizwan.claude-dev"
+        "saoudrizwan.claude-dev",
+        "openai.chatgpt"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "pwsh",
@@ -79,7 +80,7 @@
         "files.trimTrailingWhitespace": true,
         "azurite.location": "${workspaceFolder}/.azurite",
         "azurite.silent": true,
-        "azurite.debug": "${workspaceFolder}/.azurite/debug.log"
+        "azurite.debug": false
       }
     }
   },
