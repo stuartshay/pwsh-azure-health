@@ -303,4 +303,26 @@ For more details, see [`.github/agents/README.md`](.github/agents/README.md).
 
 ## Deployment
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for detailed deployment instructions.
+### GitHub Actions Setup
+
+To enable automated deployments and infrastructure management via GitHub Actions, you need to configure Azure authentication. We provide an automated setup script:
+
+```bash
+# Run the setup script
+./scripts/setup/setup-github-actions-azure.sh
+
+# Or with custom options
+./scripts/setup/setup-github-actions-azure.sh --scope resourcegroup
+```
+
+The script will:
+- Create Azure AD application with federated credentials
+- Configure OIDC authentication for GitHub Actions
+- Assign necessary Azure permissions
+- Display GitHub secrets that need to be added
+
+📖 **See [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md) for detailed instructions**
+
+### Manual Deployment
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for detailed deployment instructions using Azure CLI or VS Code.
