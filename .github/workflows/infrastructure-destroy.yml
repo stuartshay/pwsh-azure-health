@@ -1,0 +1,98 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        default: 'dev'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  destroy:
+    name: Destroy ${{ github.event.inputs.environment }} infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment variables
+        run: |
+          echo "RESOURCE_GROUP=rg-azure-health-${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+
+      - name: Check if resource group exists
+        id: check_rg
+        run: |
+          if az group exists --name $RESOURCE_GROUP > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Resource group exists: $RESOURCE_GROUP"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Resource group does not exist: $RESOURCE_GROUP"
+          fi
+
+      - name: List resources to be deleted
+        if: steps.check_rg.outputs.exists == 'true'
+        run: |
+          echo "### Resources to be Deleted" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** $RESOURCE_GROUP" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "Listing all resources in resource group: $RESOURCE_GROUP"
+          az resource list \
+            --resource-group $RESOURCE_GROUP \
+            --output table
+
+          # Add resources to summary
+          echo "#### Resources" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          az resource list \
+            --resource-group $RESOURCE_GROUP \
+            --output table >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Delete resource group
+        if: steps.check_rg.outputs.exists == 'true'
+        run: |
+          echo "⚠️ Deleting resource group: $RESOURCE_GROUP"
+          echo "This will delete all resources in the resource group..."
+
+          az group delete \
+            --name $RESOURCE_GROUP \
+            --yes \
+            --no-wait
+
+          echo "✅ Resource group deletion initiated: $RESOURCE_GROUP"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Resource group deletion initiated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Note: Deletion is asynchronous and may take several minutes to complete." >> $GITHUB_STEP_SUMMARY
+
+      - name: Skip deletion
+        if: steps.check_rg.outputs.exists == 'false'
+        run: |
+          echo "No action needed - resource group does not exist"
+          echo "### Destruction Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ℹ️ Resource group \`$RESOURCE_GROUP\` does not exist" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No resources to delete." >> $GITHUB_STEP_SUMMARY

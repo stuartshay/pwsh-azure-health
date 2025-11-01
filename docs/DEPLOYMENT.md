@@ -141,17 +141,156 @@ func azure functionapp publish $FUNCTION_APP --script-root src
 
 ### Option 3: GitHub Actions (CI/CD)
 
-The repository includes `.github/workflows/ci.yml` which runs PSScriptAnalyzer, Pester unit tests, and deploys the function app using OIDC. To enable the workflow:
+The repository includes GitHub Actions workflows for infrastructure deployment and CI/CD:
 
-1. Create an Azure AD application with federated credentials for your GitHub repository (Azure portal → Entra ID → App registrations → *Your app* → Certificates & secrets → Federated credentials).
-2. Grant the app permissions to deploy (e.g. `Website Contributor` on the Function App resource group and `Storage Blob Data Contributor` on the storage account if needed).
-3. In GitHub repository settings add the following secrets/variables:
-   - `AZURE_CLIENT_ID` – The application (client) ID from Azure AD.
-   - `AZURE_TENANT_ID` – The tenant ID.
-   - `AZURE_SUBSCRIPTION_ID` – Subscription used for deployment.
-   - `AZURE_RESOURCE_GROUP` – Resource group containing the Function App.
-   - `FUNCTION_APP_NAME` – Name of the Function App instance.
-4. Push to `master` to execute linting, tests, and deployment.
+#### Infrastructure Workflows
+
+1. **`infrastructure-deploy.yml`** - Deploy infrastructure using Bicep templates
+   - Manually triggered via workflow dispatch
+   - Select environment (dev or prod)
+   - Creates resource group `rg-azure-health-{environment}`
+   - Deploys all Azure resources from `infrastructure/main.bicep`
+
+2. **`infrastructure-destroy.yml`** - Destroy infrastructure
+   - Manually triggered via workflow dispatch
+   - Deletes entire resource group and all resources
+   - Shows resource list before deletion
+
+3. **`infrastructure-whatif.yml`** - Preview infrastructure changes
+   - Automatically triggered on PRs modifying `infrastructure/**`
+   - Posts what-if comparison as PR comment
+   - Shows changes for both dev and prod environments
+
+#### CI/CD Workflow
+
+The `ci.yml` workflow runs PSScriptAnalyzer, Pester unit tests, and deploys the function code using OIDC.
+
+#### Setup GitHub Secrets for Azure OIDC Authentication
+
+To enable GitHub Actions workflows, configure Azure AD authentication using federated credentials (no secrets required):
+
+##### 1. Create Azure AD Application
+
+```bash
+# Create the application
+APP_NAME="github-pwsh-azure-health"
+az ad app create --display-name $APP_NAME
+
+# Get the application ID
+APP_ID=$(az ad app list --display-name $APP_NAME --query [0].appId -o tsv)
+echo "Application ID: $APP_ID"
+```
+
+##### 2. Create Federated Credentials
+
+Configure federated credentials for the GitHub repository:
+
+```bash
+# Get your tenant ID
+TENANT_ID=$(az account show --query tenantId -o tsv)
+
+# Create federated credential for main/master branch
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-pwsh-azure-health-master",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:stuartshay/pwsh-azure-health:ref:refs/heads/master",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+# Create federated credential for develop branch
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-pwsh-azure-health-develop",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:stuartshay/pwsh-azure-health:ref:refs/heads/develop",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+# Create federated credential for pull requests
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-pwsh-azure-health-pr",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:stuartshay/pwsh-azure-health:pull_request",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+```
+
+##### 3. Assign Azure Permissions
+
+Grant the application necessary permissions to deploy and manage resources:
+
+```bash
+# Get your subscription ID
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+# Create service principal for the app
+az ad sp create --id $APP_ID
+
+# Get the service principal object ID
+SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
+
+# Assign Contributor role at subscription level (for creating resource groups)
+az role assignment create \
+  --assignee $APP_ID \
+  --role "Contributor" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID"
+
+# Alternative: Assign roles at specific resource group level
+# For dev environment
+az role assignment create \
+  --assignee $APP_ID \
+  --role "Contributor" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/rg-azure-health-dev"
+
+# For prod environment
+az role assignment create \
+  --assignee $APP_ID \
+  --role "Contributor" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/rg-azure-health-prod"
+```
+
+##### 4. Configure GitHub Secrets
+
+Add the following secrets in your GitHub repository settings (Settings → Secrets and variables → Actions):
+
+| Secret Name | Value | Description |
+|-------------|-------|-------------|
+| `AZURE_CLIENT_ID` | `<APP_ID from step 1>` | Azure AD application (client) ID |
+| `AZURE_TENANT_ID` | `<TENANT_ID from step 2>` | Azure AD tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | `<SUBSCRIPTION_ID from step 3>` | Target Azure subscription ID |
+| `AZURE_RESOURCE_GROUP` | `rg-azure-health-prod` | Resource group for prod deployments (for ci.yml) |
+| `FUNCTION_APP_NAME` | `func-azure-health-prod` | Function app name (for ci.yml) |
+
+```bash
+# Display values for GitHub Secrets configuration
+echo "=== GitHub Secrets Configuration ==="
+echo "AZURE_CLIENT_ID: $APP_ID"
+echo "AZURE_TENANT_ID: $TENANT_ID"
+echo "AZURE_SUBSCRIPTION_ID: $SUBSCRIPTION_ID"
+echo ""
+echo "Add these to: https://github.com/stuartshay/pwsh-azure-health/settings/secrets/actions"
+```
+
+##### 5. Test the Workflows
+
+Once configured, you can:
+
+- **Deploy infrastructure**: Go to Actions → Deploy Infrastructure → Run workflow → Select environment
+- **Destroy infrastructure**: Go to Actions → Destroy Infrastructure → Run workflow → Select environment
+- **Preview changes**: Create a PR modifying files in `infrastructure/` to see what-if preview
+- **Deploy code**: Push to `master` branch to trigger linting, testing, and code deployment
+
+##### Security Notes
+
+- ✅ **No secrets stored**: OIDC uses federated credentials, no client secrets required
+- ✅ **Least privilege**: Grant only necessary permissions to the service principal
+- ✅ **Environment protection**: Configure environment protection rules in GitHub for prod deployments
+- ✅ **Audit trail**: All deployments are logged in Azure Activity Log and GitHub Actions history
 
 The workflow packages the `src/` directory and relies on `WEBSITE_RUN_FROM_PACKAGE=1` for zero-downtime deployments.
 

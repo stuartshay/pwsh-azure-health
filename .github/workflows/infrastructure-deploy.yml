@@ -1,0 +1,95 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        default: 'dev'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment variables
+        run: |
+          echo "RESOURCE_GROUP=rg-azure-health-${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          echo "LOCATION=eastus" >> $GITHUB_ENV
+
+      - name: Create resource group if not exists
+        run: |
+          if ! az group exists --name $RESOURCE_GROUP > /dev/null 2>&1; then
+            echo "Creating resource group: $RESOURCE_GROUP"
+            az group create \
+              --name $RESOURCE_GROUP \
+              --location $LOCATION \
+              --tags environment=${{ github.event.inputs.environment }} project=azure-health
+          else
+            echo "Resource group already exists: $RESOURCE_GROUP"
+          fi
+
+      - name: Deploy Bicep template
+        id: deploy
+        run: |
+          echo "Deploying infrastructure to ${{ github.event.inputs.environment }} environment..."
+
+          deployment_output=$(az deployment group create \
+            --name "infrastructure-deploy-$(date +%Y%m%d-%H%M%S)" \
+            --resource-group $RESOURCE_GROUP \
+            --template-file infrastructure/main.bicep \
+            --parameters infrastructure/main.bicepparam \
+            --parameters environment=${{ github.event.inputs.environment }} \
+            --output json)
+
+          echo "Deployment completed successfully!"
+
+          # Extract outputs
+          function_app_name=$(echo $deployment_output | jq -r '.properties.outputs.functionAppName.value')
+          storage_account_name=$(echo $deployment_output | jq -r '.properties.outputs.storageAccountName.value')
+          app_insights_name=$(echo $deployment_output | jq -r '.properties.outputs.applicationInsightsName.value')
+
+          echo "function_app_name=$function_app_name" >> $GITHUB_OUTPUT
+          echo "storage_account_name=$storage_account_name" >> $GITHUB_OUTPUT
+          echo "app_insights_name=$app_insights_name" >> $GITHUB_OUTPUT
+
+          # Display deployment information
+          echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** $RESOURCE_GROUP" >> $GITHUB_STEP_SUMMARY
+          echo "**Location:** $LOCATION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Deployed Resources" >> $GITHUB_STEP_SUMMARY
+          echo "- **Function App:** $function_app_name" >> $GITHUB_STEP_SUMMARY
+          echo "- **Storage Account:** $storage_account_name" >> $GITHUB_STEP_SUMMARY
+          echo "- **Application Insights:** $app_insights_name" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Function App URL:** https://$function_app_name.azurewebsites.net" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployed resources..."
+          az resource list \
+            --resource-group $RESOURCE_GROUP \
+            --output table

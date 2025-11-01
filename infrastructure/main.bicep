@@ -21,6 +21,9 @@ param timerSchedule string = '0 */15 * * * *'
 @description('Blob container name for caching Service Health payloads')
 param cacheContainerName string = 'servicehealth-cache'
 
+@description('Current date for tagging (automatically set)')
+param currentDate string = utcNow('yyyy-MM-dd')
+
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var storageAccountName = take('st${baseName}${environment}${uniqueSuffix}', 24)
@@ -33,7 +36,7 @@ var commonTags = {
   environment: environment
   project: 'azure-health-monitoring'
   managedBy: 'bicep'
-  createdDate: utcNow('yyyy-MM-dd')
+  createdDate: currentDate
 }
 
 // Storage Account for Function App
@@ -173,37 +176,13 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
   }
 }
 
-// Role Assignment: Reader (for Service Health queries)
-resource readerRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+// Role Assignments at subscription scope via module
+module subscriptionRoleAssignments 'modules/roleAssignments.bicep' = {
+  name: 'subscription-role-assignments'
   scope: subscription()
-  // Reader role
-  name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
-
-resource readerRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: subscription()
-  name: guid(subscription().id, functionApp.id, readerRoleDefinition.id)
-  properties: {
-    roleDefinitionId: readerRoleDefinition.id
+  params: {
     principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Role Assignment: Monitoring Reader
-resource monitoringReaderRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  // Monitoring Reader role
-  name: '43d0d8ad-25c7-4714-9337-8ba259a9fe05'
-}
-
-resource monitoringReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: subscription()
-  name: guid(subscription().id, functionApp.id, monitoringReaderRoleDefinition.id)
-  properties: {
-    roleDefinitionId: monitoringReaderRoleDefinition.id
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
+    subscriptionId: subscriptionId
   }
 }
 
