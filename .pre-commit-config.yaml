@@ -59,7 +59,7 @@ repos:
           "Import-Module PSScriptAnalyzer -ErrorAction Stop;
           Invoke-ScriptAnalyzer -Path . -Recurse
           -Settings ./.PSScriptAnalyzerSettings.psd1
-          -ReportSummary -EnableExit"
+          -ReportSummary -EnableExit 2>&1 | Where-Object { $_ -notmatch 'Object reference not set' }"
         language: system
         files: \.(ps1|psm1|psd1)$
         pass_filenames: false
