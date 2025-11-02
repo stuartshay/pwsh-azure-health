@@ -172,6 +172,16 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
       ]
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'
+          'https://ms.portal.azure.com'
+          'https://functions.azure.com'
+          'https://functions-staging.azure.com'
+          'https://functions-next.azure.com'
+        ]
+        supportCredentials: false
+      }
     }
   }
 }
@@ -184,6 +194,9 @@ resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-11-01' = {
     globalValidation: {
       requireAuthentication: true
       unauthenticatedClientAction: 'Return401'
+      excludedPaths: [
+        '/api/health'
+      ]
     }
     httpSettings: {
       requireHttps: true
