@@ -151,7 +151,7 @@ jobs:
               --location "$LOCATION" \
               --tags environment=${{ github.event.inputs.environment }} project=azure-health \
               --output none
-          
+
           # Verify resource group was created
           echo "🔍 Verifying resource group creation..."
           if ! az group show --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
@@ -187,7 +187,7 @@ jobs:
           # Extract outputs
           function_app_name=$(jq -r '.properties.outputs.functionAppName.value' /tmp/deployment-output.json)
           storage_account_name=$(jq -r '.properties.outputs.storageAccountName.value' /tmp/deployment-output.json)
-          app_insights_name=$(jq -r '.properties.outputs.applicationInsightsName.value' /tmp/deployment-output.json)
+          app_insights_name=$(jq -r '.properties.outputs.appInsightsName.value' /tmp/deployment-output.json)
 
           # Set outputs for next steps
           {
