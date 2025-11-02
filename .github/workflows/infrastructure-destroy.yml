@@ -16,6 +16,10 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  MAX_RETRY_ATTEMPTS: 5
+  RETRY_BASE_DELAY: 2
+
 jobs:
   destroy:
     name: Destroy ${{ github.event.inputs.environment }} infrastructure
@@ -31,6 +35,88 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup retry utilities
+        shell: bash
+        run: |
+          # Create retry function for Azure operations
+          cat > /tmp/retry-utils.sh << 'RETRY_EOF'
+          #!/bin/bash
+
+          # Retry function with exponential backoff for Azure operations
+          retry_azure_operation() {
+            local max_attempts=$1
+            shift
+            local description=$1
+            shift
+            local command=("$@")
+
+            local attempt=1
+            local delay=$RETRY_BASE_DELAY
+            local max_delay=32
+
+            echo "🔄 Starting: $description"
+
+            while [ $attempt -le $max_attempts ]; do
+              echo "  Attempt $attempt/$max_attempts..."
+
+              local output
+              local exit_code
+
+              set +e
+              output=$("${command[@]}" 2>&1)
+              exit_code=$?
+              set -e
+
+              if [ $exit_code -eq 0 ]; then
+                echo "$output"
+                echo "✅ Success: $description"
+                return 0
+              fi
+
+              if echo "$output" | grep -qE \
+                "(AuthorizationFailed|InvalidAuthenticationToken|Forbidden|InvalidResourceGroupName)"; then
+                echo "❌ Permanent failure detected: $description"
+                echo "$output" >&2
+                return $exit_code
+              fi
+
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ Failed after $max_attempts attempts: $description"
+                echo "$output" >&2
+                return $exit_code
+              fi
+
+              local error_type="Unknown error"
+              if echo "$output" | grep -qE "TooManyRequests|429"; then
+                error_type="Rate limit (429)"
+              elif echo "$output" | grep -qE "ServiceUnavailable|503"; then
+                error_type="Service unavailable (503)"
+              elif echo "$output" | grep -qE "GatewayTimeout|504"; then
+                error_type="Gateway timeout (504)"
+              elif echo "$output" | grep -qE "InternalServerError|500"; then
+                error_type="Internal server error (500)"
+              elif echo "$output" | grep -qE "Conflict|409"; then
+                error_type="Conflict (409)"
+              fi
+
+              echo "⚠️  $error_type - Retrying in ${delay}s..."
+              echo "    Error preview: $(echo "$output" | head -n 1)"
+
+              sleep $delay
+
+              delay=$((delay * 2))
+              if [ $delay -gt $max_delay ]; then
+                delay=$max_delay
+              fi
+
+              attempt=$((attempt + 1))
+            done
+          }
+          RETRY_EOF
+
+          chmod +x /tmp/retry-utils.sh
+          echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
 
       - name: Set environment variables
         run: |
@@ -75,14 +161,20 @@ jobs:
 
       - name: Delete resource group
         if: steps.check_rg.outputs.exists == 'true'
+        shell: bash
         run: |
+          source /tmp/retry-utils.sh
+
           echo "⚠️ Deleting resource group: $RESOURCE_GROUP"
           echo "This will delete all resources in the resource group..."
 
-          az group delete \
-            --name "$RESOURCE_GROUP" \
-            --yes \
-            --no-wait
+          retry_azure_operation \
+            "$MAX_RETRY_ATTEMPTS" \
+            "Delete resource group $RESOURCE_GROUP" \
+            az group delete \
+              --name "$RESOURCE_GROUP" \
+              --yes \
+              --no-wait
 
           echo "✅ Resource group deletion initiated: $RESOURCE_GROUP"
           {

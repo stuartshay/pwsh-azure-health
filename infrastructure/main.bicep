@@ -176,6 +176,25 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   }
 }
 
+// Enable Easy Auth / Microsoft Entra ID authentication (required by Azure Policy)
+resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-04-01' = {
+  name: 'authsettingsV2'
+  parent: functionApp
+  properties: {
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'Return401'
+    }
+    httpSettings: {
+      requireHttps: true
+    }
+    platform: {
+      enabled: true
+      runtimeVersion: '~1'
+    }
+  }
+}
+
 // Role Assignments at subscription scope via module
 module subscriptionRoleAssignments 'modules/roleAssignments.bicep' = {
   name: 'subscription-role-assignments'
