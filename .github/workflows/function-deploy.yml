@@ -222,6 +222,7 @@ jobs:
           echo "✅ Deployment completed successfully!"
 
       - name: Verify deployment
+        id: verify-deployment
         shell: bash
         run: |
           source /tmp/retry-utils.sh
@@ -246,6 +247,9 @@ jobs:
           echo "   Name: $FUNCTION_APP_NAME"
           echo "   State: $app_state"
           echo "   URL: https://$default_hostname"
+
+          # Export for use in subsequent steps
+          echo "function_url=https://$default_hostname" >> "$GITHUB_OUTPUT"
 
           # List deployed functions
           echo ""
@@ -272,27 +276,27 @@ jobs:
             echo "✅ Deployment completed successfully!"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run smoke tests
+      - name: Wait for Function App to be ready
+        uses: mydea/action-wait-for-api@v1
+        with:
+          url: ${{ steps.verify-deployment.outputs.function_url }}
+          timeout: 300
+          interval: 10
+          expected-status: 200,401,403
+
+      - name: Report smoke test results
         if: success()
         shell: bash
-        continue-on-error: true
         run: |
-          FUNCTION_APP_NAME="${{ steps.get-function-app.outputs.function_app_name }}"
+          FUNCTION_URL="${{ steps.verify-deployment.outputs.function_url }}"
 
-          echo "🧪 Running basic smoke tests..."
+          echo "✅ Smoke test passed!"
+          echo "   Function App is healthy and responding"
+          echo "   Endpoint: $FUNCTION_URL"
 
-          # Get function app URL
-          app_url=$(az functionapp show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
-            --query "defaultHostName" \
-            --output tsv)
-
-          echo "Testing Function App endpoint: https://$app_url"
-
-          # Basic health check - just verify the app responds
-          if curl -f -s -o /dev/null -w "%{http_code}" "https://$app_url" | grep -q "200\|401\|403"; then
-            echo "✅ Function App is responding"
-          else
-            echo "⚠️  Function App may still be initializing"
-          fi
+          {
+            echo "### Smoke Test Results"
+            echo "✅ Function App is healthy and responding"
+            echo "- **URL:** $FUNCTION_URL"
+            echo "- **Validation:** Function App responded with expected status code"
+          } >> "$GITHUB_STEP_SUMMARY"
