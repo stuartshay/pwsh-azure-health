@@ -169,6 +169,10 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: '1'
         }
+        {
+          name: 'WEBSITE_AUTH_ENABLED'
+          value: 'true'
+        }
       ]
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
