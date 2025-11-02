@@ -284,7 +284,7 @@ jobs:
 
           FUNCTION_APP_NAME="${{ steps.get-function-app.outputs.function_app_name }}"
           FUNCTION_URL="${{ steps.verify-deployment.outputs.function_url }}"
-          HEALTH_ENDPOINT="https://${FUNCTION_URL#https://}/api/health"
+          HEALTH_ENDPOINT="${FUNCTION_URL}/api/health"
 
           echo "🏥 Performing health check on Function App..."
           echo "   Function App: $FUNCTION_APP_NAME"
