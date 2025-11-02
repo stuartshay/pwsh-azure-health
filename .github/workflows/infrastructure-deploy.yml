@@ -135,8 +135,8 @@ jobs:
         run: |
           source /tmp/retry-utils.sh
 
-          # Check if resource group exists
-          if az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
+          # Check if resource group exists (use az group show instead of exists for reliability)
+          if az group show --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
             echo "✅ Resource group already exists: $RESOURCE_GROUP"
             exit 0
           fi
@@ -151,6 +151,14 @@ jobs:
               --location "$LOCATION" \
               --tags environment=${{ github.event.inputs.environment }} project=azure-health \
               --output none
+          
+          # Verify resource group was created
+          echo "🔍 Verifying resource group creation..."
+          if ! az group show --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
+            echo "❌ Resource group verification failed: $RESOURCE_GROUP was not created"
+            exit 1
+          fi
+          echo "✅ Resource group verified: $RESOURCE_GROUP"
 
       - name: Deploy Bicep template
         id: deploy
