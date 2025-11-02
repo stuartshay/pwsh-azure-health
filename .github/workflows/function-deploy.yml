@@ -222,6 +222,7 @@ jobs:
           echo "✅ Deployment completed successfully!"
 
       - name: Verify deployment
+        id: verify-deployment
         shell: bash
         run: |
           source /tmp/retry-utils.sh
@@ -246,6 +247,9 @@ jobs:
           echo "   Name: $FUNCTION_APP_NAME"
           echo "   State: $app_state"
           echo "   URL: https://$default_hostname"
+
+          # Export for use in subsequent steps
+          echo "function_url=https://$default_hostname" >> "$GITHUB_OUTPUT"
 
           # List deployed functions
           echo ""
@@ -272,27 +276,85 @@ jobs:
             echo "✅ Deployment completed successfully!"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run smoke tests
-        if: success()
+      - name: Verify Function App Health with Azure CLI
+        id: health-check
         shell: bash
-        continue-on-error: true
         run: |
+          source /tmp/retry-utils.sh
+
           FUNCTION_APP_NAME="${{ steps.get-function-app.outputs.function_app_name }}"
+          FUNCTION_URL="${{ steps.verify-deployment.outputs.function_url }}"
+          HEALTH_ENDPOINT="${FUNCTION_URL}/api/health"
 
-          echo "🧪 Running basic smoke tests..."
+          echo "🏥 Performing health check on Function App..."
+          echo "   Function App: $FUNCTION_APP_NAME"
+          echo "   Health Endpoint: $HEALTH_ENDPOINT"
 
-          # Get function app URL
-          app_url=$(az functionapp show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
-            --query "defaultHostName" \
-            --output tsv)
+          # Wait for function app to be ready using Azure CLI
+          echo "⏳ Waiting for Function App to be ready (up to 5 minutes)..."
 
-          echo "Testing Function App endpoint: https://$app_url"
+          max_attempts=30
+          attempt=1
+          sleep_interval=10
 
-          # Basic health check - just verify the app responds
-          if curl -f -s -o /dev/null -w "%{http_code}" "https://$app_url" | grep -q "200\|401\|403"; then
-            echo "✅ Function App is responding"
-          else
-            echo "⚠️  Function App may still be initializing"
-          fi
+          while [ $attempt -le $max_attempts ]; do
+            echo "  Attempt $attempt/$max_attempts..."
+
+            # Check function app state via Azure CLI
+            app_state=$(retry_azure_operation \
+              "$MAX_RETRY_ATTEMPTS" \
+              "Get Function App state" \
+              az functionapp show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$FUNCTION_APP_NAME" \
+                --query "state" \
+                --output tsv 2>/dev/null || echo "Unknown")
+
+            if [ "$app_state" = "Running" ]; then
+              echo "✅ Function App is in Running state"
+
+              # Try to call the health endpoint
+              echo "🔍 Testing health endpoint..."
+
+              # Use curl with timeout to test the endpoint
+              if response=$(curl -f -s -m 10 "$HEALTH_ENDPOINT" 2>&1); then
+                echo "✅ Health endpoint responded successfully"
+                echo "$response" | jq '.' 2>/dev/null || echo "$response"
+
+                # Parse health status if JSON
+                health_status=$(echo "$response" | jq -r '.status' 2>/dev/null || echo "unknown")
+
+                if [ "$health_status" = "healthy" ]; then
+                  echo "✅ Function App health check passed!"
+                  echo "health_status=healthy" >> "$GITHUB_OUTPUT"
+                  echo "health_endpoint=$HEALTH_ENDPOINT" >> "$GITHUB_OUTPUT"
+                  break
+                else
+                  echo "⚠️  Health status: $health_status"
+                fi
+              else
+                echo "⚠️  Health endpoint not yet accessible: $response"
+              fi
+            else
+              echo "⏳ Function App state: $app_state"
+            fi
+
+            if [ $attempt -eq $max_attempts ]; then
+              echo "❌ Health check failed after $max_attempts attempts"
+              echo "   This may indicate a deployment issue or slow startup"
+              exit 1
+            fi
+
+            echo "   Waiting ${sleep_interval}s before next attempt..."
+            sleep $sleep_interval
+            attempt=$((attempt + 1))
+          done
+
+          {
+            echo "### Health Check Results"
+            echo "✅ Function App health check passed"
+            echo "- **Function App:** $FUNCTION_APP_NAME"
+            echo "- **Health Endpoint:** $HEALTH_ENDPOINT"
+            echo "- **Status:** healthy"
+            echo "- **Verification Method:** Azure CLI + HTTP health endpoint"
+          } >> "$GITHUB_STEP_SUMMARY"
