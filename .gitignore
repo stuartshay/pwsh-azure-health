@@ -93,3 +93,4 @@ Thumbs.db
 
 # Azure GitHub Actions configuration (contains sensitive IDs)
 azure-github-actions-config.txt
+actionlint

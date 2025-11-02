@@ -272,14 +272,11 @@ jobs:
             echo "✅ Deployment completed successfully!"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run smoke tests
-        if: success()
+      - name: Get Function App URL
+        id: get-function-url
         shell: bash
-        continue-on-error: true
         run: |
           FUNCTION_APP_NAME="${{ steps.get-function-app.outputs.function_app_name }}"
-
-          echo "🧪 Running basic smoke tests..."
 
           # Get function app URL
           app_url=$(az functionapp show \
@@ -288,11 +285,42 @@ jobs:
             --query "defaultHostName" \
             --output tsv)
 
-          echo "Testing Function App endpoint: https://$app_url"
+          echo "function_url=https://$app_url" >> "$GITHUB_OUTPUT"
+          echo "📍 Function App URL: https://$app_url"
 
-          # Basic health check - just verify the app responds
-          if curl -f -s -o /dev/null -w "%{http_code}" "https://$app_url" | grep -q "200\|401\|403"; then
-            echo "✅ Function App is responding"
+      - name: Wait for Function App to be ready
+        uses: mydea/action-wait-for-api@v1
+        with:
+          url: ${{ steps.get-function-url.outputs.function_url }}
+          timeout: 300
+          interval: 10
+          expected-response-field: ''
+          expected-status: 200,401,403
+
+      - name: Run smoke tests
+        if: success()
+        shell: bash
+        run: |
+          FUNCTION_URL="${{ steps.get-function-url.outputs.function_url }}"
+
+          echo "🧪 Running smoke tests..."
+          echo "Testing Function App endpoint: $FUNCTION_URL"
+
+          # Verify the app responds with expected status codes
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_URL")
+
+          if echo "$http_code" | grep -qE "^(200|401|403)$"; then
+            echo "✅ Function App is responding with HTTP $http_code"
+            echo "   Status code indicates the app is running correctly"
           else
-            echo "⚠️  Function App may still be initializing"
+            echo "❌ Function App returned unexpected status: HTTP $http_code"
+            exit 1
           fi
+
+          echo ""
+          {
+            echo "### Smoke Test Results"
+            echo "✅ Function App is healthy and responding"
+            echo "- **URL:** $FUNCTION_URL"
+            echo "- **Status Code:** $http_code"
+          } >> "$GITHUB_STEP_SUMMARY"
