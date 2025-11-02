@@ -61,10 +61,10 @@ jobs:
             local delay=$RETRY_BASE_DELAY
             local max_delay=32
 
-            echo "🔄 Starting: $description"
+            echo "🔄 Starting: $description" >&2
 
             while [ $attempt -le $max_attempts ]; do
-              echo "  Attempt $attempt/$max_attempts..."
+              echo "  Attempt $attempt/$max_attempts..." >&2
 
               # Execute command and capture output
               local output
@@ -78,21 +78,21 @@ jobs:
               # Success
               if [ $exit_code -eq 0 ]; then
                 echo "$output"
-                echo "✅ Success: $description"
+                echo "✅ Success: $description" >&2
                 return 0
               fi
 
               # Check for permanent failures (don't retry)
               if echo "$output" | grep -qE \
                 "(AuthorizationFailed|InvalidAuthenticationToken|Forbidden|InvalidResourceGroupName)"; then
-                echo "❌ Permanent failure detected: $description"
+                echo "❌ Permanent failure detected: $description" >&2
                 echo "$output" >&2
                 return $exit_code
               fi
 
               # Last attempt failed
               if [ $attempt -eq $max_attempts ]; then
-                echo "❌ Failed after $max_attempts attempts: $description"
+                echo "❌ Failed after $max_attempts attempts: $description" >&2
                 echo "$output" >&2
                 return $exit_code
               fi
@@ -111,8 +111,8 @@ jobs:
                 error_type="Conflict (409)"
               fi
 
-              echo "⚠️  $error_type - Retrying in ${delay}s..."
-              echo "    Error preview: $(echo "$output" | head -n 1)"
+              echo "⚠️  $error_type - Retrying in ${delay}s..." >&2
+              echo "    Error preview: $(echo "$output" | head -n 1)" >&2
 
               sleep $delay
 
