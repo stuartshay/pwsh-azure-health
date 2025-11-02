@@ -83,6 +83,10 @@ __azurite_db*__.json
 .env
 .env.local
 
+# Function keys (sensitive)
+.keys/
+*.key
+
 # OS files
 .DS_Store
 Thumbs.db
