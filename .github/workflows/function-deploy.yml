@@ -294,33 +294,21 @@ jobs:
           url: ${{ steps.get-function-url.outputs.function_url }}
           timeout: 300
           interval: 10
-          expected-response-field: ''
           expected-status: 200,401,403
 
-      - name: Run smoke tests
+      - name: Report smoke test results
         if: success()
         shell: bash
         run: |
           FUNCTION_URL="${{ steps.get-function-url.outputs.function_url }}"
 
-          echo "🧪 Running smoke tests..."
-          echo "Testing Function App endpoint: $FUNCTION_URL"
+          echo "✅ Smoke test passed!"
+          echo "   Function App is healthy and responding"
+          echo "   Endpoint: $FUNCTION_URL"
 
-          # Verify the app responds with expected status codes
-          http_code=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_URL")
-
-          if echo "$http_code" | grep -qE "^(200|401|403)$"; then
-            echo "✅ Function App is responding with HTTP $http_code"
-            echo "   Status code indicates the app is running correctly"
-          else
-            echo "❌ Function App returned unexpected status: HTTP $http_code"
-            exit 1
-          fi
-
-          echo ""
           {
             echo "### Smoke Test Results"
             echo "✅ Function App is healthy and responding"
             echo "- **URL:** $FUNCTION_URL"
-            echo "- **Status Code:** $http_code"
+            echo "- **Validation:** Function App responded with expected status code"
           } >> "$GITHUB_STEP_SUMMARY"
