@@ -222,6 +222,7 @@ jobs:
           echo "✅ Deployment completed successfully!"
 
       - name: Verify deployment
+        id: verify-deployment
         shell: bash
         run: |
           source /tmp/retry-utils.sh
@@ -246,6 +247,9 @@ jobs:
           echo "   Name: $FUNCTION_APP_NAME"
           echo "   State: $app_state"
           echo "   URL: https://$default_hostname"
+
+          # Export for use in subsequent steps
+          echo "function_url=https://$default_hostname" >> "$GITHUB_OUTPUT"
 
           # List deployed functions
           echo ""
@@ -272,26 +276,10 @@ jobs:
             echo "✅ Deployment completed successfully!"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Get Function App URL
-        id: get-function-url
-        shell: bash
-        run: |
-          FUNCTION_APP_NAME="${{ steps.get-function-app.outputs.function_app_name }}"
-
-          # Get function app URL
-          app_url=$(az functionapp show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
-            --query "defaultHostName" \
-            --output tsv)
-
-          echo "function_url=https://$app_url" >> "$GITHUB_OUTPUT"
-          echo "📍 Function App URL: https://$app_url"
-
       - name: Wait for Function App to be ready
         uses: mydea/action-wait-for-api@v1
         with:
-          url: ${{ steps.get-function-url.outputs.function_url }}
+          url: ${{ steps.verify-deployment.outputs.function_url }}
           timeout: 300
           interval: 10
           expected-status: 200,401,403
@@ -300,7 +288,7 @@ jobs:
         if: success()
         shell: bash
         run: |
-          FUNCTION_URL="${{ steps.get-function-url.outputs.function_url }}"
+          FUNCTION_URL="${{ steps.verify-deployment.outputs.function_url }}"
 
           echo "✅ Smoke test passed!"
           echo "   Function App is healthy and responding"
