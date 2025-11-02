@@ -170,8 +170,8 @@ jobs:
 
           DEPLOYMENT_NAME="infrastructure-deploy-$(date +%Y%m%d-%H%M%S)"
 
-          # Deploy with retry logic
-          retry_azure_operation \
+          # Deploy with retry logic - capture output separately to avoid corrupting JSON
+          deployment_output=$(retry_azure_operation \
             "$MAX_RETRY_ATTEMPTS" \
             "Deploy Bicep template" \
             az deployment group create \
@@ -180,14 +180,14 @@ jobs:
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=${{ github.event.inputs.environment }} \
-              --output json > /tmp/deployment-output.json
+              --output json)
 
           echo "✅ Deployment completed successfully!"
 
-          # Extract outputs
-          function_app_name=$(jq -r '.properties.outputs.functionAppName.value' /tmp/deployment-output.json)
-          storage_account_name=$(jq -r '.properties.outputs.storageAccountName.value' /tmp/deployment-output.json)
-          app_insights_name=$(jq -r '.properties.outputs.appInsightsName.value' /tmp/deployment-output.json)
+          # Extract outputs from deployment
+          function_app_name=$(echo "$deployment_output" | jq -r '.properties.outputs.functionAppName.value')
+          storage_account_name=$(echo "$deployment_output" | jq -r '.properties.outputs.storageAccountName.value')
+          app_insights_name=$(echo "$deployment_output" | jq -r '.properties.outputs.appInsightsName.value')
 
           # Set outputs for next steps
           {
