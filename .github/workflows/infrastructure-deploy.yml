@@ -16,6 +16,10 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  MAX_RETRY_ATTEMPTS: 5
+  RETRY_BASE_DELAY: 2
+
 jobs:
   deploy:
     name: Deploy to ${{ github.event.inputs.environment }}
@@ -37,45 +41,154 @@ jobs:
           echo "RESOURCE_GROUP=rg-azure-health-${{ github.event.inputs.environment }}" >> "$GITHUB_ENV"
           echo "LOCATION=eastus" >> "$GITHUB_ENV"
 
-      - name: Create resource group if not exists
+      - name: Setup retry utilities
+        shell: bash
         run: |
-          if ! az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
-            echo "Creating resource group: $RESOURCE_GROUP"
+          # Create retry function for Azure operations
+          cat > /tmp/retry-utils.sh << 'RETRY_EOF'
+          #!/bin/bash
+
+          # Retry function with exponential backoff for Azure operations
+          # Usage: retry_azure_operation <max_attempts> <description> <command...>
+          retry_azure_operation() {
+            local max_attempts=$1
+            shift
+            local description=$1
+            shift
+            local command=("$@")
+
+            local attempt=1
+            local delay=$RETRY_BASE_DELAY
+            local max_delay=32
+
+            echo "🔄 Starting: $description"
+
+            while [ $attempt -le $max_attempts ]; do
+              echo "  Attempt $attempt/$max_attempts..."
+
+              # Execute command and capture output
+              local output
+              local exit_code
+
+              set +e  # Temporarily disable exit on error
+              output=$("${command[@]}" 2>&1)
+              exit_code=$?
+              set -e
+
+              # Success
+              if [ $exit_code -eq 0 ]; then
+                echo "$output"
+                echo "✅ Success: $description"
+                return 0
+              fi
+
+              # Check for permanent failures (don't retry)
+              if echo "$output" | grep -qE \
+                "(AuthorizationFailed|InvalidAuthenticationToken|Forbidden|InvalidResourceGroupName)"; then
+                echo "❌ Permanent failure detected: $description"
+                echo "$output" >&2
+                return $exit_code
+              fi
+
+              # Last attempt failed
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ Failed after $max_attempts attempts: $description"
+                echo "$output" >&2
+                return $exit_code
+              fi
+
+              # Check if it's a known transient error
+              local error_type="Unknown error"
+              if echo "$output" | grep -qE "TooManyRequests|429"; then
+                error_type="Rate limit (429)"
+              elif echo "$output" | grep -qE "ServiceUnavailable|503"; then
+                error_type="Service unavailable (503)"
+              elif echo "$output" | grep -qE "GatewayTimeout|504"; then
+                error_type="Gateway timeout (504)"
+              elif echo "$output" | grep -qE "InternalServerError|500"; then
+                error_type="Internal server error (500)"
+              elif echo "$output" | grep -qE "Conflict|409"; then
+                error_type="Conflict (409)"
+              fi
+
+              echo "⚠️  $error_type - Retrying in ${delay}s..."
+              echo "    Error preview: $(echo "$output" | head -n 1)"
+
+              sleep $delay
+
+              # Exponential backoff
+              delay=$((delay * 2))
+              if [ $delay -gt $max_delay ]; then
+                delay=$max_delay
+              fi
+
+              attempt=$((attempt + 1))
+            done
+          }
+          RETRY_EOF
+
+          chmod +x /tmp/retry-utils.sh
+          echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
+
+      - name: Create resource group if not exists
+        shell: bash
+        run: |
+          source /tmp/retry-utils.sh
+
+          # Check if resource group exists
+          if az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
+            echo "✅ Resource group already exists: $RESOURCE_GROUP"
+            exit 0
+          fi
+
+          # Create resource group with retry logic
+          echo "📦 Creating resource group: $RESOURCE_GROUP"
+          retry_azure_operation \
+            "$MAX_RETRY_ATTEMPTS" \
+            "Create resource group $RESOURCE_GROUP" \
             az group create \
               --name "$RESOURCE_GROUP" \
               --location "$LOCATION" \
-              --tags environment=${{ github.event.inputs.environment }} project=azure-health
-          else
-            echo "Resource group already exists: $RESOURCE_GROUP"
-          fi
+              --tags environment=${{ github.event.inputs.environment }} project=azure-health \
+              --output none
 
       - name: Deploy Bicep template
         id: deploy
+        shell: bash
         run: |
-          echo "Deploying infrastructure to ${{ github.event.inputs.environment }} environment..."
+          source /tmp/retry-utils.sh
 
-          deployment_output=$(az deployment group create \
-            --name "infrastructure-deploy-$(date +%Y%m%d-%H%M%S)" \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file infrastructure/main.bicep \
-            --parameters infrastructure/main.bicepparam \
-            --parameters environment=${{ github.event.inputs.environment }} \
-            --output json)
+          echo "🚀 Deploying infrastructure to ${{ github.event.inputs.environment }} environment..."
 
-          echo "Deployment completed successfully!"
+          DEPLOYMENT_NAME="infrastructure-deploy-$(date +%Y%m%d-%H%M%S)"
+
+          # Deploy with retry logic
+          retry_azure_operation \
+            "$MAX_RETRY_ATTEMPTS" \
+            "Deploy Bicep template" \
+            az deployment group create \
+              --name "$DEPLOYMENT_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=${{ github.event.inputs.environment }} \
+              --output json > /tmp/deployment-output.json
+
+          echo "✅ Deployment completed successfully!"
 
           # Extract outputs
-          function_app_name=$(echo "$deployment_output" | jq -r '.properties.outputs.functionAppName.value')
-          storage_account_name=$(echo "$deployment_output" | jq -r '.properties.outputs.storageAccountName.value')
-          app_insights_name=$(echo "$deployment_output" | jq -r '.properties.outputs.applicationInsightsName.value')
+          function_app_name=$(jq -r '.properties.outputs.functionAppName.value' /tmp/deployment-output.json)
+          storage_account_name=$(jq -r '.properties.outputs.storageAccountName.value' /tmp/deployment-output.json)
+          app_insights_name=$(jq -r '.properties.outputs.applicationInsightsName.value' /tmp/deployment-output.json)
 
+          # Set outputs for next steps
           {
             echo "function_app_name=$function_app_name"
             echo "storage_account_name=$storage_account_name"
             echo "app_insights_name=$app_insights_name"
           } >> "$GITHUB_OUTPUT"
 
-          # Display deployment information
+          # Display deployment summary
           {
             echo "### Deployment Summary"
             echo ""
@@ -89,11 +202,24 @@ jobs:
             echo "- **Application Insights:** $app_insights_name"
             echo ""
             echo "**Function App URL:** https://$function_app_name.azurewebsites.net"
+            echo ""
+            echo "#### Retry Configuration"
+            echo "- Max retry attempts: $MAX_RETRY_ATTEMPTS"
+            echo "- Base retry delay: ${RETRY_BASE_DELAY}s"
+            echo "- Backoff strategy: Exponential (2x, max 32s)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify deployment
+        shell: bash
         run: |
-          echo "Verifying deployed resources..."
-          az resource list \
-            --resource-group "$RESOURCE_GROUP" \
-            --output table
+          source /tmp/retry-utils.sh
+
+          echo "🔍 Verifying deployed resources..."
+
+          # Verify with retry logic (reduced attempts for read operations)
+          retry_azure_operation \
+            3 \
+            "List deployed resources" \
+            az resource list \
+              --resource-group "$RESOURCE_GROUP" \
+              --output table
