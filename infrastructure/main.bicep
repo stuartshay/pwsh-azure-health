@@ -169,13 +169,28 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: '1'
         }
-        {
-          name: 'WEBSITE_AUTH_ENABLED'
-          value: 'true'
-        }
       ]
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+    }
+  }
+}
+
+// Enable Easy Auth / Microsoft Entra ID authentication (required by Azure Policy)
+resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-04-01' = {
+  name: 'authsettingsV2'
+  parent: functionApp
+  properties: {
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'Return401'
+    }
+    httpSettings: {
+      requireHttps: true
+    }
+    platform: {
+      enabled: true
+      runtimeVersion: '~1'
     }
   }
 }
