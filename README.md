@@ -2,6 +2,7 @@
 
 [![Deploy Infrastructure](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/infrastructure-deploy.yml/badge.svg)](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/infrastructure-deploy.yml)
 
+[![Deploy Function App](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/function-deploy.yml/badge.svg)](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/function-deploy.yml)
 
 Enterprise-grade Azure Functions application for monitoring Azure Service Health using PowerShell.
 
