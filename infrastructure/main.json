@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "11738432317190586902"
+      "templateHash": "9855398991136555708"
     }
   },
   "parameters": {
@@ -80,7 +80,7 @@
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2023-01-01",
+      "apiVersion": "2025-01-01",
       "name": "[variables('storageAccountName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -107,7 +107,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices",
-      "apiVersion": "2023-01-01",
+      "apiVersion": "2025-01-01",
       "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
@@ -115,7 +115,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-      "apiVersion": "2023-01-01",
+      "apiVersion": "2025-01-01",
       "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', parameters('cacheContainerName'))]",
       "properties": {
         "publicAccess": "None"
@@ -140,7 +140,7 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2023-01-01",
+      "apiVersion": "2024-11-01",
       "name": "[variables('appServicePlanName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -156,7 +156,7 @@
     },
     {
       "type": "Microsoft.Web/sites",
-      "apiVersion": "2023-01-01",
+      "apiVersion": "2024-11-01",
       "name": "[variables('functionAppName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -176,7 +176,7 @@
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value, environment().suffixes.storage)]"
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2025-01-01').keys[0].value, environment().suffixes.storage)]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
@@ -232,7 +232,7 @@
       "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), resourceId('Microsoft.Web/sites', variables('functionAppName')), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'))]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-01-01', 'full').identity.principalId]",
+        "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01', 'full').identity.principalId]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -253,7 +253,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-01-01', 'full').identity.principalId]"
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01', 'full').identity.principalId]"
           },
           "subscriptionId": {
             "value": "[parameters('subscriptionId')]"
@@ -330,7 +330,7 @@
     },
     "functionAppUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-01-01').defaultHostName)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01').defaultHostName)]"
     },
     "storageAccountName": {
       "type": "string",
@@ -342,7 +342,7 @@
     },
     "functionAppPrincipalId": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-01-01', 'full').identity.principalId]"
+      "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01', 'full').identity.principalId]"
     },
     "resourceGroupName": {
       "type": "string",
