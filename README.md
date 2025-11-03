@@ -18,7 +18,29 @@ This project provides a robust, production-ready solution for monitoring Azure S
 - **Enterprise Ready**: Structured with scalability and maintainability in mind
 - **Local Development Support**: Complete setup for local testing and debugging
 - **DevContainer Support**: Pre-configured development environment with all prerequisites
+- **Infrastructure as Code**: Provision Azure resources with repeatable Bicep templates
 - **GitHub Copilot Custom Agent**: Specialized AI assistant for PowerShell Azure Functions development
+
+## Infrastructure as Code (Bicep)
+
+All Azure resources required by the function app are defined in declarative Bicep templates under `infrastructure/`. The primary entry point is `infrastructure/main.bicep`, which composes reusable modules to deploy the Function App, storage, Application Insights, and required RBAC assignments.
+
+You can deploy the infra stack with the provided PowerShell helper:
+
+```powershell
+./scripts/infrastructure/deploy-bicep.ps1
+```
+
+Or run an Azure CLI deployment directly:
+
+```bash
+az deployment group create \
+  --resource-group <resource-group-name> \
+  --template-file infrastructure/main.bicep \
+  --parameters environment=dev
+```
+
+📖 **See [`infrastructure/README.md`](infrastructure/README.md) for module details, parameters, and additional deployment options.**
 
 ## Quick Start with DevContainer
 
@@ -58,21 +80,25 @@ All prerequisites (PowerShell 7.4, Azure Functions Core Tools, .NET 8, Azure CLI
 ```
 pwsh-azure-health/
 ├── docs/                       # Documentation (best practices, deployment, setup)
+├── infrastructure/             # Bicep IaC templates and modules
+│   ├── main.bicep              # Entry point template
+│   ├── main.bicepparam         # Default parameter file
+│   └── modules/                # Reusable Bicep modules
 ├── scripts/
 │   ├── ci/                     # Continuous integration helpers (placeholder)
-│   ├── deployment/             # Deployment automation scripts
-│   │   └── deploy-to-azure.sh
-│   └── local/                  # Local development utilities
-│       └── setup-local-dev.ps1
+│   ├── deployment/             # Deployment automation scripts (CLI helpers)
+│   ├── infrastructure/         # Infrastructure deployment helpers
+│   ├── local/                  # Local development utilities
+│   ├── setup/                  # GitHub Actions/OIDC bootstrap scripts
+│   ├── install-hooks.sh        # Convenience installer for pre-commit hooks
+│   └── pre-commit-hook.sh      # Aggregated local quality checks
 ├── src/
-│   ├── GetServiceHealth/       # Service Health function implementation
-│   │   ├── function.json       # Function bindings
-│   │   └── run.ps1             # HTTP trigger entry point
+│   ├── GetServiceHealth/       # HTTP-triggered Service Health API
+│   ├── GetServiceHealthTimer/  # Timer-triggered Service Health polling
+│   ├── HealthCheck/            # Lightweight health probe endpoint
 │   ├── shared/
-│   │   ├── Modules/            # Reusable PowerShell modules
-│   │   │   └── ServiceHealth.psm1
-│   │   └── Scripts/            # Common scripts and helpers
-│   │       └── HttpHelpers.ps1
+│   │   ├── Modules/            # Reusable PowerShell modules (ServiceHealth)
+│   │   └── Scripts/            # Common scripts and helpers (HTTP utilities)
 │   ├── host.json               # Function app host configuration
 │   ├── local.settings.json     # Local development settings (ignored by Git)
 │   ├── local.settings.json.template
