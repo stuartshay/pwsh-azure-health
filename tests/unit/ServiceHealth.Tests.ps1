@@ -3,9 +3,15 @@ Import-Module $modulePath -Force
 
 Describe 'Get-ServiceHealthEvents' -Tag 'unit' {
     BeforeAll {
-        # Import Az.Accounts to ensure cmdlets are available for mocking
-        Import-Module Az.Accounts -ErrorAction SilentlyContinue
-        Import-Module Az.ResourceGraph -ErrorAction SilentlyContinue
+        # Check if required Az modules are available
+        $script:azAccountsAvailable = Get-Module -ListAvailable -Name Az.Accounts
+        $script:azResourceGraphAvailable = Get-Module -ListAvailable -Name Az.ResourceGraph
+
+        if ($script:azAccountsAvailable -and $script:azResourceGraphAvailable) {
+            # Import Az modules to ensure cmdlets are available for mocking
+            Import-Module Az.Accounts -ErrorAction Stop
+            Import-Module Az.ResourceGraph -ErrorAction Stop
+        }
     }
 
     BeforeEach {
@@ -42,7 +48,7 @@ Describe 'Get-ServiceHealthEvents' -Tag 'unit' {
         }
     }
 
-    It 'returns projected event objects' {
+    It 'returns projected event objects' -Skip:(-not ($script:azAccountsAvailable -and $script:azResourceGraphAvailable)) {
         $subscription = '00000000-0000-0000-0000-000000000000'
         $events = Get-ServiceHealthEvents -SubscriptionId $subscription -DaysBack 3
 
