@@ -19,12 +19,23 @@ function Invoke-GetServiceHealthTimer {
         return
     }
 
+    Write-Information "Configuration: SubscriptionId=$subscriptionId" -InformationAction Continue
+
     $containerName = if ($env:CACHE_CONTAINER) { $env:CACHE_CONTAINER } else { 'servicehealth-cache' }
     $blobName = 'servicehealth.json'
 
+    Write-Information "Cache configuration: Container=$containerName, Blob=$blobName" -InformationAction Continue
+
     $cache = $null
     try {
+        Write-Information "Reading existing cache..." -InformationAction Continue
         $cache = Get-BlobCacheItem -ContainerName $containerName -BlobName $blobName
+        if ($cache) {
+            $eventCount = if ($cache.events) { $cache.events.Count } else { 0 }
+            Write-Information "Found existing cache with $eventCount event(s), last updated: $($cache.lastEventTime)" -InformationAction Continue
+        } else {
+            Write-Information "No existing cache found." -InformationAction Continue
+        }
     }
     catch {
         Write-Warning "Unable to read existing cache: $($_.Exception.Message)"
@@ -53,9 +64,12 @@ function Invoke-GetServiceHealthTimer {
         }
     }
 
+    Write-Information "Querying Service Health events from $($startTime.ToString('o'))..." -InformationAction Continue
+
     $events = @()
     try {
         $events = Get-ServiceHealthEvents -SubscriptionId $subscriptionId -StartTime $startTime
+        Write-Information "Retrieved $($events.Count) event(s) from Azure Resource Graph." -InformationAction Continue
     }
     catch {
         Write-Error "Failed to query Service Health events: $($_.Exception.Message)"
@@ -75,6 +89,8 @@ function Invoke-GetServiceHealthTimer {
             $newEvents.Add($healthEvent)
         }
     }
+
+    Write-Information "Identified $($newEvents.Count) new event(s) not in cache." -InformationAction Continue
 
     if (-not $newEvents.Count) {
         Write-Information "No new Service Health events detected for subscription $subscriptionId." -InformationAction Continue
@@ -114,6 +130,8 @@ function Invoke-GetServiceHealthTimer {
         }
     }
 
+    Write-Information "Deduplicated to $($deduped.Count) total unique event(s)." -InformationAction Continue
+
     $latestUpdate = if ($deduped) {
         (Get-EventTimestamp $deduped[0].LastUpdateTime).ToString('o')
     }
@@ -130,8 +148,10 @@ function Invoke-GetServiceHealthTimer {
     }
 
     try {
+        Write-Information "Writing cache to blob storage..." -InformationAction Continue
         Set-BlobCacheItem -ContainerName $containerName -BlobName $blobName -Content $payload
-        Write-Information "Cached $($newEvents.Count) new Service Health event(s) for subscription $subscriptionId." -InformationAction Continue
+        Write-Information "Successfully cached $($newEvents.Count) new Service Health event(s) for subscription $subscriptionId." -InformationAction Continue
+        Write-Information "Cache updated with $($deduped.Count) total event(s), latest timestamp: $latestUpdate" -InformationAction Continue
     }
     catch {
         Write-Error "Failed to write Service Health cache: $($_.Exception.Message)"
