@@ -1,0 +1,35 @@
+---
+# PSRule configuration aligned to the Azure Health Monitoring project.
+# Uses PSRule for Azure baseline guidance for Bicep templates.
+
+include:
+  module:
+    - PSRule.Rules.Azure
+
+baseline: Azure.GA_2024_09
+
+input:
+  path:
+    - infrastructure/
+  pathIgnore:
+    - infrastructure/main.json
+
+configuration:
+  AZURE_BICEP_FILE: true
+  AZURE_BICEP_PARAMETERS_FILE: true
+  AZURE_PARAMETER_FILE:
+    useParameterFile: true
+  AZURE_RESOURCE_TAGS:
+    include:
+      - environment
+      - project
+      - managedBy
+      - createdDate
+
+rule:
+  AZURE_RESOURCE_LOCATION:
+    with:
+      location:
+        - eastus
+        - eastus2
+        - centralus

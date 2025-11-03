@@ -58,6 +58,23 @@ repos:
         pass_filenames: true
         verbose: true
 
+      - id: psrule-azure
+        name: PSRule Azure Validation
+        entry: >
+          pwsh -NoProfile -Command
+          "try {
+            Import-Module PSRule.Rules.Azure -ErrorAction Stop;
+          } catch {
+            Write-Host 'Warning: PSRule.Rules.Azure not available, skipping' -ForegroundColor Yellow;
+            exit 0;
+          }
+          $ErrorActionPreference = 'Stop';
+          Invoke-PSRule -InputPath ./infrastructure -Module PSRule.Rules.Azure"
+        language: system
+        pass_filenames: false
+        files: ^infrastructure/.*\.(bicep|bicepparam)$
+        verbose: true
+
       - id: psscriptanalyzer
         name: PSScriptAnalyzer
         entry: >

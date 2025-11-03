@@ -22,6 +22,7 @@
     # Testing and code quality modules
     'Pester'            = @{ Version = '5.*'; MaximumVersion = '5.99.99' }
     'PSScriptAnalyzer'  = @{ Version = '1.*' }
+    'PSRule'            = @{ Version = '2.*' }
 
     # Optional: Helpful development modules
     # 'PowerShellGet'   = @{ Version = '3.*' }
