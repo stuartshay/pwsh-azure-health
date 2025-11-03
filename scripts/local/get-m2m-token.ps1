@@ -189,9 +189,15 @@ try {
     if (-not $OutputOnly) {
         Write-ColorOutput "✓ Token generated successfully!" $script:Green
 
-        # Decode token to show claims
+        # Decode token to show claims (handle base64url encoding)
         $tokenParts = $token.Split('.')
-        $payload = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($tokenParts[1] + "=="))
+        $base64 = $tokenParts[1].Replace('-', '+').Replace('_', '/')
+        # Add padding if needed
+        switch ($base64.Length % 4) {
+            2 { $base64 += '==' }
+            3 { $base64 += '=' }
+        }
+        $payload = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64))
         $claims = $payload | ConvertFrom-Json
 
         Write-Host ""

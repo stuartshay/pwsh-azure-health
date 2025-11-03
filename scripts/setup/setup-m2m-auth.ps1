@@ -65,7 +65,7 @@ function Write-Header {
 }
 
 # Determine repository root
-$repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if (-not $OutputDirectory) {
     $OutputDirectory = Join-Path $repoRoot ".keys"
 }

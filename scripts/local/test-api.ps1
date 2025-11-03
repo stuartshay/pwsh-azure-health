@@ -70,16 +70,6 @@ param(
     [switch]$UseAzureAD,
 
     [Parameter()]
-    [string]$Endpoint = 'GetServiceHealth',
-
-    [Parameter()]
-    [ValidateSet('dev', 'prod')]
-    [string]$Environment = 'dev',
-
-    [Parameter()]
-    [string]$KeyFile,
-
-    [Parameter()]
     [ValidateSet('GET', 'POST', 'HEAD')]
     [string]$Method = 'GET',
 

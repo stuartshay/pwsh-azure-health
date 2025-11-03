@@ -196,7 +196,6 @@ resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-11-01' = {
       requireAuthentication: true
       unauthenticatedClientAction: 'Return401'
       excludedPaths: [
-        '/api/health'
         '/api/*'
       ]
     }
