@@ -17,11 +17,8 @@ Describe 'HealthCheck Function' -Tag 'unit' {
         $functionPath = Join-Path -Path $testRoot -ChildPath '..' -AdditionalChildPath @('..', 'src', 'HealthCheck', 'run.ps1')
         $functionPath = (Resolve-Path $functionPath).Path
 
-        # Load the function by reading and extracting the function definition
-        $functionCode = Get-Content -Path $functionPath -Raw
-        # Execute only the function definition part
-        $functionDefinition = $functionCode -replace '(?ms)^if \(\$MyInvocation\.InvocationName.*$', ''
-        Invoke-Expression $functionDefinition
+        # Load the function by dot-sourcing the function script
+        . $functionPath
     }
 
     Context 'when function app is healthy' {

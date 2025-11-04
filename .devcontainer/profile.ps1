@@ -1,3 +1,19 @@
+# Ensure pre-commit uses a workspace-local cache so hooks run without touching read-only home directories
+if (-not $Env:PRE_COMMIT_HOME) {
+    try {
+        $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+    } catch {
+        $workspaceRoot = $PWD.Path
+    }
+
+    $preCommitCache = Join-Path $workspaceRoot '.pre-commit-cache'
+    if (-not (Test-Path $preCommitCache)) {
+        New-Item -ItemType Directory -Path $preCommitCache | Out-Null
+    }
+
+    $Env:PRE_COMMIT_HOME = $preCommitCache
+}
+
 # PowerShell Profile with Git Branch and Azure Subscription Display
 
 <#
@@ -63,22 +79,34 @@ function prompt {
         }
     }
 
-    # Display the prompt with color
-    # Note: Write-Host is intentionally used here for the prompt function
-    # as it's the standard way to display colored output in PowerShell prompts
-    Write-Host "PS " -NoNewline -ForegroundColor White
-    Write-Host "$currentPath" -NoNewline -ForegroundColor Cyan
+    # Build prompt string with ANSI color sequences when available
+    $segments = @()
+    $reset = ''
 
-    if ($gitBranch) {
-        Write-Host "$gitBranch" -NoNewline -ForegroundColor Green
+    if ($PSStyle) {
+        $reset = $PSStyle.Reset
+        $segments += $PSStyle.Foreground.White + 'PS '
+        $segments += $PSStyle.Foreground.Cyan + $currentPath
+        if ($gitBranch) {
+            $segments += $PSStyle.Foreground.Green + $gitBranch
+        }
+        if ($azureInfo) {
+            $segments += $PSStyle.Foreground.Yellow + $azureInfo
+        }
+        $segments += $PSStyle.Foreground.White + ' PS>' + $reset + ' '
+    }
+    else {
+        $segments += "PS $currentPath"
+        if ($gitBranch) {
+            $segments += " $gitBranch"
+        }
+        if ($azureInfo) {
+            $segments += " $azureInfo"
+        }
+        $segments += ' PS> '
     }
 
-    if ($azureInfo) {
-        Write-Host "$azureInfo" -NoNewline -ForegroundColor Yellow
-    }
-
-    Write-Host " PS>" -NoNewline -ForegroundColor White
-    return " "
+    return ($segments -join '')
 }
 
 # Optional: Set window title to current directory

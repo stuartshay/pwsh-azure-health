@@ -23,7 +23,7 @@ if ($psVersion.Major -lt 7) {
     Write-Information "Download from: https://github.com/PowerShell/PowerShell" -InformationAction Continue
     exit 1
 }
-Write-Information "  ✓ PowerShell version: $psVersion" -InformationAction Continue
+Write-Information "  [OK] PowerShell version: $psVersion" -InformationAction Continue
 
 # Check Azure Functions Core Tools
 Write-Information "`nChecking Azure Functions Core Tools..." -InformationAction Continue
@@ -33,7 +33,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Information "Install from: https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local" -InformationAction Continue
     exit 1
 }
-Write-Information "  ✓ Azure Functions Core Tools version: $funcVersion" -InformationAction Continue
+Write-Information "  [OK] Azure Functions Core Tools version: $funcVersion" -InformationAction Continue
 
 # Check .NET SDK
 Write-Information "`nChecking .NET SDK..." -InformationAction Continue
@@ -42,7 +42,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Information "WARNING: .NET SDK not found. It's recommended for development." -InformationAction Continue
 }
 else {
-    Write-Information "  ✓ .NET SDK version: $dotnetVersion" -InformationAction Continue
+    Write-Information "  [OK] .NET SDK version: $dotnetVersion" -InformationAction Continue
 }
 
 # Install PowerShell modules
@@ -62,7 +62,7 @@ foreach ($module in $modules) {
         }
         else {
             Install-Module -Name $module.Name -Repository PSGallery -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
-            Write-Information "    ✓ Installed $($module.Name)" -InformationAction Continue
+            Write-Information "    [OK] Installed $($module.Name)" -InformationAction Continue
         }
     }
     catch {
@@ -81,7 +81,7 @@ if (Test-Path $localSettingsPath) {
             Write-Information "  WARNING: AZURE_SUBSCRIPTION_ID not configured in local.settings.json" -InformationAction Continue
         }
         else {
-            Write-Information "  ✓ local.settings.json configured" -InformationAction Continue
+            Write-Information "  [OK] local.settings.json configured" -InformationAction Continue
         }
     }
     catch {
@@ -97,8 +97,8 @@ Write-Information "`nTesting Azure authentication..." -InformationAction Continu
 try {
     $context = Get-AzContext -ErrorAction SilentlyContinue
     if ($context) {
-        Write-Information "  ✓ Authenticated as: $($context.Account)" -InformationAction Continue
-        Write-Information "  ✓ Subscription: $($context.Subscription.Name)" -InformationAction Continue
+        Write-Information "  [OK] Authenticated as: $($context.Account)" -InformationAction Continue
+        Write-Information "  [OK] Subscription: $($context.Subscription.Name)" -InformationAction Continue
     }
     else {
         Write-Information "  WARNING: Not authenticated with Azure. Run 'Connect-AzAccount'" -InformationAction Continue
@@ -108,7 +108,7 @@ catch {
     Write-Information "  WARNING: Azure PowerShell modules not loaded" -InformationAction Continue
 }
 
-Write-Information "`n✓ Setup complete!" -InformationAction Continue
+Write-Information "`n[OK] Setup complete!" -InformationAction Continue
 Write-Information "`nNext steps:" -InformationAction Continue
 Write-Information "  1. Configure AZURE_SUBSCRIPTION_ID in src/local.settings.json" -InformationAction Continue
 Write-Information "  2. Run 'Connect-AzAccount' to authenticate" -InformationAction Continue

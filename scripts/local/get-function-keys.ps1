@@ -47,29 +47,63 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
 
-# Colors for output
-$script:Green = "`e[32m"
-$script:Yellow = "`e[33m"
-$script:Red = "`e[31m"
-$script:Blue = "`e[34m"
-$script:Reset = "`e[0m"
-
-function Write-ColorOutput {
+<#
+.SYNOPSIS
+    Writes an informational message with optional ANSI coloring.
+.DESCRIPTION
+    Wraps Write-Information so scripts can present status updates without using Write-Host.
+.PARAMETER Message
+    Text to display to the user.
+.PARAMETER Color
+    Optional color name applied when ANSI styling is available.
+#>
+function Write-Message {
     param(
+        [Parameter(Mandatory)]
         [string]$Message,
-        [string]$Color = $script:Reset
+
+        [ValidateSet('Default', 'Blue', 'Cyan', 'Gray', 'Green', 'Red', 'Yellow')]
+        [string]$Color = 'Default'
     )
-    Write-Host "${Color}${Message}${script:Reset}"
+
+    $prefix = ''
+    $suffix = ''
+
+    if ($PSStyle) {
+        switch ($Color) {
+            'Blue'   { $prefix = $PSStyle.Foreground.Blue }
+            'Cyan'   { $prefix = $PSStyle.Foreground.Cyan }
+            'Gray'   { $prefix = $PSStyle.Foreground.Gray }
+            'Green'  { $prefix = $PSStyle.Foreground.Green }
+            'Red'    { $prefix = $PSStyle.Foreground.Red }
+            'Yellow' { $prefix = $PSStyle.Foreground.Yellow }
+        }
+
+        if ($prefix) {
+            $suffix = $PSStyle.Reset
+        }
+    }
+
+    Write-Information ("{0}{1}{2}" -f $prefix, $Message, $suffix)
 }
 
+<#
+.SYNOPSIS
+    Displays a formatted header block in script output.
+.DESCRIPTION
+    Emits a blank line, a colored separator, the supplied message, and another separator.
+.PARAMETER Message
+    Header text to display.
+#>
 function Write-Header {
     param([string]$Message)
-    Write-Host ""
-    Write-ColorOutput "========================================" $script:Blue
-    Write-ColorOutput $Message $script:Blue
-    Write-ColorOutput "========================================" $script:Blue
-    Write-Host ""
+    Write-Message ''
+    Write-Message '========================================' -Color Blue
+    Write-Message $Message -Color Blue
+    Write-Message '========================================' -Color Blue
+    Write-Message ''
 }
 
 # Determine repository root
@@ -85,83 +119,83 @@ if (-not $ResourceGroup) {
 
 Write-Header "Azure Function Keys Retrieval"
 
-Write-ColorOutput "Configuration:" $script:Yellow
-Write-Host "  Environment:     $Environment"
-Write-Host "  Resource Group:  $ResourceGroup"
-Write-Host "  Output Dir:      $OutputDirectory"
-Write-Host ""
+Write-Message 'Configuration:' -Color Yellow
+Write-Message "  Environment:     $Environment"
+Write-Message "  Resource Group:  $ResourceGroup"
+Write-Message "  Output Dir:      $OutputDirectory"
+Write-Message ''
 
 # Check if Azure CLI is installed
 try {
     $azVersion = az version --output json | ConvertFrom-Json
-    Write-ColorOutput "✓ Azure CLI detected (version: $($azVersion.'azure-cli'))" $script:Green
+    Write-Message "[OK] Azure CLI detected (version: $($azVersion.'azure-cli'))" -Color Green
 }
 catch {
-    Write-ColorOutput "✗ Azure CLI not found. Please install Azure CLI first." $script:Red
-    Write-Host "  Install from: https://docs.microsoft.com/cli/azure/install-azure-cli"
+    Write-Message '[ERROR] Azure CLI not found. Please install Azure CLI first.' -Color Red
+    Write-Message '  Install from: https://docs.microsoft.com/cli/azure/install-azure-cli'
     exit 1
 }
 
 # Check if logged in
-Write-Host ""
-Write-ColorOutput "Checking Azure authentication..." $script:Yellow
+Write-Message ''
+Write-Message 'Checking Azure authentication...' -Color Yellow
 try {
     $account = az account show --output json | ConvertFrom-Json
-    Write-ColorOutput "✓ Logged in as: $($account.user.name)" $script:Green
-    Write-Host "  Subscription: $($account.name)"
+    Write-Message "[OK] Logged in as: $($account.user.name)" -Color Green
+    Write-Message "  Subscription: $($account.name)"
 }
 catch {
-    Write-ColorOutput "✗ Not logged in to Azure. Please run 'az login' first." $script:Red
+    Write-Message "[ERROR] Not logged in to Azure. Please run 'az login' first." -Color Red
     exit 1
 }
 
 # Auto-discover Function App if not provided
 if (-not $FunctionAppName) {
-    Write-Host ""
-    Write-ColorOutput "Discovering Function App in resource group..." $script:Yellow
+    Write-Message ''
+    Write-Message 'Discovering Function App in resource group...' -Color Yellow
 
     $functionApps = az functionapp list --resource-group $ResourceGroup --output json | ConvertFrom-Json
 
     if (-not $functionApps -or $functionApps.Count -eq 0) {
-        Write-ColorOutput "✗ No Function Apps found in resource group: $ResourceGroup" $script:Red
+        Write-Message "[ERROR] No Function Apps found in resource group: $ResourceGroup" -Color Red
         exit 1
     }
 
     $FunctionAppName = $functionApps[0].name
-    Write-ColorOutput "✓ Found Function App: $FunctionAppName" $script:Green
+    Write-Message "[OK] Found Function App: $FunctionAppName" -Color Green
 }
 
 # Create output directory
 if (-not (Test-Path $OutputDirectory)) {
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-    Write-ColorOutput "✓ Created directory: $OutputDirectory" $script:Green
+    Write-Message "[OK] Created directory: $OutputDirectory" -Color Green
 }
 
-Write-Host ""
+Write-Message ''
 Write-Header "Retrieving Function Keys"
 
 # Get host keys (master keys)
-Write-ColorOutput "Retrieving host keys..." $script:Yellow
+Write-Message 'Retrieving host keys...' -Color Yellow
 try {
     $hostKeys = az functionapp keys list `
         --name $FunctionAppName `
         --resource-group $ResourceGroup `
         --output json | ConvertFrom-Json
 
-    Write-ColorOutput "✓ Retrieved host keys" $script:Green
+    Write-Message '[OK] Retrieved host keys' -Color Green
 
     # Save master key
     if ($hostKeys.masterKey) {
         $masterKeyFile = Join-Path $OutputDirectory "master.key"
         $hostKeys.masterKey | Out-File -FilePath $masterKeyFile -NoNewline -Encoding utf8
-        Write-Host "  → Saved master key to: $masterKeyFile"
+        Write-Message "  -> Saved master key to: $masterKeyFile"
     }
 
     # Save default function key
     if ($hostKeys.functionKeys.default) {
         $defaultKeyFile = Join-Path $OutputDirectory "default.key"
         $hostKeys.functionKeys.default | Out-File -FilePath $defaultKeyFile -NoNewline -Encoding utf8
-        Write-Host "  → Saved default key to: $defaultKeyFile"
+        Write-Message "  -> Saved default key to: $defaultKeyFile"
     }
 
     # Save all named function keys
@@ -171,20 +205,20 @@ try {
                 $keyValue = $hostKeys.functionKeys.$keyName
                 $keyFile = Join-Path $OutputDirectory "$keyName.key"
                 $keyValue | Out-File -FilePath $keyFile -NoNewline -Encoding utf8
-                Write-Host "  → Saved $keyName key to: $keyFile"
+                Write-Message "  -> Saved $keyName key to: $keyFile"
             }
         }
     }
 
 }
 catch {
-    Write-ColorOutput "✗ Failed to retrieve function keys: $_" $script:Red
+    Write-Message "[ERROR] Failed to retrieve function keys: $_" -Color Red
     exit 1
 }
 
 # Create a summary file with key information
-Write-Host ""
-Write-ColorOutput "Creating summary file..." $script:Yellow
+Write-Message ''
+Write-Message 'Creating summary file...' -Color Yellow
 
 $summaryFile = Join-Path $OutputDirectory "keys-info.txt"
 $functionUrl = "https://$FunctionAppName.azurewebsites.net"
@@ -246,20 +280,20 @@ Get-ChildItem -Path $OutputDirectory -Filter "*.key" | ForEach-Object {
 }
 
 $summary | Out-File -FilePath $summaryFile -Encoding utf8
-Write-ColorOutput "✓ Saved summary to: $summaryFile" $script:Green
+Write-Message "[OK] Saved summary to: $summaryFile" -Color Green
 
-Write-Host ""
+Write-Message ''
 Write-Header "Success!"
 
-Write-ColorOutput "Function keys have been downloaded and saved to:" $script:Green
-Write-Host "  $OutputDirectory"
-Write-Host ""
-Write-ColorOutput "Key files:" $script:Yellow
+Write-Message 'Function keys have been downloaded and saved to:' -Color Green
+Write-Message "  $OutputDirectory"
+Write-Message ''
+Write-Message 'Key files:' -Color Yellow
 Get-ChildItem -Path $OutputDirectory -Filter "*.key" | ForEach-Object {
-    Write-Host "  • $($_.Name)"
+    Write-Message "  - $($_.Name)"
 }
-Write-Host ""
-Write-ColorOutput "📖 See $summaryFile for usage examples" $script:Blue
-Write-Host ""
-Write-ColorOutput "⚠️  Remember: Never commit these keys to git!" $script:Red
-Write-Host ""
+Write-Message ''
+Write-Message "See $summaryFile for usage examples" -Color Blue
+Write-Message ''
+Write-Message 'Remember: Never commit these keys to git!' -Color Red
+Write-Message ''

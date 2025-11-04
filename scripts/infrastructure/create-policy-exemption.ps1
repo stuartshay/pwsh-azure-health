@@ -23,43 +23,82 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
 
-Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  Azure Policy Exemption Creation" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host ""
+<#
+.SYNOPSIS
+    Writes an informational message with optional ANSI coloring.
+.DESCRIPTION
+    Wraps Write-Information to emit user-friendly status lines without Write-Host usage.
+.PARAMETER Message
+    Text to display.
+.PARAMETER Color
+    Optional color name applied when ANSI styling is available.
+#>
+function Write-Message {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Message,
+
+        [ValidateSet('Default', 'Cyan', 'Gray', 'Green', 'Yellow')]
+        [string]$Color = 'Default'
+    )
+
+    $prefix = ''
+    $suffix = ''
+
+    if ($PSStyle) {
+        switch ($Color) {
+            'Cyan'   { $prefix = $PSStyle.Foreground.Cyan }
+            'Gray'   { $prefix = $PSStyle.Foreground.Gray }
+            'Green'  { $prefix = $PSStyle.Foreground.Green }
+            'Yellow' { $prefix = $PSStyle.Foreground.Yellow }
+        }
+
+        if ($prefix) {
+            $suffix = $PSStyle.Reset
+        }
+    }
+
+    Write-Information ("{0}{1}{2}" -f $prefix, $Message, $suffix)
+}
+
+Write-Message ''
+Write-Message '===========================================================' -Color Cyan
+Write-Message '  Azure Policy Exemption Creation' -Color Cyan
+Write-Message '===========================================================' -Color Cyan
+Write-Message ''
 
 # Find the policy assignment
-Write-Host "Searching for Function App authentication policy..." -ForegroundColor Cyan
+Write-Message 'Searching for Function App authentication policy...' -Color Cyan
 $policyAssignments = az policy assignment list --query "[?contains(displayName, 'Function') && contains(displayName, 'Entra')]" | ConvertFrom-Json
 
 if ($policyAssignments.Count -eq 0) {
-    Write-Host "⚠️  No Function App authentication policy found" -ForegroundColor Yellow
-    Write-Host "Listing all policies with 'Function' in the name:" -ForegroundColor Gray
+    Write-Message '[WARN] No Function App authentication policy found' -Color Yellow
+    Write-Message "Listing all policies with 'Function' in the name:" -Color Gray
     az policy assignment list --query "[?contains(displayName, 'Function')].{Name:displayName, Id:id}" --output table
     exit 1
 }
 
 $policyAssignment = $policyAssignments[0]
-Write-Host "✓ Found policy: $($policyAssignment.displayName)" -ForegroundColor Green
-Write-Host "  Assignment ID: $($policyAssignment.id)" -ForegroundColor Gray
-Write-Host ""
+Write-Message "Found policy: $($policyAssignment.displayName)" -Color Green
+Write-Message "  Assignment ID: $($policyAssignment.id)" -Color Gray
+Write-Message ''
 
 # Get resource group ID
-Write-Host "Getting resource group information..." -ForegroundColor Cyan
+Write-Message 'Getting resource group information...' -Color Cyan
 $rg = az group show --name $ResourceGroup | ConvertFrom-Json
 $rgId = $rg.id
-Write-Host "✓ Resource Group: $($rg.name)" -ForegroundColor Green
-Write-Host "  ID: $rgId" -ForegroundColor Gray
-Write-Host ""
+Write-Message "[OK] Resource Group: $($rg.name)" -Color Green
+Write-Message "  ID: $rgId" -Color Gray
+Write-Message ''
 
 # Create exemption
-Write-Host "Creating policy exemption..." -ForegroundColor Cyan
-Write-Host "  Exemption Name: $ExemptionName" -ForegroundColor Gray
-Write-Host "  Scope: Resource Group" -ForegroundColor Gray
-Write-Host "  Category: Waiver" -ForegroundColor Gray
-Write-Host ""
+Write-Message 'Creating policy exemption...' -Color Cyan
+Write-Message "  Exemption Name: $ExemptionName" -Color Gray
+Write-Message '  Scope: Resource Group' -Color Gray
+Write-Message '  Category: Waiver' -Color Gray
+Write-Message ''
 
 try {
     $exemption = az policy exemption create `
@@ -71,31 +110,31 @@ try {
         --description "Temporary exemption for Azure Health Monitoring Function App development. Authentication will be configured post-deployment." `
         --output json | ConvertFrom-Json
 
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Green
-    Write-Host "  ✓ Policy Exemption Created Successfully!" -ForegroundColor Green
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Exemption Details:" -ForegroundColor Cyan
-    Write-Host "  Name       : $($exemption.name)" -ForegroundColor Gray
-    Write-Host "  ID         : $($exemption.id)" -ForegroundColor Gray
-    Write-Host "  Category   : $($exemption.exemptionCategory)" -ForegroundColor Gray
-    Write-Host "  Expires    : Never (unless manually deleted)" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Next Steps:" -ForegroundColor Cyan
-    Write-Host "  1. Deploy infrastructure:" -ForegroundColor Gray
-    Write-Host "     ./scripts/infrastructure/deploy-bicep.ps1" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  2. After deployment, configure authentication manually or remove exemption:" -ForegroundColor Gray
-    Write-Host "     az policy exemption delete --name $ExemptionName --scope $rgId" -ForegroundColor Yellow
-    Write-Host ""
+    Write-Message '===========================================================' -Color Green
+    Write-Message '  [OK] Policy Exemption Created Successfully!' -Color Green
+    Write-Message '===========================================================' -Color Green
+    Write-Message ''
+    Write-Message 'Exemption Details:' -Color Cyan
+    Write-Message "  Name       : $($exemption.name)" -Color Gray
+    Write-Message "  ID         : $($exemption.id)" -Color Gray
+    Write-Message "  Category   : $($exemption.exemptionCategory)" -Color Gray
+    Write-Message '  Expires    : Never (unless manually deleted)' -Color Gray
+    Write-Message ''
+    Write-Message 'Next Steps:' -Color Cyan
+    Write-Message '  1. Deploy infrastructure:' -Color Gray
+    Write-Message '     ./scripts/infrastructure/deploy-bicep.ps1' -Color Yellow
+    Write-Message ''
+    Write-Message '  2. After deployment, configure authentication manually or remove exemption:' -Color Gray
+    Write-Message "     az policy exemption delete --name $ExemptionName --scope $rgId" -Color Yellow
+    Write-Message ''
 }
 catch {
     Write-Error "Failed to create policy exemption: $_"
-    Write-Host ""
-    Write-Host "Troubleshooting:" -ForegroundColor Yellow
-    Write-Host "  - Verify you have Owner or Policy Contributor role" -ForegroundColor Gray
-    Write-Host "  - Check if exemption already exists:" -ForegroundColor Gray
-    Write-Host "    az policy exemption list --scope $rgId" -ForegroundColor Yellow
-    Write-Host ""
+    Write-Message ''
+    Write-Message 'Troubleshooting:' -Color Yellow
+    Write-Message '  - Verify you have Owner or Policy Contributor role' -Color Gray
+    Write-Message '  - Check if exemption already exists:' -Color Gray
+    Write-Message "    az policy exemption list --scope $rgId" -Color Yellow
+    Write-Message ''
     exit 1
 }

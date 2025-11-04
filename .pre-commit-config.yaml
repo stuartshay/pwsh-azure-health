@@ -39,7 +39,7 @@ repos:
       - id: actionlint
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         args: [--severity=warning]
@@ -81,13 +81,46 @@ repos:
           pwsh -NoProfile -Command
           "try {
             Import-Module PSScriptAnalyzer -ErrorAction Stop;
-            Invoke-ScriptAnalyzer -Path . -Recurse
-            -Settings ./.PSScriptAnalyzerSettings.psd1
-            -ReportSummary -EnableExit 2>&1 | Where-Object { \$_ -notmatch 'Object reference not set' }
           } catch {
             Write-Host 'Warning: PSScriptAnalyzer not available, skipping' -ForegroundColor Yellow;
             exit 0
-          }"
+          }
+          $ErrorActionPreference = 'Stop';
+          $targets = @('./scripts','./src','./tests','./.devcontainer');
+          $results = @();
+          foreach ($target in $targets) {
+            if (Test-Path $target) {
+              try {
+                $results += Invoke-ScriptAnalyzer -Path $target -Recurse `
+                  -Settings ./.PSScriptAnalyzerSettings.psd1 -ErrorAction Stop;
+              } catch {
+                if ($_.Exception.Message -notmatch 'Object reference not set') {
+                  throw
+                }
+              }
+            }
+          }
+          $singleFiles = @('./requirements.psd1',
+            './.PSScriptAnalyzerSettings.psd1');
+          foreach ($file in $singleFiles) {
+            if (Test-Path $file) {
+              try {
+                $results += Invoke-ScriptAnalyzer -Path $file `
+                  -Settings ./.PSScriptAnalyzerSettings.psd1 -ErrorAction Stop;
+              } catch {
+                if ($_.Exception.Message -notmatch 'Object reference not set') {
+                  throw
+                }
+              }
+            }
+          }
+          if ($results) {
+            $results | Sort-Object Severity -Descending |
+              Format-Table RuleName, Severity, ScriptPath, Line, Message -AutoSize;
+            Write-Host \"$($results.Count) issues detected.\" -ForegroundColor Red;
+            exit 1;
+          }
+          Write-Host 'PSScriptAnalyzer: no issues detected.' -ForegroundColor Green"
         language: system
         files: \.(ps1|psm1|psd1)$
         pass_filenames: false

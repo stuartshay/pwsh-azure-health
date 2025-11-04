@@ -67,6 +67,52 @@ else
     echo "⚠️  Azure Functions Core Tools not found"
 fi
 
+# Ensure PowerShell is at the latest stable version
+echo "Checking for newer PowerShell release..."
+CURRENT_PWSH_VERSION=$(pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>/dev/null || echo "")
+POWERSHELL_RELEASE_INFO=$(pwsh -NoProfile -Command "
+    try {
+        \$headers = @{ 'User-Agent' = 'pwsh-azure-health-devcontainer' }
+        \$release = Invoke-RestMethod -Uri 'https://api.github.com/repos/PowerShell/PowerShell/releases/latest' -Headers \$headers
+        if (-not \$release) { return }
+        \$version = \$release.tag_name.TrimStart('v')
+        \$asset = \$release.assets | Where-Object { \$_.name -match 'powershell_.*deb_amd64\.deb$' } | Select-Object -First 1
+        if (-not \$asset) { return }
+        Write-Output (\$version)
+        Write-Output (\$asset.browser_download_url)
+    }
+    catch {
+        # GitHub rate limits or network issues
+    }
+" 2>/dev/null) || POWERSHELL_RELEASE_INFO=""
+LATEST_PWSH_VERSION=$(echo "$POWERSHELL_RELEASE_INFO" | sed -n '1p')
+LATEST_PWSH_URL=$(echo "$POWERSHELL_RELEASE_INFO" | sed -n '2p')
+
+if [ -n "$LATEST_PWSH_VERSION" ] && [ -n "$LATEST_PWSH_URL" ] && [ -n "$CURRENT_PWSH_VERSION" ]; then
+    if dpkg --compare-versions "$LATEST_PWSH_VERSION" gt "$CURRENT_PWSH_VERSION"; then
+        echo "Updating PowerShell from ${CURRENT_PWSH_VERSION:-unknown} to ${LATEST_PWSH_VERSION}..."
+        TEMP_PWSH_DEB=$(mktemp /tmp/powershell-XXXXXX.deb)
+        if curl -sSL "$LATEST_PWSH_URL" -o "$TEMP_PWSH_DEB"; then
+            if sudo dpkg -i "$TEMP_PWSH_DEB"; then
+                echo "✅ PowerShell updated to $LATEST_PWSH_VERSION"
+            else
+                echo "ℹ️  Resolving PowerShell package dependencies..."
+                sudo apt-get update
+                sudo apt-get install -y -f
+                sudo dpkg -i "$TEMP_PWSH_DEB"
+                echo "✅ PowerShell updated to $LATEST_PWSH_VERSION"
+            fi
+        else
+            echo "⚠️  Failed to download PowerShell ${LATEST_PWSH_VERSION} package"
+        fi
+        rm -f "$TEMP_PWSH_DEB"
+    else
+        echo "✅ PowerShell $CURRENT_PWSH_VERSION is already the latest available build ($LATEST_PWSH_VERSION)"
+    fi
+else
+    echo "⚠️  Unable to determine latest PowerShell release. Skipping upgrade."
+fi
+
 # Install/fix Bicep CLI
 echo "Setting up Bicep CLI..."
 if [ -f "$HOME/.azure/bin/bicep" ]; then
@@ -95,6 +141,19 @@ WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
 mkdir -p "${WORKSPACE_DIR}/.azurite"
 echo "✅ Azurite directory ready at ${WORKSPACE_DIR}/.azurite"
 echo "ℹ️  Start Azurite via Command Palette: 'Azurite: Start' or use the status bar"
+
+# Configure pre-commit to use a workspace-local cache so hooks can run without writing to the readonly home cache
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
+PRE_COMMIT_CACHE_DIR="${WORKSPACE_DIR}/.pre-commit-cache"
+mkdir -p "$PRE_COMMIT_CACHE_DIR"
+if ! grep -q "PRE_COMMIT_HOME" "$HOME/.bashrc" 2>/dev/null; then
+    {
+        echo ""
+        echo "# Use repository-local cache for pre-commit to avoid readonly \$HOME/.cache"
+        echo "export PRE_COMMIT_HOME=\"${PRE_COMMIT_CACHE_DIR}\""
+    } >> "$HOME/.bashrc"
+fi
+export PRE_COMMIT_HOME="${PRE_COMMIT_CACHE_DIR}"
 
 # Note: pre-commit is installed via Dev Container Feature
 # Verify pre-commit is available
