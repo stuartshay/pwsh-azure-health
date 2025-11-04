@@ -49,22 +49,27 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Colors for output
+# Color helper function using ANSI codes
+function Write-ColorOutput {
+    param(
+        [string]$Message,
+        [string]$AnsiColor = ""
+    )
+    if ($AnsiColor) {
+        Write-Host "${AnsiColor}${Message}`e[0m"
+    }
+    else {
+        Write-Host $Message
+    }
+}
+
+# ANSI color codes for Write-ColorOutput
 $script:Green = "`e[32m"
 $script:Yellow = "`e[33m"
 $script:Red = "`e[31m"
 $script:Blue = "`e[34m"
 $script:Cyan = "`e[36m"
 $script:Gray = "`e[90m"
-$script:Reset = "`e[0m"
-
-function Write-ColorOutput {
-    param(
-        [string]$Message,
-        [string]$Color = $script:Reset
-    )
-    Write-Host "${Color}${Message}${script:Reset}"
-}
 
 Write-ColorOutput "========================================" $script:Blue
 Write-ColorOutput "Azure Function Timer Logs Query" $script:Blue
@@ -81,17 +86,32 @@ Write-Host ""
 
 # Get Application Insights resource
 Write-ColorOutput "Getting Application Insights..." $script:Yellow
-$appInsightsJson = az monitor app-insights component show --resource-group $resourceGroup --query '[0]' 2>&1
+try {
+    $appInsightsJson = az monitor app-insights component show `
+        --resource-group $resourceGroup `
+        --query '[0]' `
+        --only-show-errors 2>&1
 
-if ($LASTEXITCODE -ne 0) {
-    Write-ColorOutput "✗ Application Insights not found in $resourceGroup" $script:Red
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "✗ Application Insights not found in $resourceGroup" $script:Red
+        Write-Host "  Error: $appInsightsJson" -ForegroundColor Gray
+        exit 1
+    }
+
+    $appInsights = $appInsightsJson | ConvertFrom-Json
+
+    if (-not $appInsights) {
+        Write-ColorOutput "✗ No Application Insights found in $resourceGroup" $script:Red
+        exit 1
+    }
+
+    Write-ColorOutput "✓ Found: $($appInsights.name)" $script:Green
+    Write-Host ""
+}
+catch {
+    Write-ColorOutput "✗ Failed to query Application Insights: $_" $script:Red
     exit 1
 }
-
-$appInsights = $appInsightsJson | ConvertFrom-Json
-
-Write-ColorOutput "✓ Found: $($appInsights.name)" $script:Green
-Write-Host ""
 
 if ($ShowSummary) {
     $summaryQuery = @"
@@ -107,10 +127,22 @@ requests
 "@
 
     Write-ColorOutput "Querying execution summary..." $script:Yellow
-    $summaryResults = az monitor app-insights query `
-        --app $appInsights.appId `
-        --analytics-query $summaryQuery `
-        --output json | ConvertFrom-Json
+    try {
+        $summaryResults = az monitor app-insights query `
+            --app $appInsights.appId `
+            --analytics-query $summaryQuery `
+            --only-show-errors `
+            --output json | ConvertFrom-Json
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-ColorOutput "✗ Query failed" $script:Red
+            return
+        }
+    }
+    catch {
+        Write-ColorOutput "✗ Failed to execute summary query: $_" $script:Red
+        return
+    }
 
     if ($summaryResults.tables -and $summaryResults.tables[0].rows) {
         $row = $summaryResults.tables[0].rows[0]
@@ -136,7 +168,8 @@ traces
 | project timestamp, severityLevel, message
 "@
     Write-ColorOutput "Querying error logs..." $script:Yellow
-} else {
+}
+else {
     $query = @"
 traces
 | where timestamp > ago($($Hours)h)
@@ -148,10 +181,22 @@ traces
     Write-ColorOutput "Querying all logs..." $script:Yellow
 }
 
-$results = az monitor app-insights query `
-    --app $appInsights.appId `
-    --analytics-query $query `
-    --output json | ConvertFrom-Json
+try {
+    $results = az monitor app-insights query `
+        --app $appInsights.appId `
+        --analytics-query $query `
+        --only-show-errors `
+        --output json | ConvertFrom-Json
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "✗ Query failed" $script:Red
+        exit 1
+    }
+}
+catch {
+    Write-ColorOutput "✗ Failed to execute query: $_" $script:Red
+    exit 1
+}
 
 if ($results.tables -and $results.tables[0].rows) {
     Write-ColorOutput "✓ Found $($results.tables[0].rows.Count) log entries" $script:Green
@@ -173,20 +218,22 @@ if ($results.tables -and $results.tables[0].rows) {
             default { "UNKNOWN" }
         }
 
-        $color = switch ($severity) {
-            0 { $script:Gray }
-            1 { $script:Reset }
-            2 { $script:Yellow }
-            3 { $script:Red }
-            4 { $script:Red }
-            default { $script:Reset }
+        # Use ConsoleColor enum for Write-Host -ForegroundColor
+        $consoleColor = switch ($severity) {
+            0 { "DarkGray" }
+            1 { "White" }
+            2 { "Yellow" }
+            3 { "Red" }
+            4 { "Red" }
+            default { "White" }
         }
 
         Write-Host "[$timestamp] " -ForegroundColor Cyan -NoNewline
-        Write-Host "[$severityName] " -ForegroundColor $color -NoNewline
+        Write-Host "[$severityName] " -ForegroundColor $consoleColor -NoNewline
         Write-Host "$message"
     }
-} else {
+}
+else {
     Write-ColorOutput "No logs found in the specified time range." $script:Yellow
 }
 

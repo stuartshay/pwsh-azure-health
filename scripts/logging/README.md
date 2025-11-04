@@ -2,6 +2,18 @@
 
 This directory contains scripts for testing and querying Azure Function App logs from Application Insights.
 
+## Prerequisites
+
+⚠️ **Important**: These scripts require the Azure CLI `application-insights` extension. On **first run**, the extension will auto-install, which can take **5+ minutes** with no progress indicator.
+
+### Pre-install the extension (recommended):
+
+```bash
+az extension add --name application-insights
+```
+
+This one-time setup will prevent the scripts from appearing to hang on first use.
+
 ## Scripts
 
 ### `query-timer-logs.ps1`
@@ -99,6 +111,54 @@ requests
 - **2** - Warning (potentially harmful situations)
 - **3** - Error (error events that might still allow operation to continue)
 - **4** - Critical (severe error events that cause termination)
+
+## Requirements
+
+- Azure CLI installed and authenticated
+- Azure CLI `application-insights` extension (see Prerequisites above)
+- Access to the Function App resource group
+- Application Insights configured for the Function App
+
+## Troubleshooting
+
+### Script hangs for 5+ minutes on first run
+
+This is **normal behavior** when the Azure CLI `application-insights` extension auto-installs. Solutions:
+
+1. **Pre-install the extension** (recommended):
+   ```bash
+   az extension add --name application-insights
+   ```
+
+2. **Wait it out**: The installation only happens once. Subsequent runs will be fast.
+
+3. **Use timeout wrapper** if needed:
+   ```powershell
+   $job = Start-Job -ScriptBlock { & ./query-timer-logs.ps1 }
+   Wait-Job $job -Timeout 600  # 10 minute timeout
+   Receive-Job $job
+   ```
+
+### "Application Insights component not found"
+
+Ensure Application Insights is deployed:
+```bash
+az monitor app-insights component list --resource-group rg-azure-health-dev
+```
+
+### "No logs found"
+
+1. Verify the timer function has executed (trigger manually):
+   ```powershell
+   ./test-logging.ps1
+   ```
+
+2. Expand the query time range:
+   ```powershell
+   ./query-timer-logs.ps1 -Hours 48
+   ```
+
+3. Verify Application Insights connection in Azure Portal.
 
 ## Requirements
 

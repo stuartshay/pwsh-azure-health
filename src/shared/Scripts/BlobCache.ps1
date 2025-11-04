@@ -12,12 +12,21 @@ function Get-BlobCacheContext {
         [string]$ContainerName
     )
 
+    # Support both connection string and identity-based authentication
     $connectionString = $env:AzureWebJobsStorage
-    if (-not $connectionString) {
-        throw "AzureWebJobsStorage connection string is not configured."
-    }
+    $storageAccountName = $env:AzureWebJobsStorage__accountname
 
-    $context = New-AzStorageContext -ConnectionString $connectionString
+    if ($connectionString) {
+        # Use connection string if available
+        $context = New-AzStorageContext -ConnectionString $connectionString
+    }
+    elseif ($storageAccountName) {
+        # Use managed identity (identity-based authentication)
+        $context = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
+    }
+    else {
+        throw "AzureWebJobsStorage connection string or AzureWebJobsStorage__accountname is not configured."
+    }
 
     return [pscustomobject]@{
         Context       = $context

@@ -67,7 +67,13 @@ function Get-ServiceHealthEvents {
     }
 
     Write-Verbose "Setting Azure context to subscription '$SubscriptionId'."
-    Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
+    try {
+        Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
+    }
+    catch {
+        Write-Error "Failed to set Azure context for subscription '$SubscriptionId': $($_.Exception.Message)"
+        throw
+    }
 
     $isoStart = $StartTime.ToUniversalTime().ToString('o')
     $query = @"
@@ -89,19 +95,26 @@ ServiceHealthResources
 "@
 
     Write-Verbose "Executing Resource Graph query for Service Health events."
-    $results = Search-AzGraph -Query $query -Subscription $SubscriptionId -ErrorAction Stop
+    try {
+        $results = Search-AzGraph -Query $query -Subscription $SubscriptionId -ErrorAction Stop
+    }
+    catch {
+        Write-Error "Resource Graph query failed: $($_.Exception.Message)"
+        Write-Verbose "Query: $query"
+        throw
+    }
 
     return $results | ForEach-Object {
         [pscustomobject]@{
-            Id = $_.id
-            TrackingId = $_.trackingId
-            EventType = $_.eventType
-            Status = $_.status
-            Title = $_.title
-            Summary = $_.summary
-            Level = $_.level
+            Id               = $_.id
+            TrackingId       = $_.trackingId
+            EventType        = $_.eventType
+            Status           = $_.status
+            Title            = $_.title
+            Summary          = $_.summary
+            Level            = $_.level
             ImpactedServices = $_.impactedServices
-            LastUpdateTime = $_.lastUpdateTime
+            LastUpdateTime   = $_.lastUpdateTime
         }
     }
 }
