@@ -38,30 +38,63 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
 
-# Colors for output
-$script:Green = "`e[32m"
-$script:Yellow = "`e[33m"
-$script:Red = "`e[31m"
-$script:Blue = "`e[34m"
-$script:Cyan = "`e[36m"
-$script:Reset = "`e[0m"
-
-function Write-ColorOutput {
+<#
+.SYNOPSIS
+    Writes an informational message with optional ANSI coloring.
+.DESCRIPTION
+    Wraps Write-Information to surface script status updates without relying on Write-Host.
+.PARAMETER Message
+    Text to display.
+.PARAMETER Color
+    Optional color name applied when ANSI styling is available.
+#>
+function Write-Message {
     param(
+        [Parameter(Mandatory)]
         [string]$Message,
-        [string]$Color = $script:Reset
+
+        [ValidateSet('Default', 'Blue', 'Cyan', 'Gray', 'Green', 'Red', 'Yellow')]
+        [string]$Color = 'Default'
     )
-    Write-Host "${Color}${Message}${script:Reset}"
+
+    $prefix = ''
+    $suffix = ''
+
+    if ($PSStyle) {
+        switch ($Color) {
+            'Blue'   { $prefix = $PSStyle.Foreground.Blue }
+            'Cyan'   { $prefix = $PSStyle.Foreground.Cyan }
+            'Gray'   { $prefix = $PSStyle.Foreground.Gray }
+            'Green'  { $prefix = $PSStyle.Foreground.Green }
+            'Red'    { $prefix = $PSStyle.Foreground.Red }
+            'Yellow' { $prefix = $PSStyle.Foreground.Yellow }
+        }
+
+        if ($prefix) {
+            $suffix = $PSStyle.Reset
+        }
+    }
+
+    Write-Information ("{0}{1}{2}" -f $prefix, $Message, $suffix)
 }
 
+<#
+.SYNOPSIS
+    Displays a formatted header block in script output.
+.DESCRIPTION
+    Emits a blank line, a colored separator, the supplied message, and another separator.
+.PARAMETER Message
+    Header text to display.
+#>
 function Write-Header {
     param([string]$Message)
-    Write-Host ""
-    Write-ColorOutput "========================================" $script:Blue
-    Write-ColorOutput $Message $script:Blue
-    Write-ColorOutput "========================================" $script:Blue
-    Write-Host ""
+    Write-Message ''
+    Write-Message '========================================' -Color Blue
+    Write-Message $Message -Color Blue
+    Write-Message '========================================' -Color Blue
+    Write-Message ''
 }
 
 # Determine repository root
@@ -72,51 +105,51 @@ if (-not $OutputDirectory) {
 
 Write-Header "Azure AD M2M Authentication Setup"
 
-Write-ColorOutput "Configuration:" $script:Yellow
-Write-Host "  App Name:    $AppName"
-Write-Host "  Environment: $Environment"
-Write-Host "  Output Dir:  $OutputDirectory"
-Write-Host ""
+Write-Message 'Configuration:' -Color Yellow
+Write-Message "  App Name:    $AppName"
+Write-Message "  Environment: $Environment"
+Write-Message "  Output Dir:  $OutputDirectory"
+Write-Message ''
 
 # Check if Azure CLI is installed
 try {
     $azVersion = az version --output json | ConvertFrom-Json
-    Write-ColorOutput "✓ Azure CLI detected (version: $($azVersion.'azure-cli'))" $script:Green
+    Write-Message "[OK] Azure CLI detected (version: $($azVersion.'azure-cli'))" -Color Green
 }
 catch {
-    Write-ColorOutput "✗ Azure CLI not found. Please install Azure CLI first." $script:Red
+    Write-Message '[ERROR] Azure CLI not found. Please install Azure CLI first.' -Color Red
     exit 1
 }
 
 # Check if logged in
-Write-Host ""
-Write-ColorOutput "Checking Azure authentication..." $script:Yellow
+Write-Message ''
+Write-Message 'Checking Azure authentication...' -Color Yellow
 try {
     $account = az account show --output json | ConvertFrom-Json
     $tenantId = $account.tenantId
     $subscriptionId = $account.id
-    Write-ColorOutput "✓ Logged in as: $($account.user.name)" $script:Green
-    Write-Host "  Subscription: $($account.name)"
-    Write-Host "  Tenant ID: $tenantId"
+    Write-Message "[OK] Logged in as: $($account.user.name)" -Color Green
+    Write-Message "  Subscription: $($account.name)"
+    Write-Message "  Tenant ID: $tenantId"
 }
 catch {
-    Write-ColorOutput "✗ Not logged in to Azure. Please run 'az login' first." $script:Red
+    Write-Message "[ERROR] Not logged in to Azure. Please run 'az login' first." -Color Red
     exit 1
 }
 
-Write-Host ""
+Write-Message ''
 Write-Header "Step 1: Create App Registration"
 
-Write-ColorOutput "Creating Azure AD app registration..." $script:Yellow
+Write-Message 'Creating Azure AD app registration...' -Color Yellow
 
 try {
     # Check if app already exists
     $existingApp = az ad app list --display-name $AppName --output json | ConvertFrom-Json
 
     if ($existingApp -and $existingApp.Count -gt 0) {
-        Write-ColorOutput "⚠  App registration already exists: $AppName" $script:Yellow
+        Write-Message "[WARN] App registration already exists: $AppName" -Color Yellow
         $appId = $existingApp[0].appId
-        Write-Host "  Using existing App ID: $appId"
+        Write-Message "  Using existing App ID: $appId"
     }
     else {
         # Create new app registration
@@ -126,16 +159,16 @@ try {
             --output json | ConvertFrom-Json
 
         $appId = $app.appId
-        Write-ColorOutput "✓ Created app registration: $AppName" $script:Green
-        Write-Host "  App ID: $appId"
+        Write-Message "[OK] Created app registration: $AppName" -Color Green
+        Write-Message "  App ID: $appId"
     }
 }
 catch {
-    Write-ColorOutput "✗ Failed to create app registration: $_" $script:Red
+    Write-Message "[ERROR] Failed to create app registration: $_" -Color Red
     exit 1
 }
 
-Write-Host ""
+Write-Message ''
 Write-Header "Step 2: Create Service Principal"
 
 try {
@@ -143,24 +176,24 @@ try {
     $existingSp = az ad sp show --id $appId --output json 2>$null | ConvertFrom-Json
 
     if ($existingSp) {
-        Write-ColorOutput "⚠  Service principal already exists" $script:Yellow
-        Write-Host "  Object ID: $($existingSp.id)"
+        Write-Message '[WARN] Service principal already exists' -Color Yellow
+        Write-Message "  Object ID: $($existingSp.id)"
     }
     else {
         $sp = az ad sp create --id $appId --output json | ConvertFrom-Json
-        Write-ColorOutput "✓ Created service principal" $script:Green
-        Write-Host "  Object ID: $($sp.id)"
+        Write-Message '[OK] Created service principal' -Color Green
+        Write-Message "  Object ID: $($sp.id)"
     }
 }
 catch {
-    Write-ColorOutput "✗ Failed to create service principal: $_" $script:Red
+    Write-Message "[ERROR] Failed to create service principal: $_" -Color Red
     exit 1
 }
 
-Write-Host ""
+Write-Message ''
 Write-Header "Step 3: Generate Client Secret"
 
-Write-ColorOutput "Generating client secret..." $script:Yellow
+Write-Message 'Generating client secret...' -Color Yellow
 
 try {
     # Create a new credential with 1 year expiration
@@ -170,14 +203,14 @@ try {
         --output json | ConvertFrom-Json
 
     $clientSecret = $credential.password
-    Write-ColorOutput "✓ Client secret generated (expires in 1 year)" $script:Green
+    Write-Message '[OK] Client secret generated (expires in 1 year)' -Color Green
 }
 catch {
-    Write-ColorOutput "✗ Failed to generate client secret: $_" $script:Red
+    Write-Message "[ERROR] Failed to generate client secret: $_" -Color Red
     exit 1
 }
 
-Write-Host ""
+Write-Message ''
 Write-Header "Step 4: Save Credentials"
 
 # Create output directory if needed
@@ -194,10 +227,10 @@ $appId | Out-File -FilePath $clientIdFile -NoNewline -Encoding utf8
 $clientSecret | Out-File -FilePath $clientSecretFile -NoNewline -Encoding utf8
 $tenantId | Out-File -FilePath $tenantIdFile -NoNewline -Encoding utf8
 
-Write-ColorOutput "✓ Saved credentials to .keys directory" $script:Green
-Write-Host "  Client ID: $clientIdFile"
-Write-Host "  Client Secret: $clientSecretFile"
-Write-Host "  Tenant ID: $tenantIdFile"
+Write-Message '[OK] Saved credentials to .keys directory' -Color Green
+Write-Message "  Client ID: $clientIdFile"
+Write-Message "  Client Secret: $clientSecretFile"
+Write-Message "  Tenant ID: $tenantIdFile"
 
 # Create summary file
 $summaryFile = Join-Path $OutputDirectory "m2m-auth-info.txt"
@@ -259,17 +292,17 @@ Next Steps:
 
 $summary | Out-File -FilePath $summaryFile -Encoding utf8
 
-Write-Host ""
+Write-Message ''
 Write-Header "Setup Complete!"
 
-Write-ColorOutput "M2M authentication configured successfully!" $script:Green
-Write-Host ""
-Write-ColorOutput "Credentials saved to:" $script:Yellow
-Write-Host "  $OutputDirectory"
-Write-Host ""
-Write-ColorOutput "📖 See $summaryFile for usage instructions" $script:Blue
-Write-Host ""
-Write-ColorOutput "Next: Use 'pwsh scripts/local/get-m2m-token.ps1' to generate access tokens" $script:Cyan
-Write-Host ""
-Write-ColorOutput "⚠️  Important: Client secret expires in 1 year!" $script:Red
-Write-Host ""
+Write-Message 'M2M authentication configured successfully!' -Color Green
+Write-Message ''
+Write-Message 'Credentials saved to:' -Color Yellow
+Write-Message "  $OutputDirectory"
+Write-Message ''
+Write-Message "See $summaryFile for usage instructions" -Color Blue
+Write-Message ''
+Write-Message "Next: Use 'pwsh scripts/local/get-m2m-token.ps1' to generate access tokens" -Color Cyan
+Write-Message ''
+Write-Message 'Important: Client secret expires in 1 year!' -Color Red
+Write-Message ''

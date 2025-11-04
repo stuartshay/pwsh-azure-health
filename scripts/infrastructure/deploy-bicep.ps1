@@ -36,66 +36,105 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
+
+<#
+.SYNOPSIS
+    Writes an informational message with optional ANSI coloring.
+.DESCRIPTION
+    Wraps Write-Information so deployment scripts can emit status messages without Write-Host.
+.PARAMETER Message
+    Text to display.
+.PARAMETER Color
+    Optional color name applied when ANSI styling is available.
+#>
+function Write-Message {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Message,
+
+        [ValidateSet('Default', 'Cyan', 'Gray', 'Green', 'Yellow')]
+        [string]$Color = 'Default'
+    )
+
+    $prefix = ''
+    $suffix = ''
+
+    if ($PSStyle) {
+        switch ($Color) {
+            'Cyan'   { $prefix = $PSStyle.Foreground.Cyan }
+            'Gray'   { $prefix = $PSStyle.Foreground.Gray }
+            'Green'  { $prefix = $PSStyle.Foreground.Green }
+            'Yellow' { $prefix = $PSStyle.Foreground.Yellow }
+        }
+
+        if ($prefix) {
+            $suffix = $PSStyle.Reset
+        }
+    }
+
+    Write-Information ("{0}{1}{2}" -f $prefix, $Message, $suffix)
+}
 
 # Navigate to infrastructure directory (go up two levels from scripts/infrastructure)
 $infraDir = Join-Path -Path $PSScriptRoot -ChildPath '..' -AdditionalChildPath '..','infrastructure'
 Push-Location $infraDir
 
 try {
-    Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  Azure Health Monitoring - Bicep Deployment" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Configuration:" -ForegroundColor Cyan
-    Write-Host "  Resource Group : $ResourceGroup" -ForegroundColor Gray
-    Write-Host "  Location       : $Location" -ForegroundColor Gray
-    Write-Host "  Environment    : $Environment" -ForegroundColor Gray
-    Write-Host "  Template       : main.bicep" -ForegroundColor Gray
+    Write-Message ''
+    Write-Message '===========================================================' -Color Cyan
+    Write-Message '  Azure Health Monitoring - Bicep Deployment' -Color Cyan
+    Write-Message '===========================================================' -Color Cyan
+    Write-Message ''
+    Write-Message 'Configuration:' -Color Cyan
+    Write-Message "  Resource Group : $ResourceGroup" -Color Gray
+    Write-Message "  Location       : $Location" -Color Gray
+    Write-Message "  Environment    : $Environment" -Color Gray
+    Write-Message '  Template       : main.bicep' -Color Gray
     if ($WhatIf) {
-        Write-Host "  Mode           : What-If (preview only)" -ForegroundColor Yellow
+        Write-Message '  Mode           : What-If (preview only)' -Color Yellow
     }
-    Write-Host ""
+    Write-Message ''
 
     # Check authentication
-    Write-Host "Checking Azure CLI authentication..." -ForegroundColor Cyan
+    Write-Message 'Checking Azure CLI authentication...' -Color Cyan
     $account = az account show 2>$null | ConvertFrom-Json
     if (-not $account) {
         Write-Error "Not logged in to Azure. Run: az login"
         exit 1
     }
-    Write-Host "✓ Authenticated as: $($account.user.name)" -ForegroundColor Green
-    Write-Host "  Subscription: $($account.name)" -ForegroundColor Gray
-    Write-Host ""
+    Write-Message "[OK] Authenticated as: $($account.user.name)" -Color Green
+    Write-Message "  Subscription: $($account.name)" -Color Gray
+    Write-Message ''
 
     # Create resource group
-    Write-Host "Creating resource group..." -ForegroundColor Cyan
+    Write-Message 'Creating resource group...' -Color Cyan
     $rgExists = az group exists --name $ResourceGroup | ConvertFrom-Json
 
     if ($rgExists) {
-        Write-Host "✓ Resource group exists: $ResourceGroup" -ForegroundColor Green
+        Write-Message "[OK] Resource group exists: $ResourceGroup" -Color Green
     }
     else {
         az group create `
             --name $ResourceGroup `
             --location $Location `
             --tags environment=$Environment purpose=monitoring | Out-Null
-        Write-Host "✓ Created resource group: $ResourceGroup" -ForegroundColor Green
+        Write-Message "[OK] Created resource group: $ResourceGroup" -Color Green
     }
-    Write-Host ""
+    Write-Message ''
 
     # Deploy Bicep template
     if ($WhatIf) {
-        Write-Host "Running What-If analysis..." -ForegroundColor Cyan
+        Write-Message 'Running What-If analysis...' -Color Cyan
         az deployment group what-if `
             --resource-group $ResourceGroup `
             --template-file main.bicep `
             --parameters environment=$Environment
     }
     else {
-        Write-Host "Deploying Bicep template..." -ForegroundColor Cyan
-        Write-Host "(This may take 3-5 minutes)" -ForegroundColor Gray
-        Write-Host ""
+        Write-Message 'Deploying Bicep template...' -Color Cyan
+        Write-Message '(This may take 3-5 minutes)' -Color Gray
+        Write-Message ''
 
         $deployment = az deployment group create `
             --resource-group $ResourceGroup `
@@ -104,29 +143,29 @@ try {
             --output json | ConvertFrom-Json
 
         if ($LASTEXITCODE -eq 0) {
-            Write-Host ""
-            Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Green
-            Write-Host "  Deployment Successful!" -ForegroundColor Green
-            Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Green
-            Write-Host ""
-            Write-Host "Deployed Resources:" -ForegroundColor Cyan
-            Write-Host "  Resource Group      : $($deployment.properties.outputs.resourceGroupName.value)" -ForegroundColor Gray
-            Write-Host "  Function App        : $($deployment.properties.outputs.functionAppName.value)" -ForegroundColor Gray
-            Write-Host "  Function URL        : $($deployment.properties.outputs.functionAppUrl.value)" -ForegroundColor Gray
-            Write-Host "  Storage Account     : $($deployment.properties.outputs.storageAccountName.value)" -ForegroundColor Gray
-            Write-Host "  App Insights        : $($deployment.properties.outputs.appInsightsName.value)" -ForegroundColor Gray
-            Write-Host "  Managed Identity ID : $($deployment.properties.outputs.functionAppPrincipalId.value)" -ForegroundColor Gray
-            Write-Host ""
-            Write-Host "Next Steps:" -ForegroundColor Cyan
-            Write-Host "  1. Deploy function code:" -ForegroundColor Gray
-            Write-Host "     cd src && func azure functionapp publish $($deployment.properties.outputs.functionAppName.value)" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "  2. Test the deployment:" -ForegroundColor Gray
-            Write-Host "     curl $($deployment.properties.outputs.functionAppUrl.value)/api/GetServiceHealth" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "  3. View logs:" -ForegroundColor Gray
-            Write-Host "     az functionapp log tail --name $($deployment.properties.outputs.functionAppName.value) --resource-group $ResourceGroup" -ForegroundColor Yellow
-            Write-Host ""
+            Write-Message ''
+            Write-Message '===========================================================' -Color Green
+            Write-Message '  Deployment Successful!' -Color Green
+            Write-Message '===========================================================' -Color Green
+            Write-Message ''
+            Write-Message 'Deployed Resources:' -Color Cyan
+            Write-Message "  Resource Group      : $($deployment.properties.outputs.resourceGroupName.value)" -Color Gray
+            Write-Message "  Function App        : $($deployment.properties.outputs.functionAppName.value)" -Color Gray
+            Write-Message "  Function URL        : $($deployment.properties.outputs.functionAppUrl.value)" -Color Gray
+            Write-Message "  Storage Account     : $($deployment.properties.outputs.storageAccountName.value)" -Color Gray
+            Write-Message "  App Insights        : $($deployment.properties.outputs.appInsightsName.value)" -Color Gray
+            Write-Message "  Managed Identity ID : $($deployment.properties.outputs.functionAppPrincipalId.value)" -Color Gray
+            Write-Message ''
+            Write-Message 'Next Steps:' -Color Cyan
+            Write-Message '  1. Deploy function code:' -Color Gray
+            Write-Message "     cd src && func azure functionapp publish $($deployment.properties.outputs.functionAppName.value)" -Color Yellow
+            Write-Message ''
+            Write-Message '  2. Test the deployment:' -Color Gray
+            Write-Message "     curl $($deployment.properties.outputs.functionAppUrl.value)/api/GetServiceHealth" -Color Yellow
+            Write-Message ''
+            Write-Message '  3. View logs:' -Color Gray
+            Write-Message "     az functionapp log tail --name $($deployment.properties.outputs.functionAppName.value) --resource-group $ResourceGroup" -Color Yellow
+            Write-Message ''
         }
         else {
             Write-Error "Deployment failed. Check the output above for details."

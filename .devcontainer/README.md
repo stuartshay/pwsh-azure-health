@@ -6,7 +6,7 @@ This directory contains the DevContainer configuration for the Azure Health Moni
 
 The DevContainer includes all required tools and dependencies:
 
-- **PowerShell 7.5.4** - PowerShell runtime
+- **PowerShell (latest stable)** - PowerShell runtime (auto-updated during post-create)
 - **.NET 8 SDK** - Required by Azure Functions
 - **Azure Functions Core Tools v4** - Local function development and testing
 - **Azure CLI** - Azure resource management
@@ -14,6 +14,8 @@ The DevContainer includes all required tools and dependencies:
 - **Python 3.10** - Required for pre-commit framework
 - **Git** - Version control
 - **pre-commit** - Git hook framework for code quality
+
+> ℹ️ The `post-create.sh` automation checks GitHub for the newest stable PowerShell release and upgrades the container when a newer build is available.
 
 ## Dev Container Features
 

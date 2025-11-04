@@ -94,6 +94,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+.pre-commit-cache/
 
 # Azure GitHub Actions configuration (contains sensitive IDs)
 azure-github-actions-config.txt

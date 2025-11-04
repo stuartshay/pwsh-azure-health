@@ -8,8 +8,8 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": false,
-      "installOhMyZsh": false,
+      "installZsh": true,
+      "installOhMyZsh": true,
       "upgradePackages": true,
       "username": "vscode",
       "uid": "1000",
@@ -28,7 +28,7 @@
       "version": "latest",
       "installBicep": false
     },
-    "ghcr.io/rchaganti/devcontainer-features/azure-bicep:1": {
+    "ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:1": {
       "version": "latest"
     },
     "ghcr.io/devcontainers/features/dotnet:2": {
@@ -53,6 +53,11 @@
     "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
       "version": "4"
     },
+
+    "ghcr.io/jpawlowski/devcontainer-features/powershell-extended:2": {
+      "version": "latest"
+    },
+
     "ghcr.io/devcontainers-extra/features/actionlint:1": {
       "version": "latest"
     },
