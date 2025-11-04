@@ -23,7 +23,7 @@
     'Pester'            = @{ Version = '5.*'; MaximumVersion = '5.99.99' }
     'PSScriptAnalyzer'  = @{ Version = '1.23.*'; MaximumVersion = '1.23.99' }
     'PSRule'            = @{ Version = '2.*' }
-    'PSRule.Rules.Azure' = @{ Version = '2.*' }
+    'PSRule.Rules.Azure' = @{ Version = '1.*' }
 
     # Optional: Helpful development modules
     # 'PowerShellGet'   = @{ Version = '3.*' }
