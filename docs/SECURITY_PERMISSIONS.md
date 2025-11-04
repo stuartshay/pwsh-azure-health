@@ -1,8 +1,8 @@
 # Azure Permissions & Security Architecture
 
-**Document Version:** 1.0  
-**Last Updated:** November 4, 2025  
-**Security Classification:** Internal  
+**Document Version:** 1.0
+**Last Updated:** November 4, 2025
+**Security Classification:** Internal
 
 ## Executive Summary
 
@@ -10,10 +10,10 @@ This document provides a comprehensive overview of the Azure permissions, securi
 
 ### Security Posture
 
-✅ **Production Ready** - Implements industry-standard security controls  
-✅ **Least Privilege** - Minimal permissions for required operations  
-✅ **Zero Credentials** - No secrets or connection strings in code  
-✅ **Identity-Based** - Leverages Azure AD Managed Identity  
+✅ **Production Ready** - Implements industry-standard security controls
+✅ **Least Privilege** - Minimal permissions for required operations
+✅ **Zero Credentials** - No secrets or connection strings in code
+✅ **Identity-Based** - Leverages Azure AD Managed Identity
 
 ---
 
@@ -71,10 +71,10 @@ ServiceHealthResources
 
 #### What Reader Does NOT Provide
 
-❌ No write, modify, or delete permissions  
-❌ No role assignment management  
-❌ No access to secrets or keys  
-❌ No ability to modify resources  
+❌ No write, modify, or delete permissions
+❌ No role assignment management
+❌ No access to secrets or keys
+❌ No ability to modify resources
 
 #### Alternative Roles Considered
 
@@ -110,10 +110,10 @@ Provides read-only access to **Application Insights**, **Log Analytics**, and mo
 
 #### What Monitoring Reader Does NOT Provide
 
-❌ No write permissions to monitoring data  
-❌ No resource creation or deletion  
-❌ No data export capabilities  
-❌ No alert rule modifications  
+❌ No write permissions to monitoring data
+❌ No resource creation or deletion
+❌ No data export capabilities
+❌ No alert rule modifications
 
 ### 1.4 Storage Blob Data Contributor Role
 
@@ -193,7 +193,7 @@ module roleAssignments 'modules/roleAssignments.bicep' = {
 
 ### 2.1 Identity Type
 
-**Type:** System-Assigned Managed Identity  
+**Type:** System-Assigned Managed Identity
 **Configuration:** `infrastructure/main.bicep` (lines 119-121)
 
 ```bicep
@@ -546,7 +546,7 @@ resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-11-01' = {
 }
 ```
 
-**Why Exclude `/api/*`?**  
+**Why Exclude `/api/*`?**
 Allows Azure Functions to use **function keys** for API authentication instead of Azure AD tokens. This is required for timer triggers and external API calls.
 
 ### 4.3 Data Protection
@@ -561,16 +561,16 @@ Allows Azure Functions to use **function keys** for API authentication instead o
 
 #### Encryption in Transit
 
-✅ **TLS 1.2** enforced on all services  
-✅ **HTTPS-only** for all endpoints  
-✅ **Secure storage connections** via HTTPS  
+✅ **TLS 1.2** enforced on all services
+✅ **HTTPS-only** for all endpoints
+✅ **Secure storage connections** via HTTPS
 
 #### No Secrets in Code
 
-✅ **Zero hardcoded credentials**  
-✅ **Managed Identity** for authentication  
-✅ **Environment variables** for configuration  
-✅ **No connection strings** in source control  
+✅ **Zero hardcoded credentials**
+✅ **Managed Identity** for authentication
+✅ **Environment variables** for configuration
+✅ **No connection strings** in source control
 
 **Configuration:** `src/local.settings.json.template`
 
@@ -1004,7 +1004,7 @@ az graph query -q "ServiceHealthResources | where type =~ 'Microsoft.ResourceHea
 
 ---
 
-**Classification:** Internal  
-**Owner:** Platform Engineering Team  
-**Review Cycle:** Quarterly  
+**Classification:** Internal
+**Owner:** Platform Engineering Team
+**Review Cycle:** Quarterly
 **Next Review:** 2026-02-04
