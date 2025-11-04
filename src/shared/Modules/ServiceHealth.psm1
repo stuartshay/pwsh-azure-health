@@ -67,41 +67,55 @@ function Get-ServiceHealthEvents {
     }
 
     Write-Verbose "Setting Azure context to subscription '$SubscriptionId'."
-    Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
+    try {
+        Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
+    }
+    catch {
+        Write-Error "Failed to set Azure context for subscription '$SubscriptionId': $($_.Exception.Message)"
+        throw
+    }
 
     $isoStart = $StartTime.ToUniversalTime().ToString('o')
     $query = @"
 ServiceHealthResources
-| where type == 'microsoft.resourcehealth/events'
-| where properties.eventType == 'ServiceIssue' or properties.eventType == 'PlannedMaintenance'
-| where properties.status == 'Active' or todatetime(properties.lastUpdateTime) >= datetime('$isoStart')
+| where type =~ 'Microsoft.ResourceHealth/events'
+| extend eventType = tostring(properties.EventType), status = tostring(properties.Status), lastUpdate = todatetime(properties.LastUpdateTime)
+| where eventType == 'ServiceIssue' or eventType == 'PlannedMaintenance'
+| where status == 'Active' or lastUpdate >= datetime('$isoStart')
 | project
     id,
-    trackingId = properties.trackingId,
-    eventType = properties.eventType,
-    status = properties.status,
-    title = properties.title,
-    summary = properties.summary,
-    level = properties.level,
-    impactedServices = properties.impact,
-    lastUpdateTime = properties.lastUpdateTime
+    trackingId = tostring(properties.TrackingId),
+    eventType,
+    status,
+    title = tostring(properties.Title),
+    summary = tostring(properties.Summary),
+    level = tostring(properties.Level),
+    impactedServices = properties.Impact,
+    lastUpdateTime = lastUpdate
 | order by lastUpdateTime desc
 "@
 
     Write-Verbose "Executing Resource Graph query for Service Health events."
-    $results = Search-AzGraph -Query $query -Subscription $SubscriptionId -ErrorAction Stop
+    try {
+        $results = Search-AzGraph -Query $query -Subscription $SubscriptionId -ErrorAction Stop
+    }
+    catch {
+        Write-Error "Resource Graph query failed: $($_.Exception.Message)"
+        Write-Verbose "Query: $query"
+        throw
+    }
 
     return $results | ForEach-Object {
         [pscustomobject]@{
-            Id = $_.id
-            TrackingId = $_.trackingId
-            EventType = $_.eventType
-            Status = $_.status
-            Title = $_.title
-            Summary = $_.summary
-            Level = $_.level
+            Id               = $_.id
+            TrackingId       = $_.trackingId
+            EventType        = $_.eventType
+            Status           = $_.status
+            Title            = $_.title
+            Summary          = $_.summary
+            Level            = $_.level
             ImpactedServices = $_.impactedServices
-            LastUpdateTime = $_.lastUpdateTime
+            LastUpdateTime   = $_.lastUpdateTime
         }
     }
 }

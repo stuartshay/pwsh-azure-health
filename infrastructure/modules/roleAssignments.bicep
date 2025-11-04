@@ -7,9 +7,13 @@ param principalId string
 param subscriptionId string = subscription().subscriptionId
 
 // Role Assignment: Reader (for Service Health queries)
+// The Reader role provides:
+// - Read access to all resources in the subscription
+// - Ability to query Azure Resource Graph (including ServiceHealthResources table)
+// - No write or management permissions
 resource readerRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: subscription()
-  // Reader role
+  // Reader role - provides Resource Graph query access
   name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
 }
 

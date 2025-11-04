@@ -131,7 +131,12 @@ repos:
         entry: >
           pwsh -NoProfile -Command
           "$ErrorActionPreference = 'Stop';
-          Import-Module Pester -MinimumVersion 5.0.0;
+          try {
+            Import-Module Pester -MinimumVersion 5.0.0 -ErrorAction Stop;
+          } catch {
+            Write-Host 'Warning: Pester not available, skipping tests' -ForegroundColor Yellow;
+            exit 0;
+          }
           try {
             Import-Module Az.Accounts -ErrorAction Stop;
             Import-Module Az.ResourceGraph -ErrorAction Stop;
