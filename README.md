@@ -10,6 +10,35 @@ Enterprise-grade Azure Functions application for monitoring Azure Service Health
 
 This project provides a robust, production-ready solution for monitoring Azure Service Health through serverless Azure Functions. Built with enterprise best practices in mind, it includes comprehensive configuration, local development support, and extensibility for future health monitoring needs.
 
+## 🔐 Security & Permissions
+
+This application uses **System-Assigned Managed Identity** with **least-privilege RBAC** roles for secure, credential-free access to Azure resources.
+
+### Required Azure RBAC Roles
+
+| Role | Scope | Purpose |
+|------|-------|---------|
+| **Reader** | Subscription | Query Azure Resource Graph for Service Health events |
+| **Monitoring Reader** | Subscription | Read Application Insights and monitoring data |
+| **Storage Blob Data Contributor** | Storage Account | Read/write cache data (scoped to storage account only) |
+
+### Security Features
+
+✅ **Zero Credentials in Code** - Uses Managed Identity for all Azure authentication  
+✅ **Identity-Based Storage Access** - No connection strings, token-based blob access  
+✅ **Least Privilege Model** - Minimal permissions required for operations  
+✅ **HTTPS/TLS 1.2 Enforced** - All endpoints require secure connections  
+✅ **No Public Blob Access** - Storage account hardened with private containers  
+✅ **Enterprise Compliance** - Supports NIST 800-53, CIS, ISO 27001, SOC 2  
+
+**📖 Complete Security Documentation:** See [**`docs/SECURITY_PERMISSIONS.md`**](docs/SECURITY_PERMISSIONS.md) for:
+- Detailed role assignment justifications
+- Managed Identity architecture and authentication flows  
+- Service-specific permission requirements
+- Deployment verification procedures
+- Troubleshooting permission issues
+- Compliance and governance guidance
+
 ## Features
 
 - **Azure Service Health Monitoring**: Retrieve and monitor service health events across Azure subscriptions
@@ -71,9 +100,14 @@ All prerequisites (PowerShell 7.4, Azure Functions Core Tools, .NET 8, Azure CLI
 ### Azure Requirements
 
 - Azure subscription
-- Appropriate permissions to read Service Health data
+- **Required RBAC roles** (automatically assigned during Bicep deployment):
+  - **Reader** at subscription scope
+  - **Monitoring Reader** at subscription scope  
+  - **Storage Blob Data Contributor** at storage account scope
 - Azure Functions resource (for deployment)
-- Application Insights instance (optional, for monitoring)
+- Application Insights instance (for monitoring)
+
+> **📖 See [docs/SECURITY_PERMISSIONS.md](docs/SECURITY_PERMISSIONS.md)** for detailed permission requirements, security controls, and deployment verification procedures.
 
 ## Project Structure
 
