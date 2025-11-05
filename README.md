@@ -277,6 +277,109 @@ Retrieves Azure Service Health events for a specified subscription.
 }
 ```
 
+### GetHealthDashboard
+
+Provides comprehensive analytics and statistics for cached Azure Service Health events. This endpoint always returns meaningful data, even when Azure has no active service health issues, making it ideal for monitoring dashboards and trend analysis.
+
+**Endpoint:** `GET /api/GetHealthDashboard`
+
+**Query Parameters:**
+- `topN` (optional, default: 5): Number of top affected services and regions to return
+
+**Example Request:**
+```bash
+curl "https://your-function-app.azurewebsites.net/api/GetHealthDashboard?code=your-function-key"
+
+# With topN parameter
+curl "https://your-function-app.azurewebsites.net/api/GetHealthDashboard?code=your-function-key&topN=10"
+```
+
+**Response:**
+```json
+{
+  "systemStatus": {
+    "apiVersion": "1.0.0",
+    "cacheLastUpdated": "2025-11-04T05:37:06Z",
+    "cacheAge": "15 minutes",
+    "nextUpdate": "2025-11-04T05:52:06Z",
+    "dataHealth": "Healthy"
+  },
+  "statistics": {
+    "totalEventsInCache": 5,
+    "activeIssues": 2,
+    "eventsByType": [
+      {"type": "ServiceIssue", "count": 3},
+      {"type": "PlannedMaintenance", "count": 2}
+    ],
+    "eventsByStatus": [
+      {"status": "Active", "count": 2},
+      {"status": "Resolved", "count": 3}
+    ],
+    "eventsByLevel": [
+      {"level": "Critical", "count": 1},
+      {"level": "Warning", "count": 2},
+      {"level": "Informational", "count": 2}
+    ],
+    "dateRange": {
+      "oldestEvent": "2025-10-15T08:30:00Z",
+      "newestEvent": "2025-11-04T04:15:00Z"
+    }
+  },
+  "topAffected": {
+    "services": [
+      {"service": "Azure App Service", "count": 3},
+      {"service": "Azure Storage", "count": 2},
+      {"service": "Azure SQL Database", "count": 1}
+    ],
+    "regions": [
+      {"region": "East US", "count": 4},
+      {"region": "West Europe", "count": 2},
+      {"region": "Global", "count": 1}
+    ]
+  },
+  "trends": {
+    "last24Hours": 2,
+    "last7Days": 4,
+    "last30Days": 5
+  }
+}
+```
+
+**Dashboard Features:**
+- **System Status**: Cache health, age, and next update time
+- **Statistics**: Total events, active issues, events grouped by type/status/level
+- **Top Affected**: Most frequently impacted services and Azure regions
+- **Historical Trends**: Event counts over 24 hours, 7 days, and 30 days
+- **Data Health Indicator**: Shows "Healthy" if cache is fresh (<20 min), "Stale" otherwise
+
+**Use Cases:**
+- Building monitoring dashboards that need consistent data
+- Analyzing service health trends over time
+- Identifying most frequently affected Azure services/regions
+- Monitoring cache freshness and system health
+- Creating reports even when no active issues exist
+
+**Testing Locally:**
+
+Use the included test script to validate dashboard calculations locally:
+
+```bash
+# Basic dashboard
+./scripts/health/test-health-dashboard.ps1
+
+# Detailed view
+./scripts/health/test-health-dashboard.ps1 -Detailed
+
+# JSON output for automation
+./scripts/health/test-health-dashboard.ps1 -Json
+
+# Custom top N (services/regions)
+./scripts/health/test-health-dashboard.ps1 -TopN 10
+
+# Test against production
+./scripts/health/test-health-dashboard.ps1 -Environment prod
+```
+
 ## Development
 
 ### VS Code Setup
