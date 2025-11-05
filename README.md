@@ -24,16 +24,16 @@ This application uses **System-Assigned Managed Identity** with **least-privileg
 
 ### Security Features
 
-✅ **Zero Credentials in Code** - Uses Managed Identity for all Azure authentication  
-✅ **Identity-Based Storage Access** - No connection strings, token-based blob access  
-✅ **Least Privilege Model** - Minimal permissions required for operations  
-✅ **HTTPS/TLS 1.2 Enforced** - All endpoints require secure connections  
-✅ **No Public Blob Access** - Storage account hardened with private containers  
-✅ **Enterprise Compliance** - Supports NIST 800-53, CIS, ISO 27001, SOC 2  
+✅ **Zero Credentials in Code** - Uses Managed Identity for all Azure authentication
+✅ **Identity-Based Storage Access** - No connection strings, token-based blob access
+✅ **Least Privilege Model** - Minimal permissions required for operations
+✅ **HTTPS/TLS 1.2 Enforced** - All endpoints require secure connections
+✅ **No Public Blob Access** - Storage account hardened with private containers
+✅ **Enterprise Compliance** - Supports NIST 800-53, CIS, ISO 27001, SOC 2
 
 **📖 Complete Security Documentation:** See [**`docs/SECURITY_PERMISSIONS.md`**](docs/SECURITY_PERMISSIONS.md) for:
 - Detailed role assignment justifications
-- Managed Identity architecture and authentication flows  
+- Managed Identity architecture and authentication flows
 - Service-specific permission requirements
 - Deployment verification procedures
 - Troubleshooting permission issues
@@ -102,7 +102,7 @@ All prerequisites (PowerShell 7.4, Azure Functions Core Tools, .NET 8, Azure CLI
 - Azure subscription
 - **Required RBAC roles** (automatically assigned during Bicep deployment):
   - **Reader** at subscription scope
-  - **Monitoring Reader** at subscription scope  
+  - **Monitoring Reader** at subscription scope
   - **Storage Blob Data Contributor** at storage account scope
 - Azure Functions resource (for deployment)
 - Application Insights instance (for monitoring)

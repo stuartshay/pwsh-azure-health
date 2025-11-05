@@ -44,10 +44,12 @@ function Invoke-HealthDashboardRequest {
                 $parsedTopN = [int]$Request.Query.topN
                 if ($parsedTopN -ge 1 -and $parsedTopN -le 100) {
                     $topN = $parsedTopN
-                } else {
+                }
+                else {
                     Write-Information "Invalid topN value ($parsedTopN). Must be between 1 and 100. Using default ($topN)." -InformationAction Continue
                 }
-            } else {
+            }
+            else {
                 Write-Information "Non-numeric topN value ('$($Request.Query.topN)'). Using default ($topN)." -InformationAction Continue
             }
         }
