@@ -192,11 +192,15 @@ if [ -f "${WORKSPACE_DIR}/requirements.psd1" ]; then
             }
 
             if ($module.Value -is [hashtable]) {
-                if ($module.Value.Version) {
-                    $installParams["MinimumVersion"] = $module.Value.Version
+                if ($module.Value.MinimumVersion) {
+                    $installParams["MinimumVersion"] = $module.Value.MinimumVersion
                 }
                 if ($module.Value.MaximumVersion) {
                     $installParams["MaximumVersion"] = $module.Value.MaximumVersion
+                }
+                # Legacy support for Version key
+                if ($module.Value.Version -and -not $module.Value.MinimumVersion) {
+                    $installParams["MinimumVersion"] = $module.Value.Version
                 }
             } else {
                 $installParams["MinimumVersion"] = $module.Value
