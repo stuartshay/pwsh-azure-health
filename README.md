@@ -24,12 +24,12 @@ This application uses **System-Assigned Managed Identity** with **least-privileg
 
 ### Security Features
 
-✅ **Zero Credentials in Code** - Uses Managed Identity for all Azure authentication
-✅ **Identity-Based Storage Access** - No connection strings, token-based blob access
-✅ **Least Privilege Model** - Minimal permissions required for operations
-✅ **HTTPS/TLS 1.2 Enforced** - All endpoints require secure connections
-✅ **No Public Blob Access** - Storage account hardened with private containers
-✅ **Enterprise Compliance** - Supports NIST 800-53, CIS, ISO 27001, SOC 2
+- ✅ **Zero Credentials in Code** - Uses Managed Identity for all Azure authentication
+- ✅ **Identity-Based Storage Access** - No connection strings, token-based blob access
+- ✅ **Least Privilege Model** - Minimal permissions required for operations
+- ✅ **HTTPS/TLS 1.2 Enforced** - All endpoints require secure connections
+- ✅ **No Public Blob Access** - Storage account hardened with private containers
+- ✅ **Enterprise Compliance** - Supports NIST 800-53, CIS, ISO 27001, SOC 2
 
 **📖 Complete Security Documentation:** See [**`docs/SECURITY_PERMISSIONS.md`**](docs/SECURITY_PERMISSIONS.md) for:
 - Detailed role assignment justifications
