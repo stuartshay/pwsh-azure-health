@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Test health dashboard analytics by reading cached Service Health data.
@@ -56,6 +56,25 @@ $script:Cyan = "`e[36m"
 $script:Magenta = "`e[35m"
 $script:Reset = "`e[0m"
 
+<#
+.SYNOPSIS
+${1:Short description}
+
+.DESCRIPTION
+${2:Long description}
+
+.PARAMETER Message
+${3:Parameter description}
+
+.PARAMETER Color
+${4:Parameter description}
+
+.EXAMPLE
+${5:An example}
+
+.NOTES
+${6:General notes}
+#>
 function Write-ColorOutput {
     param(
         [string]$Message,
@@ -66,6 +85,25 @@ function Write-ColorOutput {
     }
 }
 
+<#
+.SYNOPSIS
+${1:Short description}
+
+.DESCRIPTION
+${2:Long description}
+
+.PARAMETER CachedData
+${3:Parameter description}
+
+.PARAMETER TopCount
+${4:Parameter description}
+
+.EXAMPLE
+${5:An example}
+
+.NOTES
+${6:General notes}
+#>
 function Get-ServiceHealthDashboard {
     param(
         [Parameter(Mandatory = $true)]
@@ -128,9 +166,9 @@ function Get-ServiceHealthDashboard {
 
     # Extract and count affected services
     $serviceCount = @{}
-    foreach ($event in $events) {
-        if ($event.ImpactedServices) {
-            foreach ($svc in $event.ImpactedServices) {
+    foreach ($evt in $events) {
+        if ($evt.ImpactedServices) {
+            foreach ($svc in $evt.ImpactedServices) {
                 $serviceName = if ($svc.ImpactedService) { $svc.ImpactedService } elseif ($svc.ServiceName) { $svc.ServiceName } else { $svc }
                 if ($serviceName) {
                     if ($serviceCount.ContainsKey($serviceName)) {
@@ -145,20 +183,20 @@ function Get-ServiceHealthDashboard {
     }
 
     $topServices = $serviceCount.GetEnumerator() |
-    Sort-Object -Property Value -Descending |
-    Select-Object -First $TopCount |
-    ForEach-Object {
-        @{
-            service = $_.Key
-            count   = $_.Value
+        Sort-Object -Property Value -Descending |
+        Select-Object -First $TopCount |
+        ForEach-Object {
+            @{
+                service = $_.Key
+                count   = $_.Value
+            }
         }
-    }
 
     # Extract and count affected regions
     $regionCount = @{}
-    foreach ($event in $events) {
-        if ($event.ImpactedServices) {
-            foreach ($svc in $event.ImpactedServices) {
+    foreach ($evt in $events) {
+        if ($evt.ImpactedServices) {
+            foreach ($svc in $evt.ImpactedServices) {
                 if ($svc.ImpactedRegions) {
                     foreach ($region in $svc.ImpactedRegions) {
                         $regionName = if ($region.ImpactedRegion) { $region.ImpactedRegion } elseif ($region.RegionName) { $region.RegionName } else { $region }
@@ -177,24 +215,24 @@ function Get-ServiceHealthDashboard {
     }
 
     $topRegions = $regionCount.GetEnumerator() |
-    Sort-Object -Property Value -Descending |
-    Select-Object -First $TopCount |
-    ForEach-Object {
-        @{
-            region = $_.Key
-            count  = $_.Value
+        Sort-Object -Property Value -Descending |
+        Select-Object -First $TopCount |
+        ForEach-Object {
+            @{
+                region = $_.Key
+                count  = $_.Value
+            }
         }
-    }
 
     # Parse all event times once for efficiency and safety
     $eventTimes = @()
-    foreach ($event in $events) {
-        if ($event.LastUpdateTime) {
+    foreach ($evt in $events) {
+        if ($evt.LastUpdateTime) {
             try {
-                $eventTimes += [DateTime]::Parse($event.LastUpdateTime)
+                $eventTimes += [DateTime]::Parse($evt.LastUpdateTime)
             }
             catch {
-                # Skip events with invalid dates
+                Write-Verbose "Skipping event with invalid date: $($evt.LastUpdateTime)"
             }
         }
     }

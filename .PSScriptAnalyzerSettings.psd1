@@ -17,7 +17,11 @@
         # Write-Host is acceptable in profile.ps1 files for colored prompts
         'PSAvoidUsingWriteHost',
         # Whitespace consistency can be overly strict for configuration files
-        'PSUseConsistentWhitespace'
+        'PSUseConsistentWhitespace',
+        # Comment help is informational and not required for helper functions
+        'PSProvideCommentHelp',
+        # OutputType is informational and not critical
+        'PSUseOutputTypeCorrectly'
     )
 
     # Custom rules

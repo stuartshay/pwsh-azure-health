@@ -1,4 +1,4 @@
-using namespace System.Net
+﻿using namespace System.Net
 
 param($Request, $TriggerMetadata)
 
@@ -69,8 +69,36 @@ function Invoke-HealthDashboardRequest {
     }
 }
 
+<#
+.SYNOPSIS
+Generates a comprehensive dashboard from cached Service Health data.
+
+.DESCRIPTION
+Analyzes Azure Service Health events from cache and generates analytics including:
+- System status (cache age and data health)
+- Top impacted services and regions
+- Issue categorization by status and level
+- Time-based trend analysis (24h, 7d, 30d)
+
+.PARAMETER CachedData
+The cached Service Health data object containing events and metadata.
+
+.PARAMETER TopCount
+Number of top services/regions to return. Must be between 1-100. Default is 5.
+
+.OUTPUTS
+System.Collections.Specialized.OrderedDictionary
+Returns an ordered dictionary containing dashboard metrics and analytics.
+
+.EXAMPLE
+$dashboard = Get-ServiceHealthDashboard -CachedData $cache -TopCount 10
+
+.NOTES
+This function optimizes performance by parsing dates once and caching results.
+#>
 function Get-ServiceHealthDashboard {
     [CmdletBinding()]
+    [OutputType([System.Collections.Specialized.OrderedDictionary])]
     param(
         [Parameter(Mandatory = $true)]
         $CachedData,
@@ -132,9 +160,9 @@ function Get-ServiceHealthDashboard {
 
     # Extract and count affected services
     $serviceCount = @{}
-    foreach ($event in $events) {
-        if ($event.ImpactedServices) {
-            foreach ($svc in $event.ImpactedServices) {
+    foreach ($evt in $events) {
+        if ($evt.ImpactedServices) {
+            foreach ($svc in $evt.ImpactedServices) {
                 $serviceName = if ($svc.ImpactedService) { $svc.ImpactedService } elseif ($svc.ServiceName) { $svc.ServiceName } else { $svc }
                 if ($serviceName) {
                     if ($serviceCount.ContainsKey($serviceName)) {
@@ -149,20 +177,20 @@ function Get-ServiceHealthDashboard {
     }
 
     $topServices = $serviceCount.GetEnumerator() |
-    Sort-Object -Property Value -Descending |
-    Select-Object -First $TopCount |
-    ForEach-Object {
-        @{
-            service = $_.Key
-            count   = $_.Value
+        Sort-Object -Property Value -Descending |
+        Select-Object -First $TopCount |
+        ForEach-Object {
+            @{
+                service = $_.Key
+                count   = $_.Value
+            }
         }
-    }
 
     # Extract and count affected regions
     $regionCount = @{}
-    foreach ($event in $events) {
-        if ($event.ImpactedServices) {
-            foreach ($svc in $event.ImpactedServices) {
+    foreach ($evt in $events) {
+        if ($evt.ImpactedServices) {
+            foreach ($svc in $evt.ImpactedServices) {
                 if ($svc.ImpactedRegions) {
                     foreach ($region in $svc.ImpactedRegions) {
                         $regionName = if ($region.ImpactedRegion) { $region.ImpactedRegion } elseif ($region.RegionName) { $region.RegionName } else { $region }
@@ -181,24 +209,24 @@ function Get-ServiceHealthDashboard {
     }
 
     $topRegions = $regionCount.GetEnumerator() |
-    Sort-Object -Property Value -Descending |
-    Select-Object -First $TopCount |
-    ForEach-Object {
-        @{
-            region = $_.Key
-            count  = $_.Value
+        Sort-Object -Property Value -Descending |
+        Select-Object -First $TopCount |
+        ForEach-Object {
+            @{
+                region = $_.Key
+                count  = $_.Value
+            }
         }
-    }
 
     # Parse all event times once for efficiency and safety
     $eventTimes = @()
-    foreach ($event in $events) {
-        if ($event.LastUpdateTime) {
+    foreach ($evt in $events) {
+        if ($evt.LastUpdateTime) {
             try {
-                $eventTimes += [DateTime]::Parse($event.LastUpdateTime)
+                $eventTimes += [DateTime]::Parse($evt.LastUpdateTime)
             }
             catch {
-                # Skip events with invalid dates
+                Write-Verbose "Skipping event with invalid date: $($evt.LastUpdateTime)"
             }
         }
     }
