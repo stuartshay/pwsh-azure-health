@@ -40,7 +40,16 @@ function Invoke-HealthDashboardRequest {
         # Get TopN from query parameter, default to 5
         $topN = 5
         if ($Request.Query.topN) {
-            $topN = [int]$Request.Query.topN
+            if ($Request.Query.topN -match '^\d+$') {
+                $parsedTopN = [int]$Request.Query.topN
+                if ($parsedTopN -ge 1 -and $parsedTopN -le 100) {
+                    $topN = $parsedTopN
+                } else {
+                    Write-Information "Invalid topN value ($parsedTopN). Must be between 1 and 100. Using default ($topN)." -InformationAction Continue
+                }
+            } else {
+                Write-Information "Non-numeric topN value ('$($Request.Query.topN)'). Using default ($topN)." -InformationAction Continue
+            }
         }
 
         Write-Information "Calculating dashboard with TopN=$topN" -InformationAction Continue
@@ -71,11 +80,15 @@ function Get-ServiceHealthDashboard {
     $events = $CachedData.events
 
     # Calculate cache metrics
-    $lastQueryTime = if ($CachedData.cachedAt) {
-        [DateTime]::Parse($CachedData.cachedAt)
-    }
-    else {
-        $null
+    $lastQueryTime = $null
+    if ($CachedData.cachedAt) {
+        try {
+            $lastQueryTime = [DateTime]::Parse($CachedData.cachedAt)
+        }
+        catch {
+            Write-Warning "Invalid cachedAt date format: $($CachedData.cachedAt)"
+            $lastQueryTime = $null
+        }
     }
 
     $cacheAge = if ($lastQueryTime) {
@@ -175,26 +188,29 @@ function Get-ServiceHealthDashboard {
         }
     }
 
-    # Calculate time-based trends
-    $last24Hours = $events | Where-Object {
-        $eventTime = [DateTime]::Parse($_.LastUpdateTime)
-        ($now - $eventTime).TotalHours -le 24
-    } | Measure-Object | Select-Object -ExpandProperty Count
+    # Parse all event times once for efficiency and safety
+    $eventTimes = @()
+    foreach ($event in $events) {
+        if ($event.LastUpdateTime) {
+            try {
+                $eventTimes += [DateTime]::Parse($event.LastUpdateTime)
+            }
+            catch {
+                # Skip events with invalid dates
+            }
+        }
+    }
 
-    $last7Days = $events | Where-Object {
-        $eventTime = [DateTime]::Parse($_.LastUpdateTime)
-        ($now - $eventTime).TotalDays -le 7
-    } | Measure-Object | Select-Object -ExpandProperty Count
+    # Calculate time-based trends using cached parsed times
+    $last24Hours = ($eventTimes | Where-Object { ($now - $_).TotalHours -le 24 }).Count
 
-    $last30Days = $events | Where-Object {
-        $eventTime = [DateTime]::Parse($_.LastUpdateTime)
-        ($now - $eventTime).TotalDays -le 30
-    } | Measure-Object | Select-Object -ExpandProperty Count
+    $last7Days = ($eventTimes | Where-Object { ($now - $_).TotalDays -le 7 }).Count
 
-    # Find oldest and newest events
-    $eventTimes = $events | ForEach-Object { [DateTime]::Parse($_.LastUpdateTime) }
-    $oldestEvent = if ($eventTimes) { ($eventTimes | Measure-Object -Minimum).Minimum } else { $null }
-    $newestEvent = if ($eventTimes) { ($eventTimes | Measure-Object -Maximum).Maximum } else { $null }
+    $last30Days = ($eventTimes | Where-Object { ($now - $_).TotalDays -le 30 }).Count
+
+    # Find oldest and newest events using cached parsed times
+    $oldestEvent = if ($eventTimes.Count -gt 0) { ($eventTimes | Measure-Object -Minimum).Minimum } else { $null }
+    $newestEvent = if ($eventTimes.Count -gt 0) { ($eventTimes | Measure-Object -Maximum).Maximum } else { $null }
 
     # Count active issues
     $activeIssues = ($events | Where-Object { $_.Status -eq 'Active' }).Count
