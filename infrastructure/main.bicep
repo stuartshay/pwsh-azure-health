@@ -111,7 +111,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
 }
 
 // Function App
-resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
+resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   name: functionAppName
   location: location
   tags: commonTags
