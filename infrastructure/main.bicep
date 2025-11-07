@@ -67,7 +67,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
 }
 
 // Blob service and container for cache
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-01-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-06-01' = {
   parent: storageAccount
   name: 'default'
 }
