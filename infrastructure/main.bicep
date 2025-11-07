@@ -188,7 +188,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
 
 // Enable Easy Auth / Microsoft Entra ID authentication (required by Azure Policy)
 // Excludes API endpoints to allow function key authentication while keeping Easy Auth enabled
-resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-11-01' = {
+resource functionAppAuthConfig 'Microsoft.Web/sites/config@2025-03-01' = {
   name: 'authsettingsV2'
   parent: functionApp
   properties: {
