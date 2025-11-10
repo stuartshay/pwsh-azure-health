@@ -363,17 +363,17 @@ jobs:
           echo ""
 
           # Add to summary
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          ## 🔑 Shared Configuration
-
-          Key Vault secret updated successfully:
-
-          | Property | Value |
-          |----------|-------|
-          | Key Vault | \`$SHARED_KEY_VAULT\` |
-          | Secret Name | \`$SECRET_NAME\` |
-          | Function App | \`$FUNCTION_APP_NAME\` |
-          | URL | \`https://$FUNCTION_APP_URL\` |
-
-          Frontend applications can now access this URL using their managed identity.
-          EOF
+          {
+            echo "## 🔑 Shared Configuration"
+            echo ""
+            echo "Key Vault secret updated successfully:"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Key Vault | \`$SHARED_KEY_VAULT\` |"
+            echo "| Secret Name | \`$SECRET_NAME\` |"
+            echo "| Function App | \`$FUNCTION_APP_NAME\` |"
+            echo "| URL | \`https://$FUNCTION_APP_URL\` |"
+            echo ""
+            echo "Frontend applications can now access this URL using their managed identity."
+          } >> "$GITHUB_STEP_SUMMARY"
