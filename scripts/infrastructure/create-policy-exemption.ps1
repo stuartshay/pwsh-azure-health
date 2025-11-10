@@ -50,9 +50,9 @@ function Write-Message {
 
     if ($PSStyle) {
         switch ($Color) {
-            'Cyan'   { $prefix = $PSStyle.Foreground.Cyan }
-            'Gray'   { $prefix = $PSStyle.Foreground.Gray }
-            'Green'  { $prefix = $PSStyle.Foreground.Green }
+            'Cyan' { $prefix = $PSStyle.Foreground.Cyan }
+            'Gray' { $prefix = $PSStyle.Foreground.Gray }
+            'Green' { $prefix = $PSStyle.Foreground.Green }
             'Yellow' { $prefix = $PSStyle.Foreground.Yellow }
         }
 

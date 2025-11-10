@@ -63,9 +63,9 @@ function Write-Message {
 
     if ($PSStyle) {
         switch ($Color) {
-            'Cyan'   { $prefix = $PSStyle.Foreground.Cyan }
-            'Gray'   { $prefix = $PSStyle.Foreground.Gray }
-            'Green'  { $prefix = $PSStyle.Foreground.Green }
+            'Cyan' { $prefix = $PSStyle.Foreground.Cyan }
+            'Gray' { $prefix = $PSStyle.Foreground.Gray }
+            'Green' { $prefix = $PSStyle.Foreground.Green }
             'Yellow' { $prefix = $PSStyle.Foreground.Yellow }
         }
 
@@ -78,7 +78,7 @@ function Write-Message {
 }
 
 # Navigate to infrastructure directory (go up two levels from scripts/infrastructure)
-$infraDir = Join-Path -Path $PSScriptRoot -ChildPath '..' -AdditionalChildPath '..','infrastructure'
+$infraDir = Join-Path -Path $PSScriptRoot -ChildPath '..' -AdditionalChildPath '..', 'infrastructure'
 Push-Location $infraDir
 
 try {
