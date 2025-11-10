@@ -287,11 +287,12 @@ param environment = 'dev'
 
 **Add:**
 ```bicep
-// Get identity resource ID from shared-identity-info.json
-param managedIdentityResourceId = '<PASTE_IDENTITY_RESOURCE_ID_HERE>'
+// Resource ID of the User-Assigned Managed Identity from shared resource group
+// This value is automatically passed during deployment by deploy-bicep.ps1
+param managedIdentityResourceId = ''
 ```
 
-**Replace `<PASTE_IDENTITY_RESOURCE_ID_HERE>`** with the value from Step 1.3.
+> **Note:** You do **not** need to manually update the placeholder value. The deployment script (`deploy-bicep.ps1`) automatically reads the managed identity resource ID from `shared-identity-info.json` and passes it as a parameter during deployment. The empty string is just a default for the parameter file.
 
 #### Step 2.3: Update roleAssignments.bicep
 

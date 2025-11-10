@@ -115,6 +115,33 @@ jobs:
           chmod +x /tmp/retry-utils.sh
           echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
 
+      - name: Get managed identity from shared infrastructure
+        id: get_identity
+        shell: bash
+        run: |
+          echo "🔍 Retrieving managed identity from shared infrastructure..."
+
+          # Check if shared-identity-info.json exists
+          if [ ! -f "scripts/infrastructure/shared-identity-info.json" ]; then
+            echo "⚠️ Warning: scripts/infrastructure/shared-identity-info.json not found"
+            echo "The shared infrastructure may not be set up. What-if will use empty parameter."
+            echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract resource ID from the JSON file
+          MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
+
+          if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ] || [ "$MANAGED_IDENTITY_RESOURCE_ID" == "null" ]; then
+            echo "⚠️ Warning: Could not extract resourceId from shared-identity-info.json"
+            echo "What-if will use empty parameter."
+            echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "✅ Found managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
+          echo "managed_identity_resource_id=$MANAGED_IDENTITY_RESOURCE_ID" >> "$GITHUB_OUTPUT"
+
       - name: Run What-If for Dev environment
         id: whatif_dev
         continue-on-error: true
@@ -123,6 +150,7 @@ jobs:
           source /tmp/retry-utils.sh
 
           RESOURCE_GROUP="rg-azure-health-dev"
+          MANAGED_IDENTITY_RESOURCE_ID="${{ steps.get_identity.outputs.managed_identity_resource_id }}"
 
           # Create resource group if it doesn't exist (for what-if to work)
           if ! az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
@@ -138,13 +166,26 @@ jobs:
           fi
 
           echo "Running what-if for Dev environment..."
-          whatif_output=$(az deployment group what-if \
-            --name "whatif-$(date +%Y%m%d-%H%M%S)" \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file infrastructure/main.bicep \
-            --parameters infrastructure/main.bicepparam \
-            --parameters environment=dev \
-            --result-format FullResourcePayloads 2>&1 || true)
+          if [ -n "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
+            echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
+            whatif_output=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=dev \
+              --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
+              --result-format FullResourcePayloads 2>&1 || true)
+          else
+            echo "⚠️ No managed identity found - what-if may fail"
+            whatif_output=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=dev \
+              --result-format FullResourcePayloads 2>&1 || true)
+          fi
 
           # Save output to file for comment
           echo "$whatif_output" > /tmp/whatif-dev.txt
@@ -165,6 +206,7 @@ jobs:
           source /tmp/retry-utils.sh
 
           RESOURCE_GROUP="rg-azure-health-prod"
+          MANAGED_IDENTITY_RESOURCE_ID="${{ steps.get_identity.outputs.managed_identity_resource_id }}"
 
           # Create resource group if it doesn't exist (for what-if to work)
           if ! az group exists --name "$RESOURCE_GROUP" > /dev/null 2>&1; then
@@ -180,13 +222,26 @@ jobs:
           fi
 
           echo "Running what-if for Prod environment..."
-          whatif_output=$(az deployment group what-if \
-            --name "whatif-$(date +%Y%m%d-%H%M%S)" \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file infrastructure/main.bicep \
-            --parameters infrastructure/main.bicepparam \
-            --parameters environment=prod \
-            --result-format FullResourcePayloads 2>&1 || true)
+          if [ -n "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
+            echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
+            whatif_output=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=prod \
+              --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
+              --result-format FullResourcePayloads 2>&1 || true)
+          else
+            echo "⚠️ No managed identity found - what-if may fail"
+            whatif_output=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=prod \
+              --result-format FullResourcePayloads 2>&1 || true)
+          fi
 
           # Save output to file for comment
           echo "$whatif_output" > /tmp/whatif-prod.txt

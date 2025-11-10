@@ -157,14 +157,13 @@ This pattern enables:
 ### Identity Naming Convention
 
 ```
-id-{product}-{environment}
+id-azurehealth-shared
 ```
 
-**Examples:**
-- `id-azurehealth-dev` - Development environment identity
-- `id-azurehealth-prod` - Production environment identity
+**Current Implementation:**
+- `id-azurehealth-shared` - Shared managed identity used across all environments and projects
 
-**Note:** While the shared resource group is named "shared", each environment still gets its own User-Assigned Managed Identity. The "shared" aspect refers to the resource group being shared across projects, not the identities themselves.
+**Note:** Currently, a single User-Assigned Managed Identity is used across all environments (dev, staging, prod). The "shared" aspect refers to both the resource group and the managed identity being shared across projects and environments. This simplifies management and reduces costs. If per-environment identities are required in the future, the naming convention would follow: `id-{product}-{environment}`.
 
 ### RBAC Assignments
 
