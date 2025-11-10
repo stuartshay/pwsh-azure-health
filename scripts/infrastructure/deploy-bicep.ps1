@@ -51,6 +51,7 @@ $InformationPreference = 'Continue'
 function Write-Message {
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$Message,
 
         [ValidateSet('Default', 'Cyan', 'Gray', 'Green', 'Yellow')]
@@ -107,6 +108,67 @@ try {
     Write-Message "  Subscription: $($account.name)" -Color Gray
     Write-Message ''
 
+    # Validate shared infrastructure exists
+    Write-Message 'Validating shared infrastructure...' -Color Cyan
+
+    $sharedRgName = 'rg-azure-health-shared'
+    $sharedRgExists = az group exists --name $sharedRgName | ConvertFrom-Json
+
+    if (-not $sharedRgExists) {
+        Write-Error @"
+Shared resource group '$sharedRgName' not found.
+
+You must create the shared infrastructure before deploying projects:
+
+  cd scripts/infrastructure
+  ./setup-shared-identity.ps1
+
+See docs/SHARED_INFRASTRUCTURE.md for details.
+"@
+        exit 1
+    }
+
+    # Retrieve User-Assigned Managed Identity info
+    $identityInfoFile = Join-Path $PSScriptRoot 'shared-identity-info.json'
+
+    if (-not (Test-Path $identityInfoFile)) {
+        Write-Error @"
+Identity info file not found: $identityInfoFile
+
+Please run setup-shared-identity.ps1 to generate this file:
+
+  cd scripts/infrastructure
+  ./setup-shared-identity.ps1
+"@
+        exit 1
+    }
+
+    $identityInfo = Get-Content $identityInfoFile | ConvertFrom-Json
+    $managedIdentityResourceId = $identityInfo.resourceId
+    $managedIdentityPrincipalId = $identityInfo.principalId
+
+    # Verify identity still exists in Azure
+    $identityExists = az identity show `
+        --ids $managedIdentityResourceId `
+        2>$null
+
+    if (-not $identityExists) {
+        Write-Error @"
+User-Assigned Managed Identity not found: $managedIdentityResourceId
+
+The identity may have been deleted. Please recreate shared infrastructure:
+
+  cd scripts/infrastructure
+  ./setup-shared-identity.ps1
+"@
+        exit 1
+    }
+
+    Write-Message "[OK] Found shared identity: $($identityInfo.identityName)" -Color Green
+    Write-Message "  Principal ID : $managedIdentityPrincipalId" -Color Gray
+    Write-Message "  Resource ID  : $managedIdentityResourceId" -Color Gray
+    Write-Message ''
+
     # Create resource group
     Write-Message 'Creating resource group...' -Color Cyan
     $rgExists = az group exists --name $ResourceGroup | ConvertFrom-Json
@@ -129,7 +191,8 @@ try {
         az deployment group what-if `
             --resource-group $ResourceGroup `
             --template-file main.bicep `
-            --parameters environment=$Environment
+            --parameters environment=$Environment `
+            --parameters managedIdentityResourceId=$managedIdentityResourceId
     }
     else {
         Write-Message 'Deploying Bicep template...' -Color Cyan
@@ -140,6 +203,7 @@ try {
             --resource-group $ResourceGroup `
             --template-file main.bicep `
             --parameters environment=$Environment `
+            --parameters managedIdentityResourceId=$managedIdentityResourceId `
             --output json | ConvertFrom-Json
 
         if ($LASTEXITCODE -eq 0) {
@@ -154,7 +218,8 @@ try {
             Write-Message "  Function URL        : $($deployment.properties.outputs.functionAppUrl.value)" -Color Gray
             Write-Message "  Storage Account     : $($deployment.properties.outputs.storageAccountName.value)" -Color Gray
             Write-Message "  App Insights        : $($deployment.properties.outputs.appInsightsName.value)" -Color Gray
-            Write-Message "  Managed Identity ID : $($deployment.properties.outputs.functionAppPrincipalId.value)" -Color Gray
+            Write-Message "  Managed Identity    : $($identityInfo.identityName)" -Color Gray
+            Write-Message "  Principal ID        : $($deployment.properties.outputs.managedIdentityPrincipalId.value)" -Color Gray
             Write-Message ''
             Write-Message 'Next Steps:' -Color Cyan
             Write-Message '  1. Deploy function code:' -Color Gray

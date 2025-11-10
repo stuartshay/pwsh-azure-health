@@ -38,6 +38,7 @@ $InformationPreference = 'Continue'
 function Write-Message {
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$Message,
 
         [ValidateSet('Default', 'Cyan', 'Gray', 'Green', 'Yellow')]
