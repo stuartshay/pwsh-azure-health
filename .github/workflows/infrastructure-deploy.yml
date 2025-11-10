@@ -160,6 +160,34 @@ jobs:
           fi
           echo "✅ Resource group verified: $RESOURCE_GROUP"
 
+      - name: Get managed identity from shared infrastructure
+        id: get_identity
+        shell: bash
+        run: |
+          echo "🔍 Retrieving managed identity from shared infrastructure..."
+
+          # Check if shared-identity-info.json exists
+          if [ ! -f "scripts/infrastructure/shared-identity-info.json" ]; then
+            echo "❌ Error: scripts/infrastructure/shared-identity-info.json not found"
+            echo ""
+            echo "The shared infrastructure has not been set up. Please run:"
+            echo "  ./scripts/infrastructure/setup-shared-identity.ps1"
+            echo ""
+            echo "Or create the shared infrastructure manually and populate the identity info file."
+            exit 1
+          fi
+
+          # Extract resource ID from the JSON file
+          MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
+
+          if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ] || [ "$MANAGED_IDENTITY_RESOURCE_ID" == "null" ]; then
+            echo "❌ Error: Could not extract resourceId from shared-identity-info.json"
+            exit 1
+          fi
+
+          echo "✅ Found managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
+          echo "managed_identity_resource_id=$MANAGED_IDENTITY_RESOURCE_ID" >> "$GITHUB_OUTPUT"
+
       - name: Deploy Bicep template
         id: deploy
         shell: bash
@@ -169,6 +197,9 @@ jobs:
           echo "🚀 Deploying infrastructure to ${{ github.event.inputs.environment }} environment..."
 
           DEPLOYMENT_NAME="infrastructure-deploy-$(date +%Y%m%d-%H%M%S)"
+          MANAGED_IDENTITY_RESOURCE_ID="${{ steps.get_identity.outputs.managed_identity_resource_id }}"
+
+          echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
 
           # Deploy with retry logic - capture output separately to avoid corrupting JSON
           deployment_output=$(retry_azure_operation \
@@ -180,6 +211,7 @@ jobs:
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=${{ github.event.inputs.environment }} \
+              --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --output json)
 
           echo "✅ Deployment completed successfully!"
