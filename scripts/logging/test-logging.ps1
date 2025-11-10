@@ -96,7 +96,7 @@ try {
     Write-Host "  URL: $url" -ForegroundColor Gray
     Write-Host ""
 
-    $null = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body '{}' -ErrorAction Stop
+    [void](Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body '{}' -ErrorAction Stop)
 
     Write-ColorOutput "✓ Timer function triggered successfully!" $script:Green
     Write-Host ""
