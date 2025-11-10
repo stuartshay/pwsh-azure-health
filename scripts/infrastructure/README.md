@@ -137,6 +137,60 @@ Sets up permanent shared resources in `rg-azure-health-shared` that persist acro
 - Appropriate permissions to create resources and assign roles
 - Valid `.env` file (or use parameters to override)
 
+### setup-keyvault-access.ps1
+
+**Grants managed identities RBAC access to the shared Key Vault.**
+
+**Purpose:**
+Configures permissions for the shared Key Vault (`kv-tsazurehealth`) to allow:
+- Shared managed identity (`id-azurehealth-shared`) to read secrets
+- Frontend app identities (`id-tsazurehealth-dev/prod`) to read secrets
+- GitHub Actions service principal to write secrets (optional)
+
+**Usage:**
+```powershell
+# Grant access to managed identities
+./setup-keyvault-access.ps1
+
+# Also grant access to GitHub Actions
+./setup-keyvault-access.ps1 -GrantGitHubActions -GitHubActionsAppId "12345678-1234-1234-1234-123456789012"
+```
+
+**RBAC Roles Assigned:**
+- **Key Vault Secrets User**: Read-only access for managed identities
+- **Key Vault Secrets Officer**: Read/write access for GitHub Actions
+
+**Features:**
+- Idempotent - safe to run multiple times
+- Validates resources exist before assigning roles
+- Skips existing role assignments
+- Colored output with progress indicators
+- Displays current role assignments after completion
+
+**Prerequisites:**
+- Azure CLI installed and authenticated
+- Shared Key Vault exists (`kv-tsazurehealth` in `rg-azure-health-shared`)
+- Appropriate permissions to assign RBAC roles
+
+**When to run:**
+- After initial infrastructure deployment
+- When adding new managed identities
+- When troubleshooting Key Vault access issues
+
+**Cross-Project Configuration:**
+
+The GitHub Actions deployment workflow automatically updates the following secrets in the shared Key Vault:
+- `function-app-url-dev`: Backend Function App URL for dev environment
+- `function-app-url-prod`: Backend Function App URL for prod environment
+
+Frontend applications can retrieve these secrets using their managed identity:
+```bash
+az keyvault secret show \
+  --vault-name kv-tsazurehealth \
+  --name function-app-url-dev \
+  --query value -o tsv
+```
+
 ### check-azure-health-access.ps1
 
 Verifies access to the Azure Resource Health API and checks prerequisites.
