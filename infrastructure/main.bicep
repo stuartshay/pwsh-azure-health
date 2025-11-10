@@ -38,7 +38,7 @@ var appServicePlanName = '${baseName}-plan-${environment}'
 // Tags for all resources
 var commonTags = {
   environment: environment
-  project: 'azure-health-monitoring'
+  project: 'pwsh-azure-health'
   managedBy: 'bicep'
   createdDate: currentDate
 }
