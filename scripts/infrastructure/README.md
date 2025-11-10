@@ -176,7 +176,7 @@ Verifies access to the Azure Resource Health API and checks prerequisites.
 - User-Assigned Managed Identity exists and is accessible
 - RBAC roles are correctly assigned (Reader, Monitoring Reader)
 - Resource lock is applied (CanNotDelete)
-- Identity propagation to Azure AD
+- Identity propagation to Microsoft Entra ID
 - Shared identity info file exists and is current
 
 **Features:**
