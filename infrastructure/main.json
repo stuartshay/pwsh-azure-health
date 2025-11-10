@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "9855398991136555708"
+      "templateHash": "1867786788374941490"
     }
   },
   "parameters": {
@@ -56,6 +56,14 @@
         "description": "Blob container name for caching Service Health payloads"
       }
     },
+    "managedIdentityResourceId": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 200,
+      "metadata": {
+        "description": "Resource ID of the User-Assigned Managed Identity from shared resource group. Must be in format: /subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}"
+      }
+    },
     "currentDate": {
       "type": "string",
       "defaultValue": "[utcNow('yyyy-MM-dd')]",
@@ -72,7 +80,7 @@
     "appServicePlanName": "[format('{0}-plan-{1}', parameters('baseName'), parameters('environment'))]",
     "commonTags": {
       "environment": "[parameters('environment')]",
-      "project": "azure-health-monitoring",
+      "project": "pwsh-azure-health",
       "managedBy": "bicep",
       "createdDate": "[parameters('currentDate')]"
     }
@@ -162,7 +170,10 @@
       "tags": "[variables('commonTags')]",
       "kind": "functionapp",
       "identity": {
-        "type": "SystemAssigned"
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityResourceId'))]": {}
+        }
       },
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
@@ -216,7 +227,17 @@
             }
           ],
           "ftpsState": "Disabled",
-          "minTlsVersion": "1.2"
+          "minTlsVersion": "1.2",
+          "cors": {
+            "allowedOrigins": [
+              "https://portal.azure.com",
+              "https://ms.portal.azure.com",
+              "https://functions.azure.com",
+              "https://functions-staging.azure.com",
+              "https://functions-next.azure.com"
+            ],
+            "supportCredentials": false
+          }
         }
       },
       "dependsOn": [
@@ -226,100 +247,41 @@
       ]
     },
     {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', variables('storageAccountName'))]",
-      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), resourceId('Microsoft.Web/sites', variables('functionAppName')), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'))]",
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2024-11-01",
+      "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
       "properties": {
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01', 'full').identity.principalId]",
-        "principalType": "ServicePrincipal"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "subscription-role-assignments",
-      "subscriptionId": "[subscription().subscriptionId]",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
+        "globalValidation": {
+          "requireAuthentication": true,
+          "unauthenticatedClientAction": "Return401",
+          "excludedPaths": [
+            "/api/*"
+          ]
         },
-        "mode": "Incremental",
-        "parameters": {
-          "principalId": {
-            "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01', 'full').identity.principalId]"
-          },
-          "subscriptionId": {
-            "value": "[parameters('subscriptionId')]"
-          }
+        "httpSettings": {
+          "requireHttps": true
         },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.38.33.27573",
-              "templateHash": "1509662016107129486"
-            }
-          },
-          "parameters": {
-            "principalId": {
-              "type": "string",
-              "metadata": {
-                "description": "Function App principal ID"
-              }
-            },
-            "subscriptionId": {
-              "type": "string",
-              "defaultValue": "[subscription().subscriptionId]",
-              "metadata": {
-                "description": "Subscription ID for role assignments"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "name": "[guid(parameters('subscriptionId'), parameters('principalId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7'), 'reader')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "ServicePrincipal"
-              }
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "name": "[guid(parameters('subscriptionId'), parameters('principalId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05'), 'monitoring')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "ServicePrincipal"
-              }
-            }
-          ],
-          "outputs": {
-            "readerRoleAssignmentId": {
-              "type": "string",
-              "value": "[subscriptionResourceId('Microsoft.Authorization/roleAssignments', guid(parameters('subscriptionId'), parameters('principalId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7'), 'reader'))]"
-            },
-            "monitoringReaderRoleAssignmentId": {
-              "type": "string",
-              "value": "[subscriptionResourceId('Microsoft.Authorization/roleAssignments', guid(parameters('subscriptionId'), parameters('principalId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05'), 'monitoring'))]"
-            }
-          }
+        "platform": {
+          "enabled": true,
+          "runtimeVersion": "~1"
         }
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', variables('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     }
   ],
@@ -340,9 +302,17 @@
       "type": "string",
       "value": "[variables('appInsightsName')]"
     },
-    "functionAppPrincipalId": {
+    "managedIdentityPrincipalId": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01', 'full').identity.principalId]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2023-01-31').principalId]"
+    },
+    "managedIdentityClientId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2023-01-31').clientId]"
+    },
+    "managedIdentityResourceId": {
+      "type": "string",
+      "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/')))]"
     },
     "resourceGroupName": {
       "type": "string",

@@ -71,7 +71,6 @@
         "pspester.pester-test",
         "ms-azuretools.vscode-azurefunctions",
         "ms-vscode.powershell",
-        "ms-vscode.azure-account",
         "editorconfig.editorconfig",
         "ms-azuretools.vscode-bicep",
         "azurite.azurite",

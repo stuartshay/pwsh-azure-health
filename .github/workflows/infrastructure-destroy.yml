@@ -141,49 +141,234 @@ jobs:
             echo ""
             echo "**Environment:** ${{ github.event.inputs.environment }}"
             echo "**Resource Group:** $RESOURCE_GROUP"
+            echo "**Project:** pwsh-azure-health"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "Listing all resources in resource group: $RESOURCE_GROUP"
+          echo "Listing resources tagged with project=pwsh-azure-health in resource group: $RESOURCE_GROUP"
           az resource list \
             --resource-group "$RESOURCE_GROUP" \
+            --query "[?tags.project=='pwsh-azure-health']" \
             --output table
 
           # Add resources to summary
           {
-            echo "#### Resources"
+            echo "#### Resources (tagged with project=pwsh-azure-health)"
             echo '```'
             az resource list \
               --resource-group "$RESOURCE_GROUP" \
+              --query "[?tags.project=='pwsh-azure-health']" \
               --output table
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Delete resource group
+      - name: Remove resource locks
         if: steps.check_rg.outputs.exists == 'true'
         shell: bash
         run: |
           source /tmp/retry-utils.sh
 
-          echo "⚠️ Deleting resource group: $RESOURCE_GROUP"
-          echo "This will delete all resources in the resource group..."
+          echo "🔓 Checking for resource locks..."
 
-          retry_azure_operation \
-            "$MAX_RETRY_ATTEMPTS" \
-            "Delete resource group $RESOURCE_GROUP" \
-            az group delete \
-              --name "$RESOURCE_GROUP" \
-              --yes \
-              --no-wait
+          # Get all locks in the resource group
+          LOCKS=$(az lock list --resource-group "$RESOURCE_GROUP" --query "[].{name:name,id:id}" -o json)
 
-          echo "✅ Resource group deletion initiated: $RESOURCE_GROUP"
-          {
-            echo ""
-            echo "---"
-            echo "**Status:** ✅ Resource group deletion initiated successfully"
-            echo ""
-            echo "> Note: Deletion is asynchronous and may take several minutes to complete."
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$LOCKS" != "[]" ]; then
+            echo "Found locks to remove:"
+            echo "$LOCKS" | jq -r '.[] | "  - \(.name) (\(.id))"'
+
+            # Remove each lock
+            echo "$LOCKS" | jq -r '.[].id' | while read -r lock_id; do
+              lock_name=$(echo "$lock_id" | awk -F'/' '{print $NF}')
+              retry_azure_operation \
+                "$MAX_RETRY_ATTEMPTS" \
+                "Remove lock $lock_name" \
+                az lock delete --ids "$lock_id"
+            done
+
+            echo "✅ All locks removed"
+          else
+            echo "ℹ️ No locks found in resource group"
+          fi
+
+      - name: Delete Function Apps
+        if: steps.check_rg.outputs.exists == 'true'
+        shell: bash
+        run: |
+          source /tmp/retry-utils.sh
+
+          echo "🗑️ Deleting Function Apps tagged with project=pwsh-azure-health..."
+
+          FUNCTION_APPS=$(az functionapp list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?tags.project=='pwsh-azure-health'].name" \
+            -o tsv)
+
+          if [ -n "$FUNCTION_APPS" ]; then
+            echo "Found Function Apps to delete:"
+            while IFS= read -r app; do echo "  - $app"; done <<< "$FUNCTION_APPS"
+
+            echo "$FUNCTION_APPS" | while read -r app_name; do
+              if [ -n "$app_name" ]; then
+                retry_azure_operation \
+                  "$MAX_RETRY_ATTEMPTS" \
+                  "Delete Function App $app_name" \
+                  az functionapp delete \
+                    --name "$app_name" \
+                    --resource-group "$RESOURCE_GROUP"
+              fi
+            done
+
+            echo "✅ Function Apps deleted"
+          else
+            echo "ℹ️ No Function Apps found with project tag"
+          fi
+
+      - name: Delete Storage Accounts
+        if: steps.check_rg.outputs.exists == 'true'
+        shell: bash
+        run: |
+          source /tmp/retry-utils.sh
+
+          echo "🗑️ Deleting Storage Accounts tagged with project=pwsh-azure-health..."
+
+          STORAGE_ACCOUNTS=$(az storage account list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?tags.project=='pwsh-azure-health'].name" \
+            -o tsv)
+
+          if [ -n "$STORAGE_ACCOUNTS" ]; then
+            echo "Found Storage Accounts to delete:"
+            while IFS= read -r acc; do echo "  - $acc"; done <<< "$STORAGE_ACCOUNTS"
+
+            echo "$STORAGE_ACCOUNTS" | while read -r storage_name; do
+              if [ -n "$storage_name" ]; then
+                retry_azure_operation \
+                  "$MAX_RETRY_ATTEMPTS" \
+                  "Delete Storage Account $storage_name" \
+                  az storage account delete \
+                    --name "$storage_name" \
+                    --resource-group "$RESOURCE_GROUP" \
+                    --yes
+              fi
+            done
+
+            echo "✅ Storage Accounts deleted"
+          else
+            echo "ℹ️ No Storage Accounts found with project tag"
+          fi
+
+      - name: Delete App Service Plans
+        if: steps.check_rg.outputs.exists == 'true'
+        shell: bash
+        run: |
+          source /tmp/retry-utils.sh
+
+          echo "🗑️ Deleting App Service Plans..."
+
+          # Find App Service Plans by project tag (primary method)
+          APP_SERVICE_PLANS=$(az appservice plan list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?tags.project=='pwsh-azure-health'].name" \
+            -o tsv)
+
+          if [ -n "$APP_SERVICE_PLANS" ]; then
+            echo "Found App Service Plans to delete:"
+            while IFS= read -r plan; do echo "  - $plan"; done <<< "$APP_SERVICE_PLANS"
+
+            echo "$APP_SERVICE_PLANS" | while read -r plan_name; do
+              if [ -n "$plan_name" ]; then
+                retry_azure_operation \
+                  "$MAX_RETRY_ATTEMPTS" \
+                  "Delete App Service Plan $plan_name" \
+                  az appservice plan delete \
+                    --name "$plan_name" \
+                    --resource-group "$RESOURCE_GROUP" \
+                    --yes
+              fi
+            done
+
+            echo "✅ App Service Plans deleted"
+          else
+            echo "ℹ️ No App Service Plans found"
+          fi
+
+      - name: Delete Application Insights
+        if: steps.check_rg.outputs.exists == 'true'
+        shell: bash
+        run: |
+          source /tmp/retry-utils.sh
+
+          echo "🗑️ Deleting Application Insights components..."
+
+          # Find Application Insights by project tag
+          APP_INSIGHTS=$(az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type "Microsoft.Insights/components" \
+            --query "[?tags.project=='pwsh-azure-health'].name" \
+            -o tsv)
+
+          if [ -n "$APP_INSIGHTS" ]; then
+            echo "Found Application Insights to delete:"
+            while IFS= read -r ai; do echo "  - $ai"; done <<< "$APP_INSIGHTS"
+
+            echo "$APP_INSIGHTS" | while read -r ai_name; do
+              if [ -n "$ai_name" ]; then
+                retry_azure_operation \
+                  "$MAX_RETRY_ATTEMPTS" \
+                  "Delete Application Insights $ai_name" \
+                  az monitor app-insights component delete \
+                    --app "$ai_name" \
+                    --resource-group "$RESOURCE_GROUP"
+              fi
+            done
+
+            echo "✅ Application Insights deleted"
+          else
+            echo "ℹ️ No Application Insights found"
+          fi
+
+      - name: Verify resources deleted
+        if: steps.check_rg.outputs.exists == 'true'
+        shell: bash
+        run: |
+          echo "🔍 Verifying remaining resources..."
+
+          REMAINING=$(az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?tags.project=='pwsh-azure-health']" \
+            -o json)
+
+          if [ "$REMAINING" != "[]" ]; then
+            echo "⚠️ Warning: Some resources with project tag still remain:"
+            echo "$REMAINING" | jq -r '.[] | "  - \(.name) (\(.type))"'
+            {
+              echo ""
+              echo "---"
+              echo "**Status:** ⚠️ Some resources may still remain"
+              echo ""
+              echo "Resources not yet deleted:"
+              echo '```'
+              echo "$REMAINING" | jq -r '.[] | "  - \(.name) (\(.type))"'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ All resources with project=pwsh-azure-health tag have been deleted"
+            {
+              echo ""
+              echo "---"
+              echo "**Status:** ✅ All project resources successfully deleted"
+              echo ""
+              echo "> Note: Resource group \`$RESOURCE_GROUP\` is preserved for other projects."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # List all remaining resources in the resource group
+          echo ""
+          echo "All remaining resources in resource group:"
+          az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --output table
 
       - name: Skip deletion
         if: steps.check_rg.outputs.exists == 'false'

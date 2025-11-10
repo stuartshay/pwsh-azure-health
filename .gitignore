@@ -100,3 +100,6 @@ Thumbs.db
 # Azure GitHub Actions configuration (contains sensitive IDs)
 azure-github-actions-config.txt
 actionlint
+
+# Shared infrastructure identity information (contains sensitive IDs)
+scripts/infrastructure/shared-identity-info.json

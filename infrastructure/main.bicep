@@ -21,6 +21,11 @@ param timerSchedule string = '0 */15 * * * *'
 @description('Blob container name for caching Service Health payloads')
 param cacheContainerName string = 'servicehealth-cache'
 
+@description('Resource ID of the User-Assigned Managed Identity from shared resource group. Must be in format: /subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}')
+@minLength(100)
+@maxLength(200)
+param managedIdentityResourceId string
+
 @description('Current date for tagging (automatically set)')
 param currentDate string = utcNow('yyyy-MM-dd')
 
@@ -34,7 +39,7 @@ var appServicePlanName = '${baseName}-plan-${environment}'
 // Tags for all resources
 var commonTags = {
   environment: environment
-  project: 'azure-health-monitoring'
+  project: 'pwsh-azure-health'
   managedBy: 'bicep'
   createdDate: currentDate
 }
@@ -110,6 +115,12 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   }
 }
 
+// Reference to User-Assigned Managed Identity (must already exist in shared RG)
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: last(split(managedIdentityResourceId, '/'))
+  scope: resourceGroup(split(managedIdentityResourceId, '/')[2], split(managedIdentityResourceId, '/')[4])
+}
+
 // Function App
 resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   name: functionAppName
@@ -117,7 +128,10 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   tags: commonTags
   kind: 'functionapp'
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentityResourceId}': {}
+    }
   }
   properties: {
     serverFarmId: appServicePlan.id
@@ -209,17 +223,13 @@ resource functionAppAuthConfig 'Microsoft.Web/sites/config@2024-11-01' = {
   }
 }
 
-// Role Assignments at subscription scope via module
-module subscriptionRoleAssignments 'modules/roleAssignments.bicep' = {
-  name: 'subscription-role-assignments'
-  scope: subscription()
-  params: {
-    principalId: functionApp.identity.principalId
-    subscriptionId: subscriptionId
-  }
-}
+// Note: Subscription-scoped role assignments (Reader, Monitoring Reader) are handled
+// by setup-shared-identity.ps1 script and are NOT part of this template.
+// This ensures roles persist even when project resource groups are deleted/recreated.
 
 // Role Assignment: Storage Blob Data Contributor (for cache container)
+// This is the only resource-scoped role assignment that needs to be in the template
+// because it's specific to this project's storage account.
 resource blobContributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: subscription()
   // Storage Blob Data Contributor role
@@ -228,10 +238,10 @@ resource blobContributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@
 
 resource blobContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount
-  name: guid(storageAccount.id, functionApp.id, blobContributorRoleDefinition.id)
+  name: guid(storageAccount.id, managedIdentity.id, blobContributorRoleDefinition.id)
   properties: {
     roleDefinitionId: blobContributorRoleDefinition.id
-    principalId: functionApp.identity.principalId
+    principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -241,5 +251,7 @@ output functionAppName string = functionApp.name
 output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
 output storageAccountName string = storageAccount.name
 output appInsightsName string = appInsights.name
-output functionAppPrincipalId string = functionApp.identity.principalId
+output managedIdentityPrincipalId string = managedIdentity.properties.principalId
+output managedIdentityClientId string = managedIdentity.properties.clientId
+output managedIdentityResourceId string = managedIdentity.id
 output resourceGroupName string = resourceGroup().name

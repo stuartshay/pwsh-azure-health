@@ -160,6 +160,44 @@ jobs:
           fi
           echo "✅ Resource group verified: $RESOURCE_GROUP"
 
+      - name: Get managed identity from shared infrastructure
+        id: get_identity
+        shell: bash
+        run: |
+          echo "🔍 Retrieving managed identity from shared infrastructure..."
+
+          # Query Azure for the shared managed identity
+          SHARED_RG="rg-azure-health-shared"
+          IDENTITY_NAME="id-azurehealth-shared"
+
+          # Check if shared resource group exists
+          if ! az group show --name "$SHARED_RG" --output none 2>/dev/null; then
+            echo "❌ Error: Shared resource group '$SHARED_RG' not found"
+            echo ""
+            echo "The shared infrastructure has not been set up. Please run:"
+            echo "  ./scripts/infrastructure/setup-shared-identity.ps1"
+            echo ""
+            echo "This will create the shared resource group and managed identity."
+            exit 1
+          fi
+
+          # Get managed identity resource ID
+          MANAGED_IDENTITY_RESOURCE_ID=$(az identity show \
+            --name "$IDENTITY_NAME" \
+            --resource-group "$SHARED_RG" \
+            --query id \
+            --output tsv 2>/dev/null)
+
+          if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ] || [ "$MANAGED_IDENTITY_RESOURCE_ID" == "null" ]; then
+            echo "❌ Error: Managed identity '$IDENTITY_NAME' not found in resource group '$SHARED_RG'"
+            echo ""
+            echo "Please run: ./scripts/infrastructure/setup-shared-identity.ps1"
+            exit 1
+          fi
+
+          echo "✅ Found managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
+          echo "managed_identity_resource_id=$MANAGED_IDENTITY_RESOURCE_ID" >> "$GITHUB_OUTPUT"
+
       - name: Deploy Bicep template
         id: deploy
         shell: bash
@@ -169,6 +207,9 @@ jobs:
           echo "🚀 Deploying infrastructure to ${{ github.event.inputs.environment }} environment..."
 
           DEPLOYMENT_NAME="infrastructure-deploy-$(date +%Y%m%d-%H%M%S)"
+          MANAGED_IDENTITY_RESOURCE_ID="${{ steps.get_identity.outputs.managed_identity_resource_id }}"
+
+          echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
 
           # Deploy with retry logic - capture output separately to avoid corrupting JSON
           deployment_output=$(retry_azure_operation \
@@ -180,6 +221,7 @@ jobs:
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=${{ github.event.inputs.environment }} \
+              --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --output json)
 
           echo "✅ Deployment completed successfully!"
@@ -210,6 +252,50 @@ jobs:
             echo "- **Application Insights:** $app_insights_name"
             echo ""
             echo "**Function App URL:** https://$function_app_name.azurewebsites.net"
+            echo ""
+            echo "#### Azure Policy Status"
+            echo ""
+
+            # Get policy assignments for the resource group
+            policy_assignments=$(az policy assignment list \
+              --resource-group "$RESOURCE_GROUP" \
+              --query "[].{name:name, displayName:displayName, enforcementMode:enforcementMode}" \
+              --output json 2>/dev/null || echo "[]")
+
+            policy_count=$(echo "$policy_assignments" | jq length)
+
+            if [ "$policy_count" -eq 0 ]; then
+              echo "- ℹ️ No policy assignments found for this resource group"
+            else
+              echo "**Policy Assignments ($policy_count):**"
+              echo ""
+              echo "$policy_assignments" | jq -r \
+                '.[] | "- **\(.displayName // .name)** (\(.enforcementMode // "Default"))"'
+            fi
+
+            echo ""
+
+            # Get policy exemptions for the resource group
+            subscription_id=$(az account show --query id -o tsv)
+            rg_scope="/subscriptions/$subscription_id/resourceGroups/$RESOURCE_GROUP"
+            exemptions=$(az policy exemption list \
+              --query "[?contains(policyAssignmentId, '$rg_scope') || \
+                contains(resourceSelector, '$rg_scope')].{name:name, displayName:displayName, \
+                exemptionCategory:exemptionCategory, expiresOn:expiresOn}" \
+              --output json 2>/dev/null || echo "[]")
+
+            exemption_count=$(echo "$exemptions" | jq length)
+
+            if [ "$exemption_count" -eq 0 ]; then
+              echo "- ℹ️ No policy exemptions found for this resource group"
+            else
+              echo "**Policy Exemptions ($exemption_count):**"
+              echo ""
+              echo "$exemptions" | jq -r \
+                '.[] | "- **\(.displayName // .name)** (\(.exemptionCategory))" + \
+                (if .expiresOn then " - Expires: \(.expiresOn)" else "" end)'
+            fi
+
             echo ""
             echo "#### Retry Configuration"
             echo "- Max retry attempts: $MAX_RETRY_ATTEMPTS"
