@@ -166,22 +166,32 @@ jobs:
         run: |
           echo "🔍 Retrieving managed identity from shared infrastructure..."
 
-          # Check if shared-identity-info.json exists
-          if [ ! -f "scripts/infrastructure/shared-identity-info.json" ]; then
-            echo "❌ Error: scripts/infrastructure/shared-identity-info.json not found"
+          # Query Azure for the shared managed identity
+          SHARED_RG="rg-azure-health-shared"
+          IDENTITY_NAME="id-azurehealth-shared"
+
+          # Check if shared resource group exists
+          if ! az group show --name "$SHARED_RG" --output none 2>/dev/null; then
+            echo "❌ Error: Shared resource group '$SHARED_RG' not found"
             echo ""
             echo "The shared infrastructure has not been set up. Please run:"
             echo "  ./scripts/infrastructure/setup-shared-identity.ps1"
             echo ""
-            echo "Or create the shared infrastructure manually and populate the identity info file."
+            echo "This will create the shared resource group and managed identity."
             exit 1
           fi
 
-          # Extract resource ID from the JSON file
-          MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
+          # Get managed identity resource ID
+          MANAGED_IDENTITY_RESOURCE_ID=$(az identity show \
+            --name "$IDENTITY_NAME" \
+            --resource-group "$SHARED_RG" \
+            --query id \
+            --output tsv 2>/dev/null)
 
           if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ] || [ "$MANAGED_IDENTITY_RESOURCE_ID" == "null" ]; then
-            echo "❌ Error: Could not extract resourceId from shared-identity-info.json"
+            echo "❌ Error: Managed identity '$IDENTITY_NAME' not found in resource group '$SHARED_RG'"
+            echo ""
+            echo "Please run: ./scripts/infrastructure/setup-shared-identity.ps1"
             exit 1
           fi
 
