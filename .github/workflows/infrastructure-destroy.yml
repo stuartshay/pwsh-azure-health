@@ -264,12 +264,12 @@ jobs:
         run: |
           source /tmp/retry-utils.sh
 
-          echo "🗑️ Deleting App Service Plans (Consumption plans don't have tags)..."
+          echo "🗑️ Deleting App Service Plans..."
 
-          # For Consumption plans, delete by name pattern
+          # Find App Service Plans by project tag (primary method)
           APP_SERVICE_PLANS=$(az appservice plan list \
             --resource-group "$RESOURCE_GROUP" \
-            --query "[?starts_with(name, 'ASP-rg-azure-health-')].name" \
+            --query "[?tags.project=='pwsh-azure-health'].name" \
             -o tsv)
 
           if [ -n "$APP_SERVICE_PLANS" ]; then
@@ -301,11 +301,11 @@ jobs:
 
           echo "🗑️ Deleting Application Insights components..."
 
-          # Use az resource list to find Application Insights components
+          # Find Application Insights by project tag
           APP_INSIGHTS=$(az resource list \
             --resource-group "$RESOURCE_GROUP" \
             --resource-type "Microsoft.Insights/components" \
-            --query "[?starts_with(name, 'azurehealth-')].name" \
+            --query "[?tags.project=='pwsh-azure-health'].name" \
             -o tsv)
 
           if [ -n "$APP_INSIGHTS" ]; then

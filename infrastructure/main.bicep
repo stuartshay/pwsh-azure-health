@@ -22,7 +22,8 @@ param timerSchedule string = '0 */15 * * * *'
 param cacheContainerName string = 'servicehealth-cache'
 
 @description('Resource ID of the User-Assigned Managed Identity from shared resource group. Must be in format: /subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}')
-@minLength(50)
+@minLength(100)
+@maxLength(200)
 param managedIdentityResourceId string
 
 @description('Current date for tagging (automatically set)')

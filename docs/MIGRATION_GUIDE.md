@@ -257,21 +257,21 @@ identity: {
 }
 ```
 
-**Find (lines ~180-190) - remove Storage Blob Data Contributor assignment:**
+**Find (lines ~180-190) - update Storage Blob Data Contributor assignment:**
 ```bicep
-// Remove this entire resource block
+// Update the principalId to use the managed identity
 resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'Storage Blob Data Contributor')
+  name: guid(storageAccount.id, managedIdentity.id, 'Storage Blob Data Contributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.BuiltIn/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-    principalId: functionApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+    principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
 ```
 
-**Storage role will be assigned by deploy script instead.**
+> **Note:** The storage role assignment remains in the template, but is now assigned to the managed identity instead of the function app identity.
 
 #### Step 2.2: Update main.bicepparam
 
@@ -386,33 +386,7 @@ $deploymentResult = az deployment group create `
     --output json
 ```
 
-**Find end of deployment section, add storage role assignment:**
-```powershell
-# Assign Storage Blob Data Contributor role to managed identity
-Write-Message 'Assigning storage permissions...' -Color Cyan
-
-$deployment = $deploymentResult | ConvertFrom-Json
-$storageAccountName = $deployment.properties.outputs.storageAccountName.value
-
-$storageScope = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Storage/storageAccounts/$storageAccountName"
-
-$existingAssignment = az role assignment list `
-    --assignee $managedIdentityPrincipalId `
-    --role 'Storage Blob Data Contributor' `
-    --scope $storageScope `
-    --query '[0].id' -o tsv
-
-if ($existingAssignment) {
-    Write-Message '[SKIP] Storage Blob Data Contributor role already assigned' -Color Yellow
-} else {
-    az role assignment create `
-        --assignee $managedIdentityPrincipalId `
-        --role 'Storage Blob Data Contributor' `
-        --scope $storageScope | Out-Null
-    Write-Message '[OK] Storage Blob Data Contributor role assigned' -Color Green
-}
-Write-Message ''
-```
+**Note:** The storage role assignment is now handled directly in the Bicep template (see Step 2.1 above), so no additional code is needed in the deployment script for storage permissions.
 
 ### Phase 4: Deploy Updated Infrastructure
 

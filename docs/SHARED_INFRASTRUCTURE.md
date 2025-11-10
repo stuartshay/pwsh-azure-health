@@ -298,9 +298,9 @@ The shared infrastructure supports multiple projects:
 
 Each project:
 - ✅ Has its own project resource group
-- ✅ Has its own User-Assigned Managed Identity
+- ✅ Shares the User-Assigned Managed Identity (`id-azurehealth-shared`) with other projects
 - ✅ Has its own storage account
-- ✅ Can be deleted independently
+- ✅ Can be deleted independently (without affecting the shared identity)
 - ✅ Uses shared Key Vault for secrets (future)
 
 ### Shared Resources

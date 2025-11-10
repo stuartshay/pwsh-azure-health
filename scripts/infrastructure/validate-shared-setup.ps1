@@ -128,13 +128,13 @@ try {
 
     if ($identityJson) {
         $identity = $identityJson | ConvertFrom-Json
-        $principalId = $identity.principalId
-        $subscriptionId = $account.id
+        $script:principalId = $identity.principalId
+        $script:subscriptionId = $account.id
 
         Write-Message ''
         Write-Message 'Identity Details:' -Color Cyan
         Write-Message "  Name        : $($identity.name)" -Color Gray
-        Write-Message "  Principal ID: $principalId" -Color Gray
+        Write-Message "  Principal ID: $script:principalId" -Color Gray
         Write-Message "  Client ID   : $($identity.clientId)" -Color Gray
         Write-Message "  Resource ID : $($identity.id)" -Color Gray
         Write-Message ''
@@ -142,9 +142,9 @@ try {
         # Test 3: Reader role assigned at subscription scope
         Test-Validation -TestName "Reader role assigned (subscription scope)" -TestBlock {
             $roleAssignment = az role assignment list `
-                --assignee $principalId `
+                --assignee $script:principalId `
                 --role Reader `
-                --scope "/subscriptions/$subscriptionId" `
+                --scope "/subscriptions/$script:subscriptionId" `
                 --query '[0].id' -o tsv
 
             return (-not [string]::IsNullOrEmpty($roleAssignment))
@@ -153,9 +153,9 @@ try {
         # Test 4: Monitoring Reader role assigned at subscription scope
         Test-Validation -TestName "Monitoring Reader role assigned (subscription scope)" -TestBlock {
             $roleAssignment = az role assignment list `
-                --assignee $principalId `
+                --assignee $script:principalId `
                 --role 'Monitoring Reader' `
-                --scope "/subscriptions/$subscriptionId" `
+                --scope "/subscriptions/$script:subscriptionId" `
                 --query '[0].id' -o tsv
 
             return (-not [string]::IsNullOrEmpty($roleAssignment))
