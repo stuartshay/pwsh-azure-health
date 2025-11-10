@@ -301,9 +301,10 @@ jobs:
 
           echo "🗑️ Deleting Application Insights components..."
 
-          # Delete by name pattern since AI components might not have tags
-          APP_INSIGHTS=$(az monitor app-insights component list \
+          # Use az resource list to find Application Insights components
+          APP_INSIGHTS=$(az resource list \
             --resource-group "$RESOURCE_GROUP" \
+            --resource-type "Microsoft.Insights/components" \
             --query "[?starts_with(name, 'azurehealth-')].name" \
             -o tsv)
 
