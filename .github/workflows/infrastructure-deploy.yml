@@ -317,3 +317,70 @@ jobs:
             az resource list \
               --resource-group "$RESOURCE_GROUP" \
               --output table
+
+      - name: Update shared Key Vault secret
+        shell: bash
+        run: |
+          source /tmp/retry-utils.sh
+
+          echo "🔑 Updating shared Key Vault secret..."
+          echo ""
+
+          # Get the Function App name from deployment output
+          FUNCTION_APP_NAME="${{ steps.deploy.outputs.function_app_name }}"
+
+          if [ -z "$FUNCTION_APP_NAME" ]; then
+            echo "❌ Failed to get Function App name from deployment output"
+            exit 1
+          fi
+
+          # Get the Function App URL
+          FUNCTION_APP_URL=$(az functionapp show \
+            --name "$FUNCTION_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query defaultHostName -o tsv)
+
+          if [ -z "$FUNCTION_APP_URL" ]; then
+            echo "❌ Failed to get Function App URL"
+            exit 1
+          fi
+
+          echo "Function App: $FUNCTION_APP_NAME"
+          echo "URL: https://$FUNCTION_APP_URL"
+          echo ""
+
+          # Update Key Vault secret in shared resource group
+          SHARED_KEY_VAULT="kv-tsazurehealth"
+          SECRET_NAME="function-app-url-${{ inputs.environment }}"
+
+          echo "Updating Key Vault secret: $SECRET_NAME"
+          echo "Key Vault: $SHARED_KEY_VAULT"
+          echo ""
+
+          retry_azure_operation \
+            5 \
+            "Update Key Vault secret" \
+            az keyvault secret set \
+              --vault-name "$SHARED_KEY_VAULT" \
+              --name "$SECRET_NAME" \
+              --value "https://$FUNCTION_APP_URL" \
+              --output none
+
+          echo "✅ Secret updated successfully"
+          echo ""
+
+          # Add to summary
+          {
+            echo "## 🔑 Shared Configuration"
+            echo ""
+            echo "Key Vault secret updated successfully:"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Key Vault | \`$SHARED_KEY_VAULT\` |"
+            echo "| Secret Name | \`$SECRET_NAME\` |"
+            echo "| Function App | \`$FUNCTION_APP_NAME\` |"
+            echo "| URL | \`https://$FUNCTION_APP_URL\` |"
+            echo ""
+            echo "Frontend applications can now access this URL using their managed identity."
+          } >> "$GITHUB_STEP_SUMMARY"
