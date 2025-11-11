@@ -158,7 +158,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
       powerShellVersion: '7.4'
       // CRITICAL: alwaysOn must be false for Consumption (Y1), true for Premium (EP1)
       alwaysOn: !isConsumptionPlan
-      // Premium plan features (not supported on Consumption)
+      // Elastic Premium plan features (EP1): pre-warming and minimum instance count
       preWarmedInstanceCount: isPremiumPlan ? 1 : null
       minimumElasticInstanceCount: isPremiumPlan ? 1 : null
       functionsRuntimeScaleMonitoringEnabled: isPremiumPlan
