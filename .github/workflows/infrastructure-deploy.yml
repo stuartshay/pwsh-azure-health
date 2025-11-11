@@ -79,17 +79,15 @@ jobs:
 
           # Install ACE (Azure Cost Estimator) for Bicep cost estimation
           echo "📦 Installing ACE (Azure Cost Estimator) v1.6.4..."
-          wget -q https://github.com/TheCloudTheory/arm-estimator/releases/download/1.6.4/ace-linux-x64 -O /tmp/ace
-          chmod +x /tmp/ace
-          /tmp/ace --version
+          wget -q https://github.com/TheCloudTheory/arm-estimator/releases/download/1.6.4/linux-x64.zip -O /tmp/ace.zip
+          unzip -q /tmp/ace.zip -d /tmp/ace
+          chmod +x /tmp/ace/ace
+          /tmp/ace/ace --version
           echo "✅ ACE installed successfully"
 
-          # Install azure-cost-cli for actual cost analysis
+          # Install azure-cost-cli for actual cost analysis (via .NET tool)
           echo "📦 Installing azure-cost-cli v0.52.0..."
-          wget -q https://github.com/mivano/azure-cost-cli/releases/download/0.52.0/azure-cost-cli-linux-x64.tar.gz -O /tmp/azure-cost-cli.tar.gz
-          tar -xzf /tmp/azure-cost-cli.tar.gz -C /tmp
-          chmod +x /tmp/azure-cost-cli
-          /tmp/azure-cost-cli --version
+          dotnet tool install --global azure-cost-cli --version 0.52.0
           echo "✅ azure-cost-cli installed successfully"
 
       - name: Create resource group if not exists
@@ -177,7 +175,7 @@ jobs:
 
           # Run ACE to estimate costs
           echo "📊 Running cost estimation..."
-          COST_ESTIMATE_OUTPUT=$(/tmp/ace \
+          COST_ESTIMATE_OUTPUT=$(/tmp/ace/ace \
             --template /tmp/main.json \
             --parameters environment=${{ github.event.inputs.environment }} \
             --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
@@ -468,7 +466,7 @@ jobs:
           echo ""
 
           # Get costs for the resource group (last 30 days)
-          ACTUAL_COST_OUTPUT=$(/tmp/azure-cost-cli \
+          ACTUAL_COST_OUTPUT=$(azure-cost-cli \
             --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
             --resource-group "$RESOURCE_GROUP" \
             --output json \
