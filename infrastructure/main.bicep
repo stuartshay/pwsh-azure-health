@@ -127,10 +127,12 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2025-03-01' = {
     family: planFamily
   }
   kind: isConsumptionPlan ? 'functionapp' : 'elastic'
-  properties: {
-    reserved: false // false for Windows, true for Linux
-    maximumElasticWorkerCount: isPremiumPlan ? 20 : null
-  }
+  properties: union(
+    {
+      reserved: false // false for Windows, true for Linux
+    },
+    isPremiumPlan ? { maximumElasticWorkerCount: 20 } : {}
+  )
 }
 
 // Reference to User-Assigned Managed Identity (must already exist in shared RG)
@@ -154,17 +156,13 @@ resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
-    siteConfig: {
-      powerShellVersion: '7.4'
-      // CRITICAL: alwaysOn must be false for Consumption (Y1), true for Premium (EP1)
-      alwaysOn: !isConsumptionPlan
-      // Elastic Premium plan features (EP1): pre-warming and minimum instance count
-      preWarmedInstanceCount: isPremiumPlan ? 1 : null
-      minimumElasticInstanceCount: isPremiumPlan ? 1 : null
-      functionsRuntimeScaleMonitoringEnabled: isPremiumPlan
-      // Health check endpoint (Premium feature)
-      healthCheckPath: isPremiumPlan ? '/api/HealthCheck' : null
-      appSettings: [
+    siteConfig: union(
+      {
+        powerShellVersion: '7.4'
+        // CRITICAL: alwaysOn must be false for Consumption (Y1), true for Premium (EP1)
+        alwaysOn: !isConsumptionPlan
+        functionsRuntimeScaleMonitoringEnabled: isPremiumPlan
+        appSettings: [
         {
           name: 'AzureWebJobsStorage__accountname'
           value: storageAccount.name
@@ -210,19 +208,27 @@ resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
           value: '1'
         }
       ]
-      ftpsState: 'Disabled'
-      minTlsVersion: '1.2'
-      cors: {
-        allowedOrigins: [
-          'https://portal.azure.com'
-          'https://ms.portal.azure.com'
-          'https://functions.azure.com'
-          'https://functions-staging.azure.com'
-          'https://functions-next.azure.com'
-        ]
-        supportCredentials: false
-      }
-    }
+        ftpsState: 'Disabled'
+        minTlsVersion: '1.2'
+        cors: {
+          allowedOrigins: [
+            'https://portal.azure.com'
+            'https://ms.portal.azure.com'
+            'https://functions.azure.com'
+            'https://functions-staging.azure.com'
+            'https://functions-next.azure.com'
+          ]
+          supportCredentials: false
+        }
+      },
+      // Elastic Premium (EP1) specific features: pre-warming, always-ready instances, and health monitoring
+      // NOTE: The health check endpoint '/api/HealthCheck' exists in src/HealthCheck/function.json (route: 'health')
+      isPremiumPlan ? {
+        preWarmedInstanceCount: 1
+        minimumElasticInstanceCount: 1
+        healthCheckPath: '/api/HealthCheck'
+      } : {}
+    )
   }
 }
 

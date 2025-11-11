@@ -70,7 +70,7 @@ try {
 
     # Check for shared infrastructure
     Write-Message "Checking shared infrastructure..." -Color Gray
-    $sharedIdentityFile = "$PSScriptRoot/shared-identity-info.json"
+    $sharedIdentityFile = Join-Path $PSScriptRoot 'shared-identity-info.json'
     if (-not (Test-Path $sharedIdentityFile)) {
         Write-Error "Shared identity file not found: $sharedIdentityFile`nRun: ./scripts/infrastructure/setup-shared-identity.ps1"
     }
@@ -213,7 +213,7 @@ try {
     Write-Message "  • alwaysOn:              Y1=false  │  EP1=true" -Color Gray
     Write-Message "  • preWarmedInstanceCount:  Y1=null   │  EP1=1" -Color Gray
     Write-Message "  • healthCheckPath:         Y1=null   │  EP1=/api/HealthCheck" -Color Gray
-    Write-Message "  • Estimated Cost/Month:      Y1=~\$0-20 │  EP1=~\$146" -Color Gray
+    Write-Message "  • Estimated Cost/Month:      Y1=~`$0-20 │  EP1=~`$146" -Color Gray
     Write-Message ''
 
     # Overall result
