@@ -81,8 +81,8 @@ jobs:
           echo "📦 Installing ACE (Azure Cost Estimator) v1.6.4..."
           wget -q https://github.com/TheCloudTheory/arm-estimator/releases/download/1.6.4/linux-x64.zip -O /tmp/ace.zip
           unzip -q /tmp/ace.zip -d /tmp/ace
-          chmod +x /tmp/ace/ace
-          /tmp/ace/ace --version
+          chmod +x /tmp/ace/azure-cost-estimator
+          /tmp/ace/azure-cost-estimator --version
           echo "✅ ACE installed successfully"
 
           # Install azure-cost-cli for actual cost analysis (via .NET tool)
@@ -175,7 +175,7 @@ jobs:
 
           # Run ACE to estimate costs
           echo "📊 Running cost estimation..."
-          COST_ESTIMATE_OUTPUT=$(/tmp/ace/ace \
+          COST_ESTIMATE_OUTPUT=$(/tmp/ace/azure-cost-estimator \
             --template /tmp/main.json \
             --parameters environment=${{ github.event.inputs.environment }} \
             --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
