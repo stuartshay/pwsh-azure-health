@@ -72,6 +72,26 @@ jobs:
           chmod +x /tmp/deployment-verification.sh
           echo "✅ Deployment verification utilities configured"
 
+      - name: Install cost estimation tools
+        shell: bash
+        run: |
+          echo "💰 Installing cost estimation tools..."
+
+          # Install ACE (Azure Cost Estimator) for Bicep cost estimation
+          echo "📦 Installing ACE (Azure Cost Estimator) v1.6.4..."
+          wget -q https://github.com/TheCloudTheory/arm-estimator/releases/download/1.6.4/ace-linux-x64 -O /tmp/ace
+          chmod +x /tmp/ace
+          /tmp/ace --version
+          echo "✅ ACE installed successfully"
+
+          # Install azure-cost-cli for actual cost analysis
+          echo "📦 Installing azure-cost-cli v0.52.0..."
+          wget -q https://github.com/mivano/azure-cost-cli/releases/download/0.52.0/azure-cost-cli-linux-x64.tar.gz -O /tmp/azure-cost-cli.tar.gz
+          tar -xzf /tmp/azure-cost-cli.tar.gz -C /tmp
+          chmod +x /tmp/azure-cost-cli
+          /tmp/azure-cost-cli --version
+          echo "✅ azure-cost-cli installed successfully"
+
       - name: Create resource group if not exists
         shell: bash
         run: |
@@ -139,6 +159,74 @@ jobs:
 
           echo "✅ Found managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
           echo "managed_identity_resource_id=$MANAGED_IDENTITY_RESOURCE_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Estimate deployment costs (Pre-Deploy)
+        id: cost_estimate
+        shell: bash
+        run: |
+          echo "💰 Estimating deployment costs with ACE..."
+          echo ""
+
+          MANAGED_IDENTITY_RESOURCE_ID="${{ steps.get_identity.outputs.managed_identity_resource_id }}"
+
+          # Generate ARM template from Bicep for cost estimation
+          echo "🔧 Transpiling Bicep to ARM template..."
+          az bicep build \
+            --file infrastructure/main.bicep \
+            --outfile /tmp/main.json
+
+          # Run ACE to estimate costs
+          echo "📊 Running cost estimation..."
+          COST_ESTIMATE_OUTPUT=$(/tmp/ace \
+            --template /tmp/main.json \
+            --parameters environment=${{ github.event.inputs.environment }} \
+            --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
+            --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
+            --location "$LOCATION" \
+            --currency USD 2>&1 || true)
+
+          echo "$COST_ESTIMATE_OUTPUT"
+          echo ""
+
+          # Extract estimated monthly cost (ACE outputs format may vary, adapt as needed)
+          ESTIMATED_COST=$(echo "$COST_ESTIMATE_OUTPUT" | grep -i "total" | grep -oP '\$[\d,]+\.?\d*' | head -1 || echo "N/A")
+
+          if [ "$ESTIMATED_COST" = "N/A" ]; then
+            echo "⚠️  Could not extract cost estimate from ACE output"
+            ESTIMATED_COST="Unable to calculate"
+          else
+            echo "💵 Estimated monthly cost: $ESTIMATED_COST"
+          fi
+
+          # Save for later steps
+          echo "estimated_cost=$ESTIMATED_COST" >> "$GITHUB_OUTPUT"
+
+          # Save full output for summary
+          {
+            echo "cost_estimate_details<<EOF"
+            echo "$COST_ESTIMATE_OUTPUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 💰 Pre-Deployment Cost Estimation"
+            echo ""
+            echo "**Environment:** ${{ github.event.inputs.environment }}"
+            echo "**SKU:** ${{ github.event.inputs.sku }}"
+            echo ""
+            echo "### Estimated Monthly Cost: \`$ESTIMATED_COST\`"
+            echo ""
+            echo "<details>"
+            echo "<summary>View detailed cost breakdown</summary>"
+            echo ""
+            echo "\`\`\`"
+            echo "$COST_ESTIMATE_OUTPUT"
+            echo "\`\`\`"
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "---"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy Bicep template
         id: deploy
@@ -365,3 +453,161 @@ jobs:
             echo ""
             echo "Frontend applications can now access this URL using their managed identity."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Analyze actual deployment costs (Post-Deploy)
+        id: cost_actual
+        shell: bash
+        run: |
+          echo "💰 Analyzing actual deployment costs with azure-cost-cli..."
+          echo ""
+
+          # Note: azure-cost-cli shows costs from the last billing period
+          # For newly deployed resources, costs may not be available immediately
+          echo "⏳ Querying Azure Cost Management API for resource group costs..."
+          echo "Note: Newly deployed resources may take 8-24 hours to appear in cost data"
+          echo ""
+
+          # Get costs for the resource group (last 30 days)
+          ACTUAL_COST_OUTPUT=$(/tmp/azure-cost-cli \
+            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group "$RESOURCE_GROUP" \
+            --output json \
+            --timeframe "MonthToDate" 2>&1 || true)
+
+          echo "Raw output:"
+          echo "$ACTUAL_COST_OUTPUT"
+          echo ""
+
+          # Try to extract cost from JSON output
+          ACTUAL_COST="N/A"
+          if echo "$ACTUAL_COST_OUTPUT" | jq -e . >/dev/null 2>&1; then
+            # Valid JSON, try to extract cost
+            ACTUAL_COST=$(echo "$ACTUAL_COST_OUTPUT" | jq -r '.totalCost // .Total // "N/A"' 2>/dev/null || echo "N/A")
+          fi
+
+          # If we couldn't get costs, explain why
+          if [ "$ACTUAL_COST" = "N/A" ] || [ "$ACTUAL_COST" = "null" ]; then
+            echo "⚠️  Actual cost data not yet available (resources were just deployed)"
+            ACTUAL_COST="Not yet available"
+            COST_STATUS="⏳ Pending (check in 24 hours)"
+          else
+            echo "💵 Actual cost (month-to-date): \$$ACTUAL_COST"
+            COST_STATUS="✅ Available"
+          fi
+
+          # Save for summary
+          {
+            echo "actual_cost=$ACTUAL_COST"
+            echo "cost_status=$COST_STATUS"
+          } >> "$GITHUB_OUTPUT"
+
+          # Save full output for summary
+          {
+            echo "actual_cost_details<<EOF"
+            echo "$ACTUAL_COST_OUTPUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 💵 Post-Deployment Cost Analysis"
+            echo ""
+            echo "**Resource Group:** \`$RESOURCE_GROUP\`"
+            echo "**Time Period:** Month to Date"
+            echo "**Status:** $COST_STATUS"
+            echo ""
+            echo "### Actual Cost: \`\$$ACTUAL_COST\`"
+            echo ""
+            if [ "$ACTUAL_COST" != "Not yet available" ] && [ "$ACTUAL_COST" != "N/A" ]; then
+              echo "<details>"
+              echo "<summary>View detailed cost breakdown</summary>"
+              echo ""
+              echo "\`\`\`"
+              echo "$ACTUAL_COST_OUTPUT"
+              echo "\`\`\`"
+              echo ""
+              echo "</details>"
+            else
+              echo "> **Note:** Cost data for newly deployed resources typically becomes available within 8-24 hours."
+              echo "> You can check actual costs later using:"
+              echo "> \`\`\`bash"
+              echo "> az costmanagement query \\"
+              echo ">   --type ActualCost \\"
+              echo ">   --dataset-filter \"{\\\"and\\\":[{\\\"dimensions\\\":{\\\"name\\\":\\\"ResourceGroup\\\",\\\"operator\\\":\\\"In\\\",\\\"values\\\":[\\\"$RESOURCE_GROUP\\\"]}}]}\" \\"
+              echo ">   --timeframe MonthToDate"
+              echo "> \`\`\`"
+            fi
+            echo ""
+            echo "---"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate cost comparison summary
+        shell: bash
+        run: |
+          echo "📊 Generating cost comparison summary..."
+
+          ESTIMATED_COST="${{ steps.cost_estimate.outputs.estimated_cost }}"
+          ACTUAL_COST="${{ steps.cost_actual.outputs.actual_cost }}"
+
+          {
+            echo ""
+            echo "# 💰 Azure Cost Report Summary"
+            echo ""
+            echo "## Cost Overview"
+            echo ""
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "| **Pre-Deployment Estimate** | \`$ESTIMATED_COST\` |"
+            echo "| **Post-Deployment Actual** | \`$ACTUAL_COST\` |"
+            echo "| **Environment** | \`${{ github.event.inputs.environment }}\` |"
+            echo "| **SKU** | \`${{ github.event.inputs.sku }}\` |"
+            echo "| **Resource Group** | \`$RESOURCE_GROUP\` |"
+            echo ""
+
+            if [ "$ACTUAL_COST" != "Not yet available" ] && [ "$ACTUAL_COST" != "N/A" ]; then
+              echo "## 📈 Cost Comparison"
+              echo ""
+              echo "✅ Both estimated and actual costs are available for comparison."
+              echo ""
+              echo "> **Note:** Actual costs represent month-to-date spending for the resource group."
+              echo "> The estimate is a projected monthly cost based on the Bicep template configuration."
+            else
+              echo "## ⏳ Cost Comparison"
+              echo ""
+              echo "Actual cost data is not yet available. Azure Cost Management typically requires 8-24 hours to process new resource costs."
+              echo ""
+              echo "### Follow-up Actions"
+              echo ""
+              echo "1. **Check costs in 24 hours:**"
+              echo "   \`\`\`bash"
+              echo "   az costmanagement query --type ActualCost \\"
+              echo "     --dataset-filter \"{\\\"and\\\":[{\\\"dimensions\\\":{\\\"name\\\":\\\"ResourceGroup\\\",\\\"operator\\\":\\\"In\\\",\\\"values\\\":[\\\"$RESOURCE_GROUP\\\"]}}]}\" \\"
+              echo "     --timeframe MonthToDate"
+              echo "   \`\`\`"
+              echo ""
+              echo "2. **Set up cost alerts** in Azure Portal → Cost Management + Billing → Cost alerts"
+              echo ""
+              echo "3. **Review Azure Advisor** recommendations for cost optimization"
+            fi
+
+            echo ""
+            echo "## 📋 Deployment Details"
+            echo ""
+            echo "- **Function App:** \`${{ steps.deploy.outputs.function_app_name }}\`"
+            echo "- **Storage Account:** \`${{ steps.deploy.outputs.storage_account_name }}\`"
+            echo "- **App Insights:** \`${{ steps.deploy.outputs.app_insights_name }}\`"
+            echo "- **Deployment Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "## 🔗 Useful Links"
+            echo ""
+            echo "- [Azure Cost Management](https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/overview)"
+            echo "- [Resource Group: $RESOURCE_GROUP](https://portal.azure.com/#@/resource/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RESOURCE_GROUP/overview)"
+            echo "- [Azure Advisor](https://portal.azure.com/#view/Microsoft_Azure_Expert/AdvisorMenuBlade/~/Cost)"
+            echo ""
+            echo "---"
+            echo ""
+            echo "*Cost estimation powered by [ACE (Azure Cost Estimator)](https://github.com/TheCloudTheory/arm-estimator)*"
+            echo ""
+            echo "*Actual cost analysis powered by [azure-cost-cli](https://github.com/mivano/azure-cost-cli)*"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "✅ Cost comparison summary generated"
