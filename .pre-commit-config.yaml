@@ -126,6 +126,20 @@ repos:
         pass_filenames: false
         verbose: true
 
+      - id: bats-tests
+        name: BATS Tests
+        entry: >
+          bash -c '
+          if command -v bats &> /dev/null; then
+            bats tests/workflows/;
+          else
+            echo "BATS not installed, skipping tests. Install: ./scripts/local/install-bats.sh";
+          fi'
+        language: system
+        files: ^scripts/ci/.*\.sh$
+        pass_filenames: false
+        verbose: true
+
       - id: pester-tests
         name: Run Pester Tests
         entry: >
