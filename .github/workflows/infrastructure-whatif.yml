@@ -165,35 +165,69 @@ jobs:
                 --output none
           fi
 
-          echo "Running what-if for Dev environment..."
+          {
+            echo "## Dev Environment What-If"
+            echo ""
+          } >> /tmp/whatif-summary.md
+
+          # Run what-if for Y1 (Consumption)
+          echo "Running what-if for Dev environment with Y1 (Consumption)..."
           if [ -n "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
-            echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
-            whatif_output=$(az deployment group what-if \
+            whatif_y1=$(az deployment group what-if \
               --name "whatif-$(date +%Y%m%d-%H%M%S)" \
               --resource-group "$RESOURCE_GROUP" \
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=dev \
+              --parameters functionAppPlanSku=Y1 \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --result-format FullResourcePayloads 2>&1 || true)
           else
-            echo "⚠️ No managed identity found - what-if may fail"
-            whatif_output=$(az deployment group what-if \
+            whatif_y1=$(az deployment group what-if \
               --name "whatif-$(date +%Y%m%d-%H%M%S)" \
               --resource-group "$RESOURCE_GROUP" \
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=dev \
+              --parameters functionAppPlanSku=Y1 \
               --result-format FullResourcePayloads 2>&1 || true)
           fi
 
-          # Save output to file for comment
-          echo "$whatif_output" > /tmp/whatif-dev.txt
+          {
+            echo "### Y1 (Consumption Plan)"
+            echo '```'
+            echo "$whatif_y1"
+            echo '```'
+            echo ""
+          } >> /tmp/whatif-summary.md
+
+          # Run what-if for EP1 (Premium)
+          echo "Running what-if for Dev environment with EP1 (Premium)..."
+          if [ -n "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
+            whatif_ep1=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=dev \
+              --parameters functionAppPlanSku=EP1 \
+              --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
+              --result-format FullResourcePayloads 2>&1 || true)
+          else
+            whatif_ep1=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=dev \
+              --parameters functionAppPlanSku=EP1 \
+              --result-format FullResourcePayloads 2>&1 || true)
+          fi
 
           {
-            echo "## Dev Environment What-If"
+            echo "### EP1 (Elastic Premium Plan)"
             echo '```'
-            echo "$whatif_output"
+            echo "$whatif_ep1"
             echo '```'
             echo ""
           } >> /tmp/whatif-summary.md
@@ -221,35 +255,69 @@ jobs:
                 --output none
           fi
 
-          echo "Running what-if for Prod environment..."
+          {
+            echo "## Prod Environment What-If"
+            echo ""
+          } >> /tmp/whatif-summary.md
+
+          # Run what-if for Y1 (Consumption)
+          echo "Running what-if for Prod environment with Y1 (Consumption)..."
           if [ -n "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
-            echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
-            whatif_output=$(az deployment group what-if \
+            whatif_y1=$(az deployment group what-if \
               --name "whatif-$(date +%Y%m%d-%H%M%S)" \
               --resource-group "$RESOURCE_GROUP" \
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=prod \
+              --parameters functionAppPlanSku=Y1 \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --result-format FullResourcePayloads 2>&1 || true)
           else
-            echo "⚠️ No managed identity found - what-if may fail"
-            whatif_output=$(az deployment group what-if \
+            whatif_y1=$(az deployment group what-if \
               --name "whatif-$(date +%Y%m%d-%H%M%S)" \
               --resource-group "$RESOURCE_GROUP" \
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=prod \
+              --parameters functionAppPlanSku=Y1 \
               --result-format FullResourcePayloads 2>&1 || true)
           fi
 
-          # Save output to file for comment
-          echo "$whatif_output" > /tmp/whatif-prod.txt
+          {
+            echo "### Y1 (Consumption Plan)"
+            echo '```'
+            echo "$whatif_y1"
+            echo '```'
+            echo ""
+          } >> /tmp/whatif-summary.md
+
+          # Run what-if for EP1 (Premium)
+          echo "Running what-if for Prod environment with EP1 (Premium)..."
+          if [ -n "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
+            whatif_ep1=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=prod \
+              --parameters functionAppPlanSku=EP1 \
+              --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
+              --result-format FullResourcePayloads 2>&1 || true)
+          else
+            whatif_ep1=$(az deployment group what-if \
+              --name "whatif-$(date +%Y%m%d-%H%M%S)" \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infrastructure/main.bicep \
+              --parameters infrastructure/main.bicepparam \
+              --parameters environment=prod \
+              --parameters functionAppPlanSku=EP1 \
+              --result-format FullResourcePayloads 2>&1 || true)
+          fi
 
           {
-            echo "## Prod Environment What-If"
+            echo "### EP1 (Elastic Premium Plan)"
             echo '```'
-            echo "$whatif_output"
+            echo "$whatif_ep1"
             echo '```'
           } >> /tmp/whatif-summary.md
 
@@ -274,8 +342,20 @@ jobs:
             ${summary}
 
             ---
-            <sub>💡 This preview shows potential changes to both **dev** and **prod**
-            environments based on the current Bicep templates.</sub>
+
+            ### SKU Comparison
+
+            | Feature | Y1 (Consumption) | EP1 (Elastic Premium) |
+            |---------|------------------|------------------------|
+            | **Cost/Month** | ~$0-20 (pay per execution) | ~$146 (fixed) |
+            | **Always On** | ❌ No (scales to zero) | ✅ Yes |
+            | **Cold Starts** | ✅ Yes | ❌ No (pre-warmed) |
+            | **VNet Integration** | ❌ No | ✅ Ready |
+            | **Health Check** | ❌ No | ✅ /api/HealthCheck |
+            | **Max Scale** | 200 instances | 100 instances (configurable) |
+
+            <sub>💡 This preview shows potential changes to both **dev** and **prod** environments
+            with both **Y1** and **EP1** SKU options based on the current Bicep templates.</sub>
             `;
 
             // Find existing comment
