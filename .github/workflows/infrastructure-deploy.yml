@@ -326,8 +326,15 @@ jobs:
           echo "🔑 Updating shared Key Vault secret..."
           echo ""
 
+          # Get the Function App name from deployment output
+          FUNCTION_APP_NAME="${{ steps.deploy.outputs.function_app_name }}"
+
+          if [ -z "$FUNCTION_APP_NAME" ]; then
+            echo "❌ Failed to get Function App name from deployment output"
+            exit 1
+          fi
+
           # Get the Function App URL
-          FUNCTION_APP_NAME="func-azurehealth-${{ inputs.environment }}"
           FUNCTION_APP_URL=$(az functionapp show \
             --name "$FUNCTION_APP_NAME" \
             --resource-group "$RESOURCE_GROUP" \
