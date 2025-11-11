@@ -176,11 +176,12 @@ jobs:
           # Run ACE to estimate costs
           echo "📊 Running cost estimation..."
           COST_ESTIMATE_OUTPUT=$(/tmp/ace/azure-cost-estimator \
-            --template /tmp/main.json \
-            --parameters environment=${{ github.event.inputs.environment }} \
-            --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
-            --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
-            --location "$LOCATION" \
+            /tmp/main.json \
+            ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            "$RESOURCE_GROUP" \
+            --inline "environment=${{ github.event.inputs.environment }}" \
+            --inline "functionAppPlanSku=${{ github.event.inputs.sku }}" \
+            --inline "managedIdentityResourceId=$MANAGED_IDENTITY_RESOURCE_ID" \
             --currency USD 2>&1 || true)
 
           echo "$COST_ESTIMATE_OUTPUT"
