@@ -106,3 +106,7 @@ actionlint
 
 # Shared infrastructure identity information (contains sensitive IDs)
 scripts/infrastructure/shared-identity-info.json
+
+# ACE (Azure Cost Estimator) cache files
+infrastructure/.ace/
+.ace/

@@ -87,7 +87,9 @@ jobs:
 
           # Install azure-cost-cli for actual cost analysis (via .NET tool)
           echo "📦 Installing azure-cost-cli v0.52.0..."
-          dotnet tool install --global azure-cost-cli --version 0.52.0
+          dotnet tool install --global azure-cost-cli --version 0.52.0 || dotnet tool update --global azure-cost-cli --version 0.52.0
+          # Ensure dotnet tools are in PATH for subsequent steps
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
           echo "✅ azure-cost-cli installed successfully"
 
       - name: Create resource group if not exists
@@ -187,14 +189,15 @@ jobs:
           echo "$COST_ESTIMATE_OUTPUT"
           echo ""
 
-          # Extract estimated monthly cost (ACE outputs format may vary, adapt as needed)
-          ESTIMATED_COST=$(echo "$COST_ESTIMATE_OUTPUT" | grep -i "total" | grep -oP '\$[\d,]+\.?\d*' | head -1 || echo "N/A")
+          # Extract estimated monthly cost from ACE output (looks for "Total cost: X.XX USD")
+          ESTIMATED_COST=$(echo "$COST_ESTIMATE_OUTPUT" | grep -i "Total cost:" | grep -oP '[\d,]+\.?\d+(?= USD)' | head -1 || echo "N/A")
 
           if [ "$ESTIMATED_COST" = "N/A" ]; then
             echo "⚠️  Could not extract cost estimate from ACE output"
             ESTIMATED_COST="Unable to calculate"
           else
-            echo "💵 Estimated monthly cost: $ESTIMATED_COST"
+            echo "💵 Estimated monthly cost: \$$ESTIMATED_COST USD"
+            ESTIMATED_COST="\$$ESTIMATED_COST"
           fi
 
           # Save for later steps
@@ -466,32 +469,43 @@ jobs:
           echo "Note: Newly deployed resources may take 8-24 hours to appear in cost data"
           echo ""
 
-          # Get costs for the resource group (last 30 days)
-          ACTUAL_COST_OUTPUT=$(azure-cost-cli \
-            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
-            --resource-group "$RESOURCE_GROUP" \
-            --output json \
-            --timeframe "MonthToDate" 2>&1 || true)
-
-          echo "Raw output:"
-          echo "$ACTUAL_COST_OUTPUT"
-          echo ""
-
-          # Try to extract cost from JSON output
-          ACTUAL_COST="N/A"
-          if echo "$ACTUAL_COST_OUTPUT" | jq -e . >/dev/null 2>&1; then
-            # Valid JSON, try to extract cost
-            ACTUAL_COST=$(echo "$ACTUAL_COST_OUTPUT" | jq -r '.totalCost // .Total // "N/A"' 2>/dev/null || echo "N/A")
-          fi
-
-          # If we couldn't get costs, explain why
-          if [ "$ACTUAL_COST" = "N/A" ] || [ "$ACTUAL_COST" = "null" ]; then
-            echo "⚠️  Actual cost data not yet available (resources were just deployed)"
-            ACTUAL_COST="Not yet available"
-            COST_STATUS="⏳ Pending (check in 24 hours)"
+          # Verify azure-cost is available
+          if ! command -v azure-cost &> /dev/null; then
+            echo "❌ azure-cost not found in PATH"
+            echo "PATH: $PATH"
+            ls -la "$HOME/.dotnet/tools/" 2>/dev/null || echo "dotnet tools directory not found"
+            ACTUAL_COST="Tool not available"
+            COST_STATUS="❌ azure-cost-cli not installed"
           else
-            echo "💵 Actual cost (month-to-date): \$$ACTUAL_COST"
-            COST_STATUS="✅ Available"
+            echo "✅ Found azure-cost: $(which azure-cost)"
+
+            # Get costs for the resource group (month to date)
+            ACTUAL_COST_OUTPUT=$(azure-cost \
+              --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+              --resource-group "$RESOURCE_GROUP" \
+              --output json \
+              --timeframe "MonthToDate" 2>&1 || true)
+
+            echo "Raw output:"
+            echo "$ACTUAL_COST_OUTPUT"
+            echo ""
+
+            # Try to extract cost from JSON output
+            ACTUAL_COST="N/A"
+            if echo "$ACTUAL_COST_OUTPUT" | jq -e . >/dev/null 2>&1; then
+              # Valid JSON, try to extract cost
+              ACTUAL_COST=$(echo "$ACTUAL_COST_OUTPUT" | jq -r '.totalCost // .Total // "N/A"' 2>/dev/null || echo "N/A")
+            fi
+
+            # If we couldn't get costs, explain why
+            if [ "$ACTUAL_COST" = "N/A" ] || [ "$ACTUAL_COST" = "null" ]; then
+              echo "⚠️  Actual cost data not yet available (resources were just deployed)"
+              ACTUAL_COST="Not yet available"
+              COST_STATUS="⏳ Pending (check in 24 hours)"
+            else
+              echo "💵 Actual cost (month-to-date): \$$ACTUAL_COST"
+              COST_STATUS="✅ Available"
+            fi
           fi
 
           # Save for summary

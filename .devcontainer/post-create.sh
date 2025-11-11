@@ -134,6 +134,23 @@ else
     echo "⚠️  Bicep CLI installation may have failed"
 fi
 
+# Install azure-cost-cli for cost analysis
+echo "Installing azure-cost-cli..."
+if command -v dotnet &> /dev/null; then
+    if dotnet tool install --global azure-cost-cli --version 0.52.0 2>/dev/null || dotnet tool update --global azure-cost-cli --version 0.52.0 2>/dev/null; then
+        echo "✅ azure-cost-cli installed successfully"
+        # Ensure dotnet tools are in PATH
+        export PATH="$PATH:$HOME/.dotnet/tools"
+        if command -v azure-cost-cli &> /dev/null; then
+            echo "✅ azure-cost-cli: $(azure-cost-cli --version 2>/dev/null || echo 'installed')"
+        fi
+    else
+        echo "⚠️  azure-cost-cli installation may have failed"
+    fi
+else
+    echo "⚠️  .NET SDK not found, skipping azure-cost-cli installation"
+fi
+
 # Note: Azurite is managed via VS Code extension (azurite.azurite)
 # Create the workspace directory for Azurite data
 echo "Creating Azurite workspace directory..."
