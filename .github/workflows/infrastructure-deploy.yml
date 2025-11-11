@@ -62,6 +62,16 @@ jobs:
           chmod +x /tmp/policy-query.sh
           echo "✅ Policy query utilities configured"
 
+          # Copy Key Vault utilities from source
+          cp scripts/ci/keyvault-utils.sh /tmp/keyvault-utils.sh
+          chmod +x /tmp/keyvault-utils.sh
+          echo "✅ Key Vault utilities configured"
+
+          # Copy deployment verification utilities from source
+          cp scripts/ci/deployment-verification.sh /tmp/deployment-verification.sh
+          chmod +x /tmp/deployment-verification.sh
+          echo "✅ Deployment verification utilities configured"
+
       - name: Create resource group if not exists
         shell: bash
         run: |
@@ -222,13 +232,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify deployment
+        id: verify
         shell: bash
         run: |
           source /tmp/retry-utils.sh
+          source /tmp/deployment-verification.sh
 
           echo "🔍 Verifying deployed resources..."
+          echo ""
 
-          # Verify with retry logic (reduced attempts for read operations)
+          # List deployed resources
           retry_azure_operation \
             3 \
             "List deployed resources" \
@@ -236,10 +249,64 @@ jobs:
               --resource-group "$RESOURCE_GROUP" \
               --output table
 
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+
+          # Run comprehensive deployment verification
+          FUNCTION_APP_NAME="${{ steps.deploy.outputs.function_app_name }}"
+          STORAGE_ACCOUNT_NAME="${{ steps.deploy.outputs.storage_account_name }}"
+          APP_INSIGHTS_NAME="${{ steps.deploy.outputs.app_insights_name }}"
+          FUNCTION_URL="https://$FUNCTION_APP_NAME.azurewebsites.net"
+
+          if verify_deployment \
+            "$FUNCTION_APP_NAME" \
+            "$STORAGE_ACCOUNT_NAME" \
+            "$APP_INSIGHTS_NAME" \
+            "$RESOURCE_GROUP" \
+            "$FUNCTION_URL"; then
+            echo "verification_status=✅ Passed" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ Deployment verification completed successfully!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Add verification results to summary
+            {
+              echo ""
+              echo "## ✅ Deployment Verification"
+              echo ""
+              echo "All post-deployment checks passed:"
+              echo ""
+              echo "- ✅ Function App is running"
+              echo "- ✅ Storage account accessible"
+              echo "- ✅ Application Insights configured"
+              echo "- ✅ Health endpoint responsive"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "verification_status=⚠️ Failed" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "⚠️  Some deployment verification checks failed"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Add warning to summary
+            {
+              echo ""
+              echo "## ⚠️ Deployment Verification"
+              echo ""
+              echo "Some post-deployment checks failed. Review the logs above for details."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            # Don't fail the workflow - resources are deployed but may need attention
+            exit 0
+          fi
+
       - name: Update shared Key Vault secret
         shell: bash
         run: |
           source /tmp/retry-utils.sh
+          source /tmp/keyvault-utils.sh
 
           echo "🔑 Updating shared Key Vault secret..."
           echo ""
@@ -267,25 +334,19 @@ jobs:
           echo "URL: https://$FUNCTION_APP_URL"
           echo ""
 
-          # Update Key Vault secret in shared resource group
+          # Update Key Vault secret in shared resource group with verification
           SHARED_KEY_VAULT="kv-tsazurehealth"
           SECRET_NAME="function-app-url-${{ inputs.environment }}"
+          SECRET_VALUE="https://$FUNCTION_APP_URL"
 
-          echo "Updating Key Vault secret: $SECRET_NAME"
-          echo "Key Vault: $SHARED_KEY_VAULT"
-          echo ""
-
-          retry_azure_operation \
-            5 \
-            "Update Key Vault secret" \
-            az keyvault secret set \
-              --vault-name "$SHARED_KEY_VAULT" \
-              --name "$SECRET_NAME" \
-              --value "https://$FUNCTION_APP_URL" \
-              --output none
-
-          echo "✅ Secret updated successfully"
-          echo ""
+          if update_and_verify_keyvault_secret "$SHARED_KEY_VAULT" "$SECRET_NAME" "$SECRET_VALUE"; then
+            echo ""
+            echo "✅ Key Vault secret update complete and verified"
+          else
+            echo ""
+            echo "❌ Key Vault secret update or verification failed"
+            exit 1
+          fi
 
           # Add to summary
           {
@@ -299,6 +360,8 @@ jobs:
             echo "| Secret Name | \`$SECRET_NAME\` |"
             echo "| Function App | \`$FUNCTION_APP_NAME\` |"
             echo "| URL | \`https://$FUNCTION_APP_URL\` |"
+            echo ""
+            echo "✅ Secret verified in Key Vault"
             echo ""
             echo "Frontend applications can now access this URL using their managed identity."
           } >> "$GITHUB_STEP_SUMMARY"
