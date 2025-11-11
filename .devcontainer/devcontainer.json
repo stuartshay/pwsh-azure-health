@@ -74,6 +74,7 @@
     "vscode": {
       "extensions": [
         "pspester.pester-test",
+        "jetmartin.bats",
         "ms-azuretools.vscode-azurefunctions",
         "ms-vscode.powershell",
         "editorconfig.editorconfig",

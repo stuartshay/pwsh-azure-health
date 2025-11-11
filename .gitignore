@@ -97,6 +97,9 @@ Thumbs.db
 *.temp
 .pre-commit-cache/
 
+# Test mocks (generated during test runs)
+tests/workflows/mocks/
+
 # Azure GitHub Actions configuration (contains sensitive IDs)
 azure-github-actions-config.txt
 actionlint
