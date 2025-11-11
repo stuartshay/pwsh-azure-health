@@ -120,26 +120,30 @@ EOF
 
 # Test: format_policy_assignments with valid assignments
 @test "format_policy_assignments formats assignments correctly" {
-  local json='[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default"}]'
+  local json='[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default","complianceState":"Compliant"}]'
 
   run format_policy_assignments "$json"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Policy Assignments (1):"* ]]
-  [[ "$output" == *"**Test Assignment** (Default)"* ]]
+  [[ "$output" == *"✅"* ]]
+  [[ "$output" == *"**Test Assignment**"* ]]
+  [[ "$output" == *"_Compliant_"* ]]
 }
 
 # Test: format_policy_assignments with multiple assignments
 @test "format_policy_assignments handles multiple assignments" {
   local json='[
-    {"name":"assignment1","displayName":"Assignment One","enforcementMode":"Default"},
-    {"name":"assignment2","displayName":"Assignment Two","enforcementMode":"DoNotEnforce"}
+    {"name":"assignment1","displayName":"Assignment One","enforcementMode":"Default","complianceState":"NonCompliant"},
+    {"name":"assignment2","displayName":"Assignment Two","enforcementMode":"DoNotEnforce","complianceState":"Compliant"}
   ]'
 
   run format_policy_assignments "$json"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Policy Assignments (2):"* ]]
-  [[ "$output" == *"**Assignment One** (Default)"* ]]
-  [[ "$output" == *"**Assignment Two** (DoNotEnforce)"* ]]
+  [[ "$output" == *"❌"* ]]
+  [[ "$output" == *"✅"* ]]
+  [[ "$output" == *"**Assignment One**"* ]]
+  [[ "$output" == *"**Assignment Two**"* ]]
 }
 
 # Test: format_policy_assignments with empty array
@@ -212,7 +216,9 @@ EOF
 if [[ "$*" == *"account show"* ]]; then
   echo "12345678-1234-1234-1234-123456789abc"
 elif [[ "$*" == *"policy assignment list"* ]]; then
-  echo '[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default"}]'
+  echo '[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default","policyDefinitionId":"/subscriptions/test/providers/Microsoft.Authorization/policyDefinitions/test-policy"}]'
+elif [[ "$*" == *"policy state list"* ]]; then
+  echo '[{"policyAssignment":"assignment1","compliance":"Compliant"}]'
 elif [[ "$*" == *"policy exemption list"* ]]; then
   echo '[{"name":"exemption1","displayName":"Test Exemption","exemptionCategory":"Waiver"}]'
 else
@@ -225,7 +231,8 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"Azure Policy Status"* ]]
   [[ "$output" == *"Policy Assignments (1):"* ]]
-  [[ "$output" == *"**Test Assignment** (Default)"* ]]
+  [[ "$output" == *"✅"* ]]
+  [[ "$output" == *"**Test Assignment**"* ]]
   [[ "$output" == *"Policy Exemptions (1):"* ]]
   [[ "$output" == *"**Test Exemption** (Waiver)"* ]]
 }

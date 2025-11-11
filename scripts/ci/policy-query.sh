@@ -3,7 +3,64 @@
 # Azure Policy Query Utilities
 # Functions for querying policy assignments and exemptions
 
-# Query policy assignments for a resource group
+# Query policy assignments for a resource group with compliance state
+# Usage: get_policy_assignments_with_compliance <resource-group-name>
+# Returns: JSON array of policy assignments with compliance information
+get_policy_assignments_with_compliance() {
+  local resource_group=$1
+
+  if [ -z "$resource_group" ]; then
+    echo "Error: Resource group name is required" >&2
+    return 1
+  fi
+
+  # Get policy assignments
+  local assignments
+  assignments=$(az policy assignment list \
+    --resource-group "$resource_group" \
+    --query "[].{name:name, displayName:displayName, enforcementMode:enforcementMode, policyDefinitionId:policyDefinitionId}" \
+    --output json 2>/dev/null || echo "[]")
+
+  # Get all compliance states for the resource group
+  local all_states
+  all_states=$(az policy state list \
+    --resource-group "$resource_group" \
+    --query "[].{policyAssignment:policyAssignmentName, compliance:complianceState}" \
+    --output json 2>/dev/null || echo "[]")
+
+  # For each policy assignment, find the worst compliance state (NonCompliant > Compliant)
+  echo "$assignments" | jq --argjson states "$all_states" '
+    map(. as $assignment |
+      ($states | map(select(.policyAssignment == $assignment.name)) | map(.compliance)) as $complianceStates |
+      (if ($complianceStates | any(. == "NonCompliant")) then "NonCompliant"
+       elif ($complianceStates | any(. == "Compliant")) then "Compliant"
+       else "Unknown"
+       end) as $overallState |
+      $assignment + {complianceState: $overallState}
+    )'
+}
+
+# Get policy definition description
+# Usage: get_policy_description <policy-definition-id>
+# Returns: Policy description text
+get_policy_description() {
+  local policy_def_id=$1
+
+  if [ -z "$policy_def_id" ]; then
+    return 1
+  fi
+
+  # Extract policy definition name from ID
+  local policy_name
+  policy_name=$(basename "$policy_def_id")
+
+  az policy definition show \
+    --name "$policy_name" \
+    --query "description" \
+    --output tsv 2>/dev/null || echo ""
+}
+
+# Query policy assignments for a resource group (legacy function, kept for compatibility)
 # Usage: get_policy_assignments <resource-group-name>
 # Returns: JSON array of policy assignments
 get_policy_assignments() {
@@ -76,8 +133,53 @@ format_policy_assignments() {
 
   echo "**Policy Assignments ($count):**"
   echo ""
-  echo "$assignments" | jq -r \
-    '.[] | "- **\(.displayName // .name)** (\(.enforcementMode // "Default"))"'
+
+  # Sort: NonCompliant first, then Compliant, then others
+  # Format with checkbox/X and include description
+  echo "$assignments" | jq -r '
+    sort_by(
+      if .complianceState == "NonCompliant" then 0
+      elif .complianceState == "Compliant" then 1
+      else 2
+      end
+    ) |
+    .[] |
+    (if .complianceState == "Compliant" then "  - ✅ "
+     elif .complianceState == "NonCompliant" then "  - ❌ "
+     else "  - ⚪ "
+     end) +
+    "**\(.displayName // .name)**" +
+    (if .enforcementMode != "Default" then " (\(.enforcementMode))" else "" end) +
+    (if .complianceState and .complianceState != "Unknown" then " - _\(.complianceState)_" else "" end)
+  '
+
+  # Add descriptions for policies with definition IDs
+  echo ""
+  echo "$assignments" | jq -r '
+    sort_by(
+      if .complianceState == "NonCompliant" then 0
+      elif .complianceState == "Compliant" then 1
+      else 2
+      end
+    ) |
+    .[] |
+    select(.policyDefinitionId) |
+    .policyDefinitionId
+  ' | while read -r policy_def_id; do
+    if [ -n "$policy_def_id" ]; then
+      local description
+      description=$(get_policy_description "$policy_def_id")
+      if [ -n "$description" ]; then
+        local policy_name
+        policy_name=$(basename "$policy_def_id")
+        echo "    <details>"
+        echo "    <summary><em>$policy_name</em></summary>"
+        echo ""
+        echo "    $description"
+        echo "    </details>"
+      fi
+    fi
+  done
 }
 
 # Format policy exemptions for display
@@ -123,9 +225,9 @@ generate_policy_report() {
   echo "#### Azure Policy Status"
   echo ""
 
-  # Get and format policy assignments
+  # Get policy assignments with compliance states
   local assignments
-  assignments=$(get_policy_assignments "$resource_group")
+  assignments=$(get_policy_assignments_with_compliance "$resource_group")
   format_policy_assignments "$assignments"
 
   echo ""
