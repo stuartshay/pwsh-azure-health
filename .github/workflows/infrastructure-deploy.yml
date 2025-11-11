@@ -49,13 +49,18 @@ jobs:
           echo "RESOURCE_GROUP=rg-azure-health-${{ github.event.inputs.environment }}" >> "$GITHUB_ENV"
           echo "LOCATION=eastus" >> "$GITHUB_ENV"
 
-      - name: Setup retry utilities
+      - name: Setup CI utilities
         shell: bash
         run: |
           # Copy retry utilities from source
           cp scripts/ci/retry-utils.sh /tmp/retry-utils.sh
           chmod +x /tmp/retry-utils.sh
           echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
+
+          # Copy policy query utilities from source
+          cp scripts/ci/policy-query.sh /tmp/policy-query.sh
+          chmod +x /tmp/policy-query.sh
+          echo "✅ Policy query utilities configured"
 
       - name: Create resource group if not exists
         shell: bash
@@ -204,48 +209,10 @@ jobs:
             echo ""
             echo "**Function App URL:** https://$function_app_name.azurewebsites.net"
             echo ""
-            echo "#### Azure Policy Status"
-            echo ""
 
-            # Get policy assignments for the resource group
-            policy_assignments=$(az policy assignment list \
-              --resource-group "$RESOURCE_GROUP" \
-              --query "[].{name:name, displayName:displayName, enforcementMode:enforcementMode}" \
-              --output json 2>/dev/null || echo "[]")
-
-            policy_count=$(echo "$policy_assignments" | jq length)
-
-            if [ "$policy_count" -eq 0 ]; then
-              echo "- ℹ️ No policy assignments found for this resource group"
-            else
-              echo "**Policy Assignments ($policy_count):**"
-              echo ""
-              echo "$policy_assignments" | jq -r \
-                '.[] | "- **\(.displayName // .name)** (\(.enforcementMode // "Default"))"'
-            fi
-
-            echo ""
-
-            # Get policy exemptions for the resource group
-            subscription_id=$(az account show --query id -o tsv)
-            rg_scope="/subscriptions/$subscription_id/resourceGroups/$RESOURCE_GROUP"
-            exemptions=$(az policy exemption list \
-              --query "[?contains(policyAssignmentId, '$rg_scope') || \
-                contains(resourceSelector, '$rg_scope')].{name:name, displayName:displayName, \
-                exemptionCategory:exemptionCategory, expiresOn:expiresOn}" \
-              --output json 2>/dev/null || echo "[]")
-
-            exemption_count=$(echo "$exemptions" | jq length)
-
-            if [ "$exemption_count" -eq 0 ]; then
-              echo "- ℹ️ No policy exemptions found for this resource group"
-            else
-              echo "**Policy Exemptions ($exemption_count):**"
-              echo ""
-              echo "$exemptions" | jq -r \
-                '.[] | "- **\(.displayName // .name)** (\(.exemptionCategory))" + \
-                (if .expiresOn then " - Expires: \(.expiresOn)" else "" end)'
-            fi
+            # Source policy query utilities and generate report
+            source /tmp/policy-query.sh
+            generate_policy_report "$RESOURCE_GROUP"
 
             echo ""
             echo "#### Retry Configuration"
