@@ -235,6 +235,21 @@ jobs:
 
           echo "✅ Deployment completed successfully!"
 
+          # Debug: Check if deployment output is valid JSON
+          if ! echo "$deployment_output" | jq empty 2>/dev/null; then
+            echo "❌ Error: Deployment output is not valid JSON"
+            echo "First 500 characters of output:"
+            echo "$deployment_output" | head -c 500
+            echo ""
+            echo "Attempting to query deployment directly..."
+
+            # Fallback: Query the deployment directly
+            deployment_output=$(az deployment group show \
+              --name "$DEPLOYMENT_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              --output json)
+          fi
+
           # Extract outputs from deployment
           function_app_name=$(echo "$deployment_output" | jq -r '.properties.outputs.functionAppName.value')
           storage_account_name=$(echo "$deployment_output" | jq -r '.properties.outputs.storageAccountName.value')
