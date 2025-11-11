@@ -48,6 +48,7 @@ This application uses **System-Assigned Managed Identity** with **least-privileg
 - **Local Development Support**: Complete setup for local testing and debugging
 - **DevContainer Support**: Pre-configured development environment with all prerequisites
 - **Infrastructure as Code**: Provision Azure resources with repeatable Bicep templates
+- **Cost Estimation & Analysis**: Automated cost estimation before deployment and actual cost tracking after deployment
 - **GitHub Copilot Custom Agent**: Specialized AI assistant for PowerShell Azure Functions development
 
 ## Infrastructure as Code (Bicep)
@@ -489,6 +490,15 @@ The script will:
 - Display GitHub secrets that need to be added
 
 📖 **See [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md) for detailed instructions**
+
+### Cost Estimation & Analysis
+
+The infrastructure deployment workflow automatically:
+- **Pre-deployment:** Estimates monthly costs using ACE (Azure Cost Estimator) from Bicep templates
+- **Post-deployment:** Analyzes actual costs using azure-cost-cli from Azure Cost Management API
+- **Summary report:** Displays comprehensive cost comparison in GitHub Actions step summary
+
+📖 **See [docs/COST_ESTIMATION.md](docs/COST_ESTIMATION.md) for complete cost estimation documentation**
 
 ### Manual Deployment
 

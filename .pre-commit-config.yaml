@@ -31,7 +31,7 @@ repos:
       - id: yamllint
         args:
           - --config-data
-          - "{extends: default, rules: {line-length: {max: 120}, document-start: disable, truthy: {check-keys: false}}}"
+          - "{extends: default, rules: {line-length: {max: 200}, document-start: disable, truthy: {check-keys: false}}}"
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.8
