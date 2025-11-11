@@ -11,6 +11,14 @@ on:
           - dev
           - prod
         default: 'dev'
+      sku:
+        description: 'Function App hosting plan SKU'
+        required: true
+        type: choice
+        options:
+          - Y1
+          - EP1
+        default: 'Y1'
 
 permissions:
   contents: read
@@ -221,6 +229,7 @@ jobs:
               --template-file infrastructure/main.bicep \
               --parameters infrastructure/main.bicepparam \
               --parameters environment=${{ github.event.inputs.environment }} \
+              --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --output json)
 
@@ -239,10 +248,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           # Display deployment summary
+          SKU_TYPE="Consumption"
+          if [ "${{ github.event.inputs.sku }}" = "EP1" ]; then
+            SKU_TYPE="Elastic Premium"
+          fi
+
           {
             echo "### Deployment Summary"
             echo ""
             echo "**Environment:** ${{ github.event.inputs.environment }}"
+            echo "**SKU:** ${{ github.event.inputs.sku }} ($SKU_TYPE)"
             echo "**Resource Group:** $RESOURCE_GROUP"
             echo "**Location:** $LOCATION"
             echo ""

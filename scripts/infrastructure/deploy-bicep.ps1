@@ -11,10 +11,14 @@
     Azure region for deployment
 .PARAMETER Environment
     Environment: dev, staging, or prod
+.PARAMETER Sku
+    Function App hosting plan SKU: Y1 (Consumption) or EP1 (Elastic Premium)
 .PARAMETER WhatIf
     Preview changes without deploying
 .EXAMPLE
     ./deploy-bicep.ps1
+.EXAMPLE
+    ./deploy-bicep.ps1 -Environment prod -Sku EP1
 .EXAMPLE
     ./deploy-bicep.ps1 -Environment prod -Location westus2 -WhatIf
 #>
@@ -30,6 +34,10 @@ param(
     [Parameter()]
     [ValidateSet('dev', 'staging', 'prod')]
     [string]$Environment = 'dev',
+
+    [Parameter()]
+    [ValidateSet('Y1', 'EP1')]
+    [string]$Sku = 'Y1',
 
     [Parameter()]
     [switch]$WhatIf
@@ -188,14 +196,17 @@ The identity may have been deleted. Please recreate shared infrastructure:
     # Deploy Bicep template
     if ($WhatIf) {
         Write-Message 'Running What-If analysis...' -Color Cyan
+        Write-Message "SKU: $Sku ($(if ($Sku -eq 'Y1') { 'Consumption' } else { 'Elastic Premium' }))" -Color Gray
         az deployment group what-if `
             --resource-group $ResourceGroup `
             --template-file main.bicep `
             --parameters environment=$Environment `
+            --parameters functionAppPlanSku=$Sku `
             --parameters managedIdentityResourceId=$managedIdentityResourceId
     }
     else {
         Write-Message 'Deploying Bicep template...' -Color Cyan
+        Write-Message "SKU: $Sku ($(if ($Sku -eq 'Y1') { 'Consumption' } else { 'Elastic Premium' }))" -Color Gray
         Write-Message '(This may take 3-5 minutes)' -Color Gray
         Write-Message ''
 
@@ -203,6 +214,7 @@ The identity may have been deleted. Please recreate shared infrastructure:
             --resource-group $ResourceGroup `
             --template-file main.bicep `
             --parameters environment=$Environment `
+            --parameters functionAppPlanSku=$Sku `
             --parameters managedIdentityResourceId=$managedIdentityResourceId `
             --output json | ConvertFrom-Json
 
@@ -214,6 +226,7 @@ The identity may have been deleted. Please recreate shared infrastructure:
             Write-Message ''
             Write-Message 'Deployed Resources:' -Color Cyan
             Write-Message "  Resource Group      : $($deployment.properties.outputs.resourceGroupName.value)" -Color Gray
+            Write-Message "  SKU                 : $Sku ($(if ($Sku -eq 'Y1') { 'Consumption' } else { 'Elastic Premium' }))" -Color Gray
             Write-Message "  Function App        : $($deployment.properties.outputs.functionAppName.value)" -Color Gray
             Write-Message "  Function URL        : $($deployment.properties.outputs.functionAppUrl.value)" -Color Gray
             Write-Message "  Storage Account     : $($deployment.properties.outputs.storageAccountName.value)" -Color Gray

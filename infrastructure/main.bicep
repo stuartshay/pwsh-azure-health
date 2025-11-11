@@ -21,6 +21,13 @@ param timerSchedule string = '0 */15 * * * *'
 @description('Blob container name for caching Service Health payloads')
 param cacheContainerName string = 'servicehealth-cache'
 
+@description('Function App hosting plan SKU')
+@allowed([
+  'Y1'   // Consumption (Dynamic) - Pay per execution
+  'EP1'  // Elastic Premium - 210 ACU, 3.5 GB memory, VNet integration, no cold start
+])
+param functionAppPlanSku string = 'Y1'
+
 @description('Resource ID of the User-Assigned Managed Identity from shared resource group. Must be in format: /subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}')
 @minLength(100)
 @maxLength(200)
@@ -35,6 +42,12 @@ var storageAccountName = take('st${baseName}${environment}${uniqueSuffix}', 24)
 var functionAppName = '${baseName}-func-${environment}-${uniqueSuffix}'
 var appInsightsName = '${baseName}-ai-${environment}'
 var appServicePlanName = '${baseName}-plan-${environment}'
+
+// SKU detection and conditional logic
+var isConsumptionPlan = functionAppPlanSku == 'Y1'
+var isPremiumPlan = functionAppPlanSku == 'EP1'
+var planTier = isConsumptionPlan ? 'Dynamic' : 'ElasticPremium'
+var planFamily = isConsumptionPlan ? 'Y' : 'EP'
 
 // Tags for all resources
 var commonTags = {
@@ -99,19 +112,24 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// App Service Plan (Consumption)
+// App Service Plan (Dynamic SKU: Consumption or Premium)
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: appServicePlanName
   location: location
-  tags: commonTags
+  tags: union(commonTags, {
+    sku: functionAppPlanSku
+    tier: planTier
+  })
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-    size: 'Y1'
-    family: 'Y'
+    name: functionAppPlanSku
+    tier: planTier
+    size: functionAppPlanSku
+    family: planFamily
   }
+  kind: isConsumptionPlan ? 'functionapp' : 'elastic'
   properties: {
     reserved: false // false for Windows, true for Linux
+    maximumElasticWorkerCount: isPremiumPlan ? 20 : null
   }
 }
 
@@ -138,6 +156,14 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     httpsOnly: true
     siteConfig: {
       powerShellVersion: '7.4'
+      // CRITICAL: alwaysOn must be false for Consumption (Y1), true for Premium (EP1)
+      alwaysOn: !isConsumptionPlan
+      // Elastic Premium plan features (EP1): pre-warming and minimum instance count
+      preWarmedInstanceCount: isPremiumPlan ? 1 : null
+      minimumElasticInstanceCount: isPremiumPlan ? 1 : null
+      functionsRuntimeScaleMonitoringEnabled: isPremiumPlan
+      // Health check endpoint (Premium feature)
+      healthCheckPath: isPremiumPlan ? '/api/HealthCheck' : null
       appSettings: [
         {
           name: 'AzureWebJobsStorage__accountname'
