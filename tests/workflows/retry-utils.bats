@@ -5,6 +5,7 @@
 
 setup() {
   # Load the retry utilities
+  # shellcheck disable=SC1091
   source "${BATS_TEST_DIRNAME}/../../scripts/ci/retry-utils.sh"
   export RETRY_BASE_DELAY=0  # Speed up tests by removing delays
 }

@@ -43,6 +43,9 @@ repos:
     hooks:
       - id: shellcheck
         args: [--severity=warning]
+        types: [shell]
+        # Also check BATS test files
+        files: \.(sh|bash|bats)$
 
   - repo: local
     hooks:
