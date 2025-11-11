@@ -49,13 +49,28 @@ jobs:
           echo "RESOURCE_GROUP=rg-azure-health-${{ github.event.inputs.environment }}" >> "$GITHUB_ENV"
           echo "LOCATION=eastus" >> "$GITHUB_ENV"
 
-      - name: Setup retry utilities
+      - name: Setup CI utilities
         shell: bash
         run: |
           # Copy retry utilities from source
           cp scripts/ci/retry-utils.sh /tmp/retry-utils.sh
           chmod +x /tmp/retry-utils.sh
           echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
+
+          # Copy policy query utilities from source
+          cp scripts/ci/policy-query.sh /tmp/policy-query.sh
+          chmod +x /tmp/policy-query.sh
+          echo "✅ Policy query utilities configured"
+
+          # Copy Key Vault utilities from source
+          cp scripts/ci/keyvault-utils.sh /tmp/keyvault-utils.sh
+          chmod +x /tmp/keyvault-utils.sh
+          echo "✅ Key Vault utilities configured"
+
+          # Copy deployment verification utilities from source
+          cp scripts/ci/deployment-verification.sh /tmp/deployment-verification.sh
+          chmod +x /tmp/deployment-verification.sh
+          echo "✅ Deployment verification utilities configured"
 
       - name: Create resource group if not exists
         shell: bash
@@ -138,8 +153,10 @@ jobs:
 
           echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
 
-          # Deploy with retry logic - capture output separately to avoid corrupting JSON
-          deployment_output=$(retry_azure_operation \
+          # Deploy with retry logic
+          # Note: We don't capture deployment output here because Bicep warnings corrupt JSON
+          # Instead, we query the deployment separately after it completes
+          retry_azure_operation \
             "$MAX_RETRY_ATTEMPTS" \
             "Deploy Bicep template" \
             az deployment group create \
@@ -150,23 +167,23 @@ jobs:
               --parameters environment=${{ github.event.inputs.environment }} \
               --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
-              --output json)
+              --output none
 
           echo "✅ Deployment completed successfully!"
 
-          # Debug: Check if deployment output is valid JSON
-          if ! echo "$deployment_output" | jq empty 2>/dev/null; then
-            echo "❌ Error: Deployment output is not valid JSON"
-            echo "First 500 characters of output:"
-            echo "$deployment_output" | head -c 500
-            echo ""
-            echo "Attempting to query deployment directly..."
+          # Query the deployment to get clean JSON output (no Bicep warnings)
+          echo "📋 Retrieving deployment outputs..."
+          deployment_output=$(az deployment group show \
+            --name "$DEPLOYMENT_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --output json)
 
-            # Fallback: Query the deployment directly
-            deployment_output=$(az deployment group show \
-              --name "$DEPLOYMENT_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --output json)
+          # Validate JSON output
+          if ! echo "$deployment_output" | jq empty 2>/dev/null; then
+            echo "❌ Error: Failed to retrieve valid deployment output"
+            echo "Deployment output:"
+            echo "$deployment_output"
+            exit 1
           fi
 
           # Extract outputs from deployment
@@ -202,48 +219,10 @@ jobs:
             echo ""
             echo "**Function App URL:** https://$function_app_name.azurewebsites.net"
             echo ""
-            echo "#### Azure Policy Status"
-            echo ""
 
-            # Get policy assignments for the resource group
-            policy_assignments=$(az policy assignment list \
-              --resource-group "$RESOURCE_GROUP" \
-              --query "[].{name:name, displayName:displayName, enforcementMode:enforcementMode}" \
-              --output json 2>/dev/null || echo "[]")
-
-            policy_count=$(echo "$policy_assignments" | jq length)
-
-            if [ "$policy_count" -eq 0 ]; then
-              echo "- ℹ️ No policy assignments found for this resource group"
-            else
-              echo "**Policy Assignments ($policy_count):**"
-              echo ""
-              echo "$policy_assignments" | jq -r \
-                '.[] | "- **\(.displayName // .name)** (\(.enforcementMode // "Default"))"'
-            fi
-
-            echo ""
-
-            # Get policy exemptions for the resource group
-            subscription_id=$(az account show --query id -o tsv)
-            rg_scope="/subscriptions/$subscription_id/resourceGroups/$RESOURCE_GROUP"
-            exemptions=$(az policy exemption list \
-              --query "[?contains(policyAssignmentId, '$rg_scope') || \
-                contains(resourceSelector, '$rg_scope')].{name:name, displayName:displayName, \
-                exemptionCategory:exemptionCategory, expiresOn:expiresOn}" \
-              --output json 2>/dev/null || echo "[]")
-
-            exemption_count=$(echo "$exemptions" | jq length)
-
-            if [ "$exemption_count" -eq 0 ]; then
-              echo "- ℹ️ No policy exemptions found for this resource group"
-            else
-              echo "**Policy Exemptions ($exemption_count):**"
-              echo ""
-              echo "$exemptions" | jq -r \
-                '.[] | "- **\(.displayName // .name)** (\(.exemptionCategory))" + \
-                (if .expiresOn then " - Expires: \(.expiresOn)" else "" end)'
-            fi
+            # Source policy query utilities and generate report
+            source /tmp/policy-query.sh
+            generate_policy_report "$RESOURCE_GROUP"
 
             echo ""
             echo "#### Retry Configuration"
@@ -253,13 +232,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify deployment
+        id: verify
         shell: bash
         run: |
           source /tmp/retry-utils.sh
+          source /tmp/deployment-verification.sh
 
           echo "🔍 Verifying deployed resources..."
+          echo ""
 
-          # Verify with retry logic (reduced attempts for read operations)
+          # List deployed resources
           retry_azure_operation \
             3 \
             "List deployed resources" \
@@ -267,10 +249,64 @@ jobs:
               --resource-group "$RESOURCE_GROUP" \
               --output table
 
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+
+          # Run comprehensive deployment verification
+          FUNCTION_APP_NAME="${{ steps.deploy.outputs.function_app_name }}"
+          STORAGE_ACCOUNT_NAME="${{ steps.deploy.outputs.storage_account_name }}"
+          APP_INSIGHTS_NAME="${{ steps.deploy.outputs.app_insights_name }}"
+          FUNCTION_URL="https://$FUNCTION_APP_NAME.azurewebsites.net"
+
+          if verify_deployment \
+            "$FUNCTION_APP_NAME" \
+            "$STORAGE_ACCOUNT_NAME" \
+            "$APP_INSIGHTS_NAME" \
+            "$RESOURCE_GROUP" \
+            "$FUNCTION_URL"; then
+            echo "verification_status=✅ Passed" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ Deployment verification completed successfully!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Add verification results to summary
+            {
+              echo ""
+              echo "## ✅ Deployment Verification"
+              echo ""
+              echo "All post-deployment checks passed:"
+              echo ""
+              echo "- ✅ Function App is running"
+              echo "- ✅ Storage account accessible"
+              echo "- ✅ Application Insights configured"
+              echo "- ✅ Health endpoint responsive"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "verification_status=⚠️ Failed" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "⚠️  Some deployment verification checks failed"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Add warning to summary
+            {
+              echo ""
+              echo "## ⚠️ Deployment Verification"
+              echo ""
+              echo "Some post-deployment checks failed. Review the logs above for details."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            # Don't fail the workflow - resources are deployed but may need attention
+            exit 0
+          fi
+
       - name: Update shared Key Vault secret
         shell: bash
         run: |
           source /tmp/retry-utils.sh
+          source /tmp/keyvault-utils.sh
 
           echo "🔑 Updating shared Key Vault secret..."
           echo ""
@@ -298,25 +334,19 @@ jobs:
           echo "URL: https://$FUNCTION_APP_URL"
           echo ""
 
-          # Update Key Vault secret in shared resource group
+          # Update Key Vault secret in shared resource group with verification
           SHARED_KEY_VAULT="kv-tsazurehealth"
           SECRET_NAME="function-app-url-${{ inputs.environment }}"
+          SECRET_VALUE="https://$FUNCTION_APP_URL"
 
-          echo "Updating Key Vault secret: $SECRET_NAME"
-          echo "Key Vault: $SHARED_KEY_VAULT"
-          echo ""
-
-          retry_azure_operation \
-            5 \
-            "Update Key Vault secret" \
-            az keyvault secret set \
-              --vault-name "$SHARED_KEY_VAULT" \
-              --name "$SECRET_NAME" \
-              --value "https://$FUNCTION_APP_URL" \
-              --output none
-
-          echo "✅ Secret updated successfully"
-          echo ""
+          if update_and_verify_keyvault_secret "$SHARED_KEY_VAULT" "$SECRET_NAME" "$SECRET_VALUE"; then
+            echo ""
+            echo "✅ Key Vault secret update complete and verified"
+          else
+            echo ""
+            echo "❌ Key Vault secret update or verification failed"
+            exit 1
+          fi
 
           # Add to summary
           {
@@ -330,6 +360,8 @@ jobs:
             echo "| Secret Name | \`$SECRET_NAME\` |"
             echo "| Function App | \`$FUNCTION_APP_NAME\` |"
             echo "| URL | \`https://$FUNCTION_APP_URL\` |"
+            echo ""
+            echo "✅ Secret verified in Key Vault"
             echo ""
             echo "Frontend applications can now access this URL using their managed identity."
           } >> "$GITHUB_STEP_SUMMARY"

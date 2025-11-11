@@ -210,15 +210,36 @@ The identity may have been deleted. Please recreate shared infrastructure:
         Write-Message '(This may take 3-5 minutes)' -Color Gray
         Write-Message ''
 
-        $deployment = az deployment group create `
+        # Generate unique deployment name
+        $deploymentName = "bicep-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+
+        # Deploy without capturing output to avoid Bicep warnings corrupting JSON
+        az deployment group create `
+            --name $deploymentName `
             --resource-group $ResourceGroup `
             --template-file main.bicep `
             --parameters environment=$Environment `
             --parameters functionAppPlanSku=$Sku `
             --parameters managedIdentityResourceId=$managedIdentityResourceId `
-            --output json | ConvertFrom-Json
+            --output none
 
         if ($LASTEXITCODE -eq 0) {
+            Write-Message 'Deployment completed successfully!' -Color Green
+            Write-Message 'Retrieving deployment outputs...' -Color Cyan
+
+            # Query deployment separately to get clean JSON output
+            $deploymentJson = az deployment group show `
+                --name $deploymentName `
+                --resource-group $ResourceGroup `
+                --output json
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to retrieve deployment outputs"
+                exit 1
+            }
+
+            $deployment = $deploymentJson | ConvertFrom-Json
+
             Write-Message ''
             Write-Message '===========================================================' -Color Green
             Write-Message '  Deployment Successful!' -Color Green

@@ -21,7 +21,7 @@ repos:
         args: [--branch, master, --branch, main]
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.28.0
+    rev: v8.29.0
     hooks:
       - id: gitleaks
 
@@ -43,6 +43,9 @@ repos:
     hooks:
       - id: shellcheck
         args: [--severity=warning]
+        types: [shell]
+        # Also check BATS test files
+        files: \.(sh|bash|bats)$
 
   - repo: local
     hooks:

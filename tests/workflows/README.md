@@ -40,6 +40,7 @@ pre-commit run bats-tests --all-files
 ## Test Files
 
 - `retry-utils.bats` - Tests for retry utility functions in `scripts/ci/retry-utils.sh`
+- `deployment-output.bats` - Tests for deployment output parsing and JSON validation
 
 ## Writing Tests
 
