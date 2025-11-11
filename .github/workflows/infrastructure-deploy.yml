@@ -138,8 +138,10 @@ jobs:
 
           echo "Using managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
 
-          # Deploy with retry logic - capture output separately to avoid corrupting JSON
-          deployment_output=$(retry_azure_operation \
+          # Deploy with retry logic
+          # Note: We don't capture deployment output here because Bicep warnings corrupt JSON
+          # Instead, we query the deployment separately after it completes
+          retry_azure_operation \
             "$MAX_RETRY_ATTEMPTS" \
             "Deploy Bicep template" \
             az deployment group create \
@@ -150,23 +152,23 @@ jobs:
               --parameters environment=${{ github.event.inputs.environment }} \
               --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
-              --output json)
+              --output none
 
           echo "✅ Deployment completed successfully!"
 
-          # Debug: Check if deployment output is valid JSON
-          if ! echo "$deployment_output" | jq empty 2>/dev/null; then
-            echo "❌ Error: Deployment output is not valid JSON"
-            echo "First 500 characters of output:"
-            echo "$deployment_output" | head -c 500
-            echo ""
-            echo "Attempting to query deployment directly..."
+          # Query the deployment to get clean JSON output (no Bicep warnings)
+          echo "📋 Retrieving deployment outputs..."
+          deployment_output=$(az deployment group show \
+            --name "$DEPLOYMENT_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --output json)
 
-            # Fallback: Query the deployment directly
-            deployment_output=$(az deployment group show \
-              --name "$DEPLOYMENT_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --output json)
+          # Validate JSON output
+          if ! echo "$deployment_output" | jq empty 2>/dev/null; then
+            echo "❌ Error: Failed to retrieve valid deployment output"
+            echo "Deployment output:"
+            echo "$deployment_output"
+            exit 1
           fi
 
           # Extract outputs from deployment

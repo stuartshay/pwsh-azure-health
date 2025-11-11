@@ -57,8 +57,13 @@
     "ghcr.io/jpawlowski/devcontainer-features/powershell-extended:2": {
       "version": "latest"
     },
-
     "ghcr.io/devcontainers-extra/features/actionlint:1": {
+      "version": "latest"
+    },
+    "ghcr.io/szkiba/devcontainer-features/bats:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers-extra/features/act:1": {
       "version": "latest"
     },
     "ghcr.io/lukewiwa/features/shellcheck:0": {
