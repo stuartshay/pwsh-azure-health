@@ -94,14 +94,15 @@ try {
             --location $Location `
             --tags purpose=validation environment=test | Out-Null
         Write-Message "[OK] Created resource group" -Color Green
-    } else {
+    }
+    else {
         Write-Message "[OK] Resource group exists: $ResourceGroup" -Color Green
     }
     Write-Message ''
 
     # Validation results
     $results = @{
-        Y1 = @{ Success = $false; Duration = 0; Output = '' }
+        Y1  = @{ Success = $false; Duration = 0; Output = '' }
         EP1 = @{ Success = $false; Duration = 0; Output = '' }
     }
 
@@ -128,13 +129,15 @@ try {
             $results.Y1.Output = $y1Output | ConvertFrom-Json
             Write-Message "✅ Y1 validation PASSED" -Color Green
             Write-Message "   Duration: $([math]::Round($results.Y1.Duration, 2))s" -Color Gray
-        } else {
+        }
+        else {
             $results.Y1.Output = $y1Output
             Write-Message "❌ Y1 validation FAILED" -Color Red
             Write-Message "   Duration: $([math]::Round($results.Y1.Duration, 2))s" -Color Gray
             Write-Message "   Error: $y1Output" -Color Red
         }
-    } catch {
+    }
+    catch {
         $y1EndTime = Get-Date
         $results.Y1.Duration = ($y1EndTime - $y1StartTime).TotalSeconds
         $results.Y1.Output = $_.Exception.Message
@@ -166,13 +169,15 @@ try {
             $results.EP1.Output = $ep1Output | ConvertFrom-Json
             Write-Message "✅ EP1 validation PASSED" -Color Green
             Write-Message "   Duration: $([math]::Round($results.EP1.Duration, 2))s" -Color Gray
-        } else {
+        }
+        else {
             $results.EP1.Output = $ep1Output
             Write-Message "❌ EP1 validation FAILED" -Color Red
             Write-Message "   Duration: $([math]::Round($results.EP1.Duration, 2))s" -Color Gray
             Write-Message "   Error: $ep1Output" -Color Red
         }
-    } catch {
+    }
+    catch {
         $ep1EndTime = Get-Date
         $results.EP1.Duration = ($ep1EndTime - $ep1StartTime).TotalSeconds
         $results.EP1.Output = $_.Exception.Message
@@ -221,7 +226,8 @@ try {
         Write-Message "Your Bicep template supports both Y1 and EP1 deployments." -Color Green
         Write-Message ''
         exit 0
-    } else {
+    }
+    else {
         Write-Message "╔══════════════════════════════════════════════════════════════╗" -Color Red
         Write-Message "║  ❌ FAILURE: One or more validations failed                  ║" -Color Red
         Write-Message "╚══════════════════════════════════════════════════════════════╝`n" -Color Red
