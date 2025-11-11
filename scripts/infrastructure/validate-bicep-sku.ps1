@@ -207,7 +207,7 @@ try {
     Write-Message "Configuration Differences:" -Color Cyan
     Write-Message "  • alwaysOn:              Y1=false  │  EP1=true" -Color Gray
     Write-Message "  • preWarmedInstanceCount:    Y1=null   │  EP1=1" -Color Gray
-    Write-Message "  • healthCheckPath:           Y1=null   │  EP1=/api/HealthCheck" -Color Gray
+    Write-Message "  • healthCheckPath:         Y1=null   │  EP1=/api/HealthCheck" -Color Gray
     Write-Message "  • Estimated Cost/Month:      Y1=~\$0-20 │  EP1=~\$146" -Color Gray
     Write-Message ''
 
