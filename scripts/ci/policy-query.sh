@@ -152,8 +152,7 @@ format_policy_assignments() {
   echo "**Policy Assignments ($count):**"
   echo ""
 
-  # Sort: NonCompliant first, then Compliant, then others
-  # Format with checkbox/X and include description
+  # Process each policy assignment with description and details
   echo "$assignments" | jq -r '
     sort_by(
       if .complianceState == "NonCompliant" then 0
@@ -162,44 +161,39 @@ format_policy_assignments() {
       end
     ) |
     .[] |
-    (if .complianceState == "Compliant" then "  - ✅ "
-     elif .complianceState == "NonCompliant" then "  - ❌ "
-     else "  - ⚪ "
-     end) +
-    "**\(.displayName // .name)**" +
-    (if .enforcementMode != "Default" then " (\(.enforcementMode))" else "" end) +
-    (if .complianceState and .complianceState != "Unknown" then " - _\(.complianceState)_" else "" end)
-  '
+    "\(.name)|\(.displayName // .name)|\(.enforcementMode)|\(.complianceState)|\(.policyDefinitionId)"
+  ' | while IFS='|' read -r assignment_name display_name enforcement_mode compliance_state policy_def_id; do
+    # Display policy header with checkbox
+    local checkbox="⚪"
+    if [ "$compliance_state" = "Compliant" ]; then
+      checkbox="✅"
+    elif [ "$compliance_state" = "NonCompliant" ]; then
+      checkbox="❌"
+    fi
 
-  # Add descriptions and non-compliant resource details for policies with definition IDs
-  echo ""
-  echo "$assignments" | jq -r '
-    sort_by(
-      if .complianceState == "NonCompliant" then 0
-      elif .complianceState == "Compliant" then 1
-      else 2
-      end
-    ) |
-    .[] |
-    select(.policyDefinitionId) |
-    "\(.name)|\(.policyDefinitionId)|\(.complianceState)"
-  ' | while IFS='|' read -r assignment_name policy_def_id compliance_state; do
-    if [ -n "$policy_def_id" ]; then
+    echo -n "  - $checkbox **$display_name**"
+    if [ "$enforcement_mode" != "Default" ]; then
+      echo -n " ($enforcement_mode)"
+    fi
+    if [ "$compliance_state" != "Unknown" ] && [ -n "$compliance_state" ]; then
+      echo " - _${compliance_state}_"
+    else
+      echo ""
+    fi
+
+    # Add description if available
+    if [ -n "$policy_def_id" ] && [ "$policy_def_id" != "null" ]; then
       local description
       description=$(get_policy_description "$policy_def_id")
       local policy_name
       policy_name=$(basename "$policy_def_id")
 
-      echo "    <details>"
-      echo "    <summary><em>$policy_name</em></summary>"
-      echo ""
-
       if [ -n "$description" ]; then
-        echo "    $description"
         echo ""
+        echo "    > $description"
       fi
 
-      # If non-compliant, show which resources are failing and why
+      # If non-compliant, show which resources are failing
       if [ "$compliance_state" = "NonCompliant" ] && [ -n "$resource_group" ]; then
         local noncompliant_resources
         noncompliant_resources=$(get_noncompliant_resources "$resource_group" "$assignment_name")
@@ -207,15 +201,14 @@ format_policy_assignments() {
         nc_count=$(echo "$noncompliant_resources" | jq 'length' 2>/dev/null)
 
         if [ -n "$nc_count" ] && [ "$nc_count" != "null" ] && [ "$nc_count" -gt 0 ]; then
+          echo ""
           echo "    **Non-compliant resources ($nc_count):**"
-          echo ""
           echo "$noncompliant_resources" | jq -r '.[] | "    - **\(.resourceName)** (\(.resourceType))" + (if .location then " - Location: `\(.location)`" else "" end)'
-          echo ""
         fi
       fi
-
-      echo "    </details>"
     fi
+
+    echo ""
   done
 }
 
