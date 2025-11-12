@@ -190,7 +190,11 @@ format_policy_assignments() {
 
       if [ -n "$description" ]; then
         echo ""
-        echo "    > $description"
+        echo "    <details>"
+        echo "    <summary><em>Description</em></summary>"
+        echo ""
+        echo "    $description"
+        echo "    </details>"
       fi
 
       # If non-compliant, show which resources are failing
