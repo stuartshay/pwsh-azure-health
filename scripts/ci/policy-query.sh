@@ -60,6 +60,23 @@ get_policy_description() {
     --output tsv 2>/dev/null || echo ""
 }
 
+# Get non-compliant resources for a policy assignment
+# Usage: get_noncompliant_resources <resource-group-name> <policy-assignment-name>
+# Returns: JSON array of non-compliant resources with details
+get_noncompliant_resources() {
+  local resource_group=$1
+  local policy_assignment=$2
+
+  if [ -z "$resource_group" ] || [ -z "$policy_assignment" ]; then
+    return 1
+  fi
+
+  az policy state list \
+    --resource-group "$resource_group" \
+    --query "[?policyAssignmentName=='$policy_assignment' && complianceState=='NonCompliant'].{resourceId:resourceId, resourceType:resourceType, location:resourceLocation}" \
+    --output json 2>/dev/null | jq 'map({resourceName: (.resourceId | split("/") | last), resourceType: .resourceType, location: .location})' || echo "[]"
+}
+
 # Query policy assignments for a resource group (legacy function, kept for compatibility)
 # Usage: get_policy_assignments <resource-group-name>
 # Returns: JSON array of policy assignments
@@ -108,10 +125,11 @@ get_policy_exemptions() {
 }
 
 # Format policy assignments for display
-# Usage: format_policy_assignments <json-array>
+# Usage: format_policy_assignments <json-array> <resource-group-name>
 # Returns: Markdown-formatted text
 format_policy_assignments() {
   local assignments=$1
+  local resource_group=$2
 
   if [ -z "$assignments" ]; then
     echo "- ℹ️ No policy assignments found for this resource group"
@@ -153,7 +171,7 @@ format_policy_assignments() {
     (if .complianceState and .complianceState != "Unknown" then " - _\(.complianceState)_" else "" end)
   '
 
-  # Add descriptions for policies with definition IDs
+  # Add descriptions and non-compliant resource details for policies with definition IDs
   echo ""
   echo "$assignments" | jq -r '
     sort_by(
@@ -164,20 +182,39 @@ format_policy_assignments() {
     ) |
     .[] |
     select(.policyDefinitionId) |
-    .policyDefinitionId
-  ' | while read -r policy_def_id; do
+    "\(.name)|\(.policyDefinitionId)|\(.complianceState)"
+  ' | while IFS='|' read -r assignment_name policy_def_id compliance_state; do
     if [ -n "$policy_def_id" ]; then
       local description
       description=$(get_policy_description "$policy_def_id")
+      local policy_name
+      policy_name=$(basename "$policy_def_id")
+
+      echo "    <details>"
+      echo "    <summary><em>$policy_name</em></summary>"
+      echo ""
+
       if [ -n "$description" ]; then
-        local policy_name
-        policy_name=$(basename "$policy_def_id")
-        echo "    <details>"
-        echo "    <summary><em>$policy_name</em></summary>"
-        echo ""
         echo "    $description"
-        echo "    </details>"
+        echo ""
       fi
+
+      # If non-compliant, show which resources are failing and why
+      if [ "$compliance_state" = "NonCompliant" ] && [ -n "$resource_group" ]; then
+        local noncompliant_resources
+        noncompliant_resources=$(get_noncompliant_resources "$resource_group" "$assignment_name")
+        local nc_count
+        nc_count=$(echo "$noncompliant_resources" | jq 'length' 2>/dev/null)
+
+        if [ -n "$nc_count" ] && [ "$nc_count" != "null" ] && [ "$nc_count" -gt 0 ]; then
+          echo "    **Non-compliant resources ($nc_count):**"
+          echo ""
+          echo "$noncompliant_resources" | jq -r '.[] | "    - **\(.resourceName)** (\(.resourceType))" + (if .location then " - Location: `\(.location)`" else "" end)'
+          echo ""
+        fi
+      fi
+
+      echo "    </details>"
     fi
   done
 }
@@ -228,7 +265,7 @@ generate_policy_report() {
   # Get policy assignments with compliance states
   local assignments
   assignments=$(get_policy_assignments_with_compliance "$resource_group")
-  format_policy_assignments "$assignments"
+  format_policy_assignments "$assignments" "$resource_group"
 
   echo ""
 
