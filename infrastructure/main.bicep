@@ -49,13 +49,13 @@ var isPremiumPlan = functionAppPlanSku == 'EP1'
 var planTier = isConsumptionPlan ? 'Dynamic' : 'ElasticPremium'
 var planFamily = isConsumptionPlan ? 'Y' : 'EP'
 
-// Tags for all resources
-var commonTags = {
+// Tags for all resources - inherit from resource group and merge with resource-specific tags
+var commonTags = union(resourceGroup().tags, {
   environment: environment
   project: 'pwsh-azure-health'
   managedBy: 'bicep'
   createdDate: currentDate
-}
+})
 
 // Storage Account for Function App
 resource storageAccount 'Microsoft.Storage/storageAccounts@2025-06-01' = {
