@@ -246,6 +246,7 @@ jobs:
           # Deploy with retry logic
           # Note: We don't capture deployment output here because Bicep warnings corrupt JSON
           # Instead, we query the deployment separately after it completes
+          set +e  # Don't exit on deployment failure - we want to generate policy report
           retry_azure_operation \
             "$MAX_RETRY_ATTEMPTS" \
             "Deploy Bicep template" \
@@ -258,6 +259,46 @@ jobs:
               --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --output none
+
+          DEPLOYMENT_EXIT_CODE=$?
+          set -e
+
+          # Generate policy report regardless of deployment success/failure
+          echo ""
+          echo "📋 Generating Azure Policy compliance report..."
+          source /tmp/policy-query.sh
+          POLICY_REPORT=$(generate_policy_report "$RESOURCE_GROUP")
+
+          # Check if deployment succeeded
+          if [ $DEPLOYMENT_EXIT_CODE -ne 0 ]; then
+            echo "❌ Deployment failed with exit code $DEPLOYMENT_EXIT_CODE"
+
+            # Add failure summary with policy report
+            {
+              echo "## ❌ Deployment Failed"
+              echo ""
+              echo "**Environment:** ${{ github.event.inputs.environment }}"
+              echo "**SKU:** ${{ github.event.inputs.sku }}"
+              echo "**Resource Group:** $RESOURCE_GROUP"
+              echo ""
+              echo "### Possible Causes"
+              echo ""
+              echo "1. **Azure Policy Denial** - A policy may be blocking this deployment"
+              echo "2. **Resource Quota Exceeded** - Check subscription limits"
+              echo "3. **Invalid Parameters** - Review Bicep parameter values"
+              echo "4. **Permission Issues** - Verify RBAC permissions"
+              echo ""
+              echo "### Policy Compliance Status"
+              echo ""
+              echo "$POLICY_REPORT"
+              echo ""
+              echo "---"
+              echo ""
+              echo "Review the deployment logs above for detailed error messages."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit $DEPLOYMENT_EXIT_CODE
+          fi
 
           echo "✅ Deployment completed successfully!"
 
@@ -309,11 +350,7 @@ jobs:
             echo ""
             echo "**Function App URL:** https://$function_app_name.azurewebsites.net"
             echo ""
-
-            # Source policy query utilities and generate report
-            source /tmp/policy-query.sh
-            generate_policy_report "$RESOURCE_GROUP"
-
+            echo "$POLICY_REPORT"
             echo ""
             echo "#### Retry Configuration"
             echo "- Max retry attempts: $MAX_RETRY_ATTEMPTS"
