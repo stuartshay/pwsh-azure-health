@@ -272,6 +272,8 @@ jobs:
           # Check if deployment succeeded
           if [ $DEPLOYMENT_EXIT_CODE -ne 0 ]; then
             echo "❌ Deployment failed with exit code $DEPLOYMENT_EXIT_CODE"
+            echo ""
+            echo "📄 Writing failure summary to GitHub Actions..."
 
             # Add failure summary with policy report
             {
@@ -297,6 +299,12 @@ jobs:
               echo "Review the deployment logs above for detailed error messages."
             } >> "$GITHUB_STEP_SUMMARY"
 
+            echo "✅ Failure summary written to GitHub Actions"
+            echo ""
+            echo "Exiting with code $DEPLOYMENT_EXIT_CODE"
+
+            # Re-enable exit on error and exit with failure code
+            set -e
             exit $DEPLOYMENT_EXIT_CODE
           fi
 
