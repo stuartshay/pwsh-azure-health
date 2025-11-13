@@ -261,7 +261,6 @@ jobs:
               --output none
 
           DEPLOYMENT_EXIT_CODE=$?
-          set -e
 
           # Generate policy report regardless of deployment success/failure
           echo ""
@@ -303,10 +302,12 @@ jobs:
             echo ""
             echo "Exiting with code $DEPLOYMENT_EXIT_CODE"
 
-            # Re-enable exit on error and exit with failure code
-            set -e
+            # Exit with failure code (set -e still disabled, so we control the exit)
             exit $DEPLOYMENT_EXIT_CODE
           fi
+
+          # Re-enable exit on error for successful deployments
+          set -e
 
           echo "✅ Deployment completed successfully!"
 
