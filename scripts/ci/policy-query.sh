@@ -73,8 +73,10 @@ get_noncompliant_resources() {
 
   az policy state list \
     --resource-group "$resource_group" \
-    --query "[?policyAssignmentName=='$policy_assignment' && complianceState=='NonCompliant'].{resourceId:resourceId, resourceType:resourceType, location:resourceLocation}" \
-    --output json 2>/dev/null | jq 'map({resourceName: (.resourceId | split("/") | last), resourceType: .resourceType, location: .location})' || echo "[]"
+    --output json 2>/dev/null | \
+    jq --arg assignment "$policy_assignment" \
+      '[.[] | select(.policyAssignmentName == $assignment and .complianceState == "NonCompliant") |
+       {resourceName: (.resourceId | split("/") | last), resourceType: .resourceType, location: .resourceLocation}]' || echo "[]"
 }
 
 # Query policy assignments for a resource group (legacy function, kept for compatibility)

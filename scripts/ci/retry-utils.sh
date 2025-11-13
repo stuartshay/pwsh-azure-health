@@ -25,7 +25,7 @@ retry_azure_operation() {
     set +e  # Temporarily disable exit on error
     output=$("${command[@]}" 2>&1)
     exit_code=$?
-    set -e
+    # Note: Do not re-enable set -e here to allow caller to capture exit code
 
     # Success
     if [ $exit_code -eq 0 ]; then

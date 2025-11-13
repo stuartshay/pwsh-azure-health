@@ -247,7 +247,7 @@ jobs:
           # Deploy with retry logic
           # Note: We don't capture deployment output here because Bicep warnings corrupt JSON
           # Instead, we query the deployment separately after it completes
-          # Capture exit code before shell exits (GitHub Actions runs with set -e by default)
+          # Disable exit-on-error to capture the deployment exit code for custom handling
           set +e
           retry_azure_operation \
             "$MAX_RETRY_ATTEMPTS" \
@@ -262,14 +262,14 @@ jobs:
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --output none
           DEPLOYMENT_EXIT_CODE=$?
-          set -e  # Temporarily re-enable for the echo commands
-          set +e  # But disable again for the rest of the failure handling
 
           # Generate policy report regardless of deployment success/failure
           echo ""
           echo "📋 Generating Azure Policy compliance report..."
           source /tmp/policy-query.sh
-          POLICY_REPORT=$(generate_policy_report "$RESOURCE_GROUP")
+          POLICY_REPORT=$(generate_policy_report "$RESOURCE_GROUP" 2>&1) || {
+            POLICY_REPORT="⚠️ Unable to generate policy compliance report. Check logs for details."
+          }
 
           # Check if deployment succeeded
           if [ $DEPLOYMENT_EXIT_CODE -ne 0 ]; then

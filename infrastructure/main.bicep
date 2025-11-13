@@ -50,6 +50,8 @@ var planTier = isConsumptionPlan ? 'Dynamic' : 'ElasticPremium'
 var planFamily = isConsumptionPlan ? 'Y' : 'EP'
 
 // Tags for all resources - inherit from resource group and merge with resource-specific tags
+// Note: Resource-specific tags (environment, project, managedBy, createdDate) override
+//       resource group tags with the same keys due to union() merge precedence
 var commonTags = union(resourceGroup().tags, {
   environment: environment
   project: 'pwsh-azure-health'
