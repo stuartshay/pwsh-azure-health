@@ -105,22 +105,11 @@ get_policy_exemptions() {
     return 1
   fi
 
-  # Get subscription ID and build resource group scope
-  local subscription_id
-  subscription_id=$(az account show --query id -o tsv 2>/dev/null)
-
-  if [ -z "$subscription_id" ]; then
-    echo "Error: Failed to get subscription ID" >&2
-    return 1
-  fi
-
-  local rg_scope="/subscriptions/$subscription_id/resourceGroups/$resource_group"
-
-  # Query exemptions that apply to this resource group
+  # Query exemptions scoped to this resource group
   az policy exemption list \
-    --query "[?contains(policyAssignmentId, '$rg_scope') || \
-      contains(resourceSelector, '$rg_scope')].{name:name, displayName:displayName, \
-      exemptionCategory:exemptionCategory, expiresOn:expiresOn}" \
+    --resource-group "$resource_group" \
+    --query "[].{name:name, displayName:displayName, policyAssignmentId:policyAssignmentId, \
+      exemptionCategory:exemptionCategory, expiresOn:expiresOn, description:description}" \
     --output json 2>/dev/null || echo "[]"
 }
 
@@ -242,7 +231,13 @@ format_policy_exemptions() {
 
   echo "**Policy Exemptions ($count):**"
   echo ""
-  echo "$exemptions" | jq -r '.[] | "- **\(.displayName // .name)** (\(.exemptionCategory))" + (if .expiresOn then " - Expires: \(.expiresOn)" else "" end)'
+
+  # Format each exemption with details
+  echo "$exemptions" | jq -r '.[] |
+    "- 🛡️ **\(.displayName // .name)** - _\(.exemptionCategory)_" +
+    (if .expiresOn then "\n  - **Expires:** \(.expiresOn)" else "" end) +
+    (if .description then "\n  - **Reason:** \(.description)" else "" end) +
+    (if .policyAssignmentId then "\n  - **Policy:** `\(.policyAssignmentId | split("/") | last)`" else "" end)'
 }
 
 # Generate complete policy status report
