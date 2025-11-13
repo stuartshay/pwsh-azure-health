@@ -232,8 +232,9 @@ jobs:
 
       - name: Deploy Bicep template
         id: deploy
-        shell: bash
+        shell: bash {0}  # {0} removes default -e -o pipefail, giving us full control
         run: |
+          set -e  # Enable exit on error, but we'll control it ourselves
           source /tmp/retry-utils.sh
 
           echo "🚀 Deploying infrastructure to ${{ github.event.inputs.environment }} environment..."
@@ -246,7 +247,8 @@ jobs:
           # Deploy with retry logic
           # Note: We don't capture deployment output here because Bicep warnings corrupt JSON
           # Instead, we query the deployment separately after it completes
-          set +e  # Don't exit on deployment failure - we want to generate policy report
+          # Capture exit code before shell exits (GitHub Actions runs with set -e by default)
+          set +e
           retry_azure_operation \
             "$MAX_RETRY_ATTEMPTS" \
             "Deploy Bicep template" \
@@ -259,8 +261,9 @@ jobs:
               --parameters functionAppPlanSku=${{ github.event.inputs.sku }} \
               --parameters managedIdentityResourceId="$MANAGED_IDENTITY_RESOURCE_ID" \
               --output none
-
           DEPLOYMENT_EXIT_CODE=$?
+          set -e  # Temporarily re-enable for the echo commands
+          set +e  # But disable again for the rest of the failure handling
 
           # Generate policy report regardless of deployment success/failure
           echo ""
