@@ -62,9 +62,9 @@ Resources:
 Total cost: 20.48 USD
 '
 
-  # Extract cost using the same pattern as the workflow
+  # Extract cost using the same pattern as the workflow (tail -1 for summary total)
   run bash -c "
-    echo '$ace_output' | grep -i 'Total cost:' | grep -oP '[\\d,]+\\.?\\d+(?= USD)' | head -1
+    echo '$ace_output' | grep -i 'Total cost:' | grep -oP '[\\d,]+\\.?\\d+(?= USD)' | tail -1
   "
 
   [ "$status" -eq 0 ]
@@ -392,6 +392,45 @@ EOF
 
   [ "$status" -eq 0 ]
   [ "$output" = "Unable to calculate" ]
+}
+
+# Test: Multiple "Total cost:" lines - extracts summary not individual resources
+@test "extracts summary total when multiple Total cost lines present" {
+  # Simulates real ACE output with per-resource costs AND summary
+  ace_output='
+[Create] azurehealth-ai-dev
+   \--- Type: Microsoft.Insights/components
+   \--- Location: eastus
+   \--- Total cost: 0.00 USD
+   \--- Delta: +0.00 USD
+
+[Create] stazurehealthdev
+   \--- Type: Microsoft.Storage/storageAccounts
+   \--- Location: eastus
+   \--- Total cost: 0.13 USD
+   \--- Delta: +0.13 USD
+
+[Create] azurehealth-plan-dev
+   \--- Type: Microsoft.Web/serverfarms
+   \--- Location: eastus
+   \--- Total cost: 0.00 USD
+   \--- Delta: +0.00 USD
+
+-------------------------------
+
+Summary:
+
+-> Total cost: 0.13 USD
+-> Delta: +0.13 USD
+'
+
+  # Use tail -1 to get the LAST occurrence (summary total), not first (free resource)
+  run bash -c "
+    echo '$ace_output' | grep -i 'Total cost:' | grep -oP '[\\d,]+\\.?\\d+(?= USD)' | tail -1
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "0.13" ]  # Should get summary (0.13), not first free resource (0.00)
 }
 
 # Test: Real-world ACE output format (from GitHub issue)

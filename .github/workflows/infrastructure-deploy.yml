@@ -189,8 +189,9 @@ jobs:
           echo "$COST_ESTIMATE_OUTPUT"
           echo ""
 
-          # Extract estimated monthly cost from ACE output (looks for "Total cost: X.XX USD")
-          ESTIMATED_COST=$(echo "$COST_ESTIMATE_OUTPUT" | grep -i "Total cost:" | grep -oP '[\d,]+\.?\d+(?= USD)' | head -1 || echo "N/A")
+          # Extract estimated monthly cost from ACE summary (looks for "-> Total cost: X.XX USD" in Summary section)
+          # Use tail -1 to get the LAST occurrence which is the summary total, not individual resource costs
+          ESTIMATED_COST=$(echo "$COST_ESTIMATE_OUTPUT" | grep -i "Total cost:" | grep -oP '[\d,]+\.?\d+(?= USD)' | tail -1 || echo "N/A")
 
           if [ "$ESTIMATED_COST" = "N/A" ]; then
             echo "⚠️  Could not extract cost estimate from ACE output"
