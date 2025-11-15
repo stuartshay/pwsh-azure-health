@@ -164,20 +164,74 @@ jobs:
         id: cost_estimate
         shell: bash
         run: |
-          echo "💰 Estimating deployment costs with ACE..."
+          echo "💰 Estimating deployment costs..."
           echo ""
 
           MANAGED_IDENTITY_RESOURCE_ID="${{ steps.get_identity.outputs.managed_identity_resource_id }}"
 
-          # Generate ARM template from Bicep for cost estimation
+          # ========================================
+          # Primary Estimator: PowerShell Script
+          # ========================================
+          echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+          echo "║ Primary Cost Estimator: PowerShell Script (Accurate Pricing)                ║"
+          echo "╚══════════════════════════════════════════════════════════════════════════════╝"
+          echo ""
+
+          # Run PowerShell cost estimation script with validation
+          PWSH_COST_OUTPUT=$(pwsh ./scripts/infrastructure/estimate-costs.ps1 \
+            -Environment "${{ github.event.inputs.environment }}" \
+            -Sku "${{ github.event.inputs.sku }}" \
+            -Region "$LOCATION" \
+            -OutputFormat both \
+            -Validate 2>&1)
+
+          PWSH_EXIT_CODE=$?
+
+          echo "$PWSH_COST_OUTPUT"
+          echo ""
+
+          # Extract JSON from output (last complete JSON object)
+          PWSH_JSON=$(echo "$PWSH_COST_OUTPUT" | awk '/^{/,/^}/' | tail -n +1)
+
+          # Extract total cost from JSON output
+          if [ -n "$PWSH_JSON" ]; then
+            PWSH_TOTAL_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.Total.MonthlyCost' 2>/dev/null || echo "N/A")
+            PWSH_FUNCTION_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.FunctionAppPlan.MonthlyCost' 2>/dev/null || echo "N/A")
+            PWSH_STORAGE_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.Storage.MonthlyCost' 2>/dev/null || echo "N/A")
+            PWSH_AI_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.ApplicationInsights.MonthlyCost' 2>/dev/null || echo "N/A")
+          else
+            PWSH_TOTAL_COST="N/A"
+            PWSH_FUNCTION_COST="N/A"
+            PWSH_STORAGE_COST="N/A"
+            PWSH_AI_COST="N/A"
+          fi
+
+          if [ "$PWSH_EXIT_CODE" -ne 0 ]; then
+            echo "⚠️  PowerShell cost estimation validation failed (exit code: $PWSH_EXIT_CODE)"
+            echo "This may indicate cost estimates are outside expected ranges."
+          else
+            echo "✅ PowerShell cost estimation completed successfully"
+            echo "💵 Estimated monthly cost: \$$PWSH_TOTAL_COST USD"
+          fi
+
+          # ========================================
+          # Secondary Estimator: ACE (Reference Only)
+          # ========================================
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+          echo "║ Secondary Cost Estimator: ACE (Reference/Comparison)                        ║"
+          echo "╚══════════════════════════════════════════════════════════════════════════════╝"
+          echo ""
+
+          # Generate ARM template from Bicep for ACE
           echo "🔧 Transpiling Bicep to ARM template..."
           az bicep build \
             --file infrastructure/main.bicep \
             --outfile /tmp/main.json
 
           # Run ACE to estimate costs
-          echo "📊 Running cost estimation..."
-          COST_ESTIMATE_OUTPUT=$(/tmp/ace/azure-cost-estimator \
+          echo "📊 Running ACE cost estimation..."
+          ACE_COST_OUTPUT=$(/tmp/ace/azure-cost-estimator \
             /tmp/main.json \
             ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
             "$RESOURCE_GROUP" \
@@ -186,44 +240,107 @@ jobs:
             --inline "managedIdentityResourceId=$MANAGED_IDENTITY_RESOURCE_ID" \
             --currency USD 2>&1 || true)
 
-          echo "$COST_ESTIMATE_OUTPUT"
+          echo "$ACE_COST_OUTPUT"
           echo ""
 
-          # Extract estimated monthly cost from ACE summary (looks for "-> Total cost: X.XX USD" in Summary section)
-          # Use tail -1 to get the LAST occurrence which is the summary total, not individual resource costs
-          ESTIMATED_COST=$(echo "$COST_ESTIMATE_OUTPUT" | grep -i "Total cost:" | grep -oP '[\d,]+\.?\d+(?= USD)' | tail -1 || echo "N/A")
+          # Extract estimated monthly cost from ACE
+          ACE_TOTAL_COST=$(echo "$ACE_COST_OUTPUT" | grep -i "Total cost:" | grep -oP '[\d,]+\.?\d+(?= USD)' | tail -1 || echo "N/A")
 
-          if [ "$ESTIMATED_COST" = "N/A" ]; then
+          if [ "$ACE_TOTAL_COST" = "N/A" ]; then
             echo "⚠️  Could not extract cost estimate from ACE output"
-            ESTIMATED_COST="Unable to calculate"
+            ACE_TOTAL_COST="Unable to calculate"
           else
-            echo "💵 Estimated monthly cost: \$$ESTIMATED_COST USD"
-            ESTIMATED_COST="\$$ESTIMATED_COST"
+            echo "💵 ACE estimated monthly cost: \$$ACE_TOTAL_COST USD"
           fi
 
-          # Save for later steps
-          echo "estimated_cost=$ESTIMATED_COST" >> "$GITHUB_OUTPUT"
+          # ========================================
+          # Use PowerShell estimate as primary
+          # ========================================
+          # Validate cost estimate for EP1
+          if [ "${{ github.event.inputs.sku }}" = "EP1" ] && [ "$PWSH_TOTAL_COST" != "N/A" ]; then
+            # Check if cost is less than $100 (sanity check for EP1)
+            if (( $(echo "$PWSH_TOTAL_COST < 100" | bc -l 2>/dev/null || echo 0) )); then
+              echo ""
+              echo "❌ ERROR: EP1 cost estimate (\$$PWSH_TOTAL_COST) is suspiciously low!"
+              echo "Expected EP1 base cost is ~\$147/month. This indicates a pricing error."
+              echo "Please review the cost configuration and estimation logic."
+              exit 1
+            fi
+          fi
 
-          # Save full output for summary
+          # Save outputs
           {
-            echo "cost_estimate_details<<EOF"
-            echo "$COST_ESTIMATE_OUTPUT"
+            echo "pwsh_total_cost=\$$PWSH_TOTAL_COST"
+            echo "ace_total_cost=\$$ACE_TOTAL_COST"
+            echo "function_cost=\$$PWSH_FUNCTION_COST"
+            echo "storage_cost=\$$PWSH_STORAGE_COST"
+            echo "ai_cost=\$$PWSH_AI_COST"
+          } >> "$GITHUB_OUTPUT"
+
+          # Save full outputs for summary
+          {
+            echo "pwsh_cost_details<<EOF"
+            echo "$PWSH_COST_OUTPUT"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+          {
+            echo "ace_cost_details<<EOF"
+            echo "$ACE_COST_OUTPUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Generate summary
           {
             echo "## 💰 Pre-Deployment Cost Estimation"
             echo ""
             echo "**Environment:** ${{ github.event.inputs.environment }}"
             echo "**SKU:** ${{ github.event.inputs.sku }}"
+            echo "**Region:** $LOCATION"
             echo ""
-            echo "### Estimated Monthly Cost: \`$ESTIMATED_COST\`"
+            echo "### Primary Estimate (PowerShell): \`\$$PWSH_TOTAL_COST USD/month\`"
             echo ""
+            echo "| Resource | Monthly Cost |"
+            echo "|----------|--------------|"
+            echo "| Function App Plan (${{ github.event.inputs.sku }}) | \`\$$PWSH_FUNCTION_COST\` |"
+            echo "| Storage Account (Standard LRS) | \`\$$PWSH_STORAGE_COST\` |"
+            echo "| Application Insights | \`\$$PWSH_AI_COST\` |"
+            echo "| **Total** | **\`\$$PWSH_TOTAL_COST\`** |"
+            echo ""
+            echo "### Secondary Estimate (ACE): \`\$$ACE_TOTAL_COST USD/month\`"
+            echo ""
+
+            # Show discrepancy warning if estimates differ significantly
+            if [ "$PWSH_TOTAL_COST" != "N/A" ] && [ "$ACE_TOTAL_COST" != "Unable to calculate" ] && [ "$ACE_TOTAL_COST" != "N/A" ]; then
+              # Remove any dollar signs for comparison
+              PWSH_NUM=$(echo "$PWSH_TOTAL_COST" | tr -d '$')
+              ACE_NUM=$(echo "$ACE_TOTAL_COST" | tr -d '$')
+
+              # Check if difference is > 10%
+              DIFF=$(echo "scale=2; ($PWSH_NUM - $ACE_NUM) / $PWSH_NUM * 100" | bc -l 2>/dev/null || echo "0")
+              ABS_DIFF=$(echo "$DIFF" | tr -d '-')
+
+              if (( $(echo "$ABS_DIFF > 10" | bc -l 2>/dev/null || echo 0) )); then
+                echo "> **⚠️  Note:** Significant difference detected between estimators (${ABS_DIFF}% variance)."
+                echo "> The PowerShell estimator uses official Azure pricing and is more accurate."
+                echo ""
+              fi
+            fi
+
             echo "<details>"
-            echo "<summary>View detailed cost breakdown</summary>"
+            echo "<summary>View PowerShell detailed cost breakdown</summary>"
             echo ""
             echo "\`\`\`"
-            echo "$COST_ESTIMATE_OUTPUT"
+            echo "$PWSH_COST_OUTPUT"
+            echo "\`\`\`"
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "<details>"
+            echo "<summary>View ACE cost breakdown (reference)</summary>"
+            echo ""
+            echo "\`\`\`"
+            echo "$ACE_COST_OUTPUT"
             echo "\`\`\`"
             echo ""
             echo "</details>"
@@ -608,7 +725,8 @@ jobs:
         run: |
           echo "📊 Generating cost comparison summary..."
 
-          ESTIMATED_COST="${{ steps.cost_estimate.outputs.estimated_cost }}"
+          PWSH_COST="${{ steps.cost_estimate.outputs.pwsh_total_cost }}"
+          ACE_COST="${{ steps.cost_estimate.outputs.ace_total_cost }}"
           ACTUAL_COST="${{ steps.cost_actual.outputs.actual_cost }}"
 
           {
@@ -619,7 +737,8 @@ jobs:
             echo ""
             echo "| Metric | Value |"
             echo "|--------|-------|"
-            echo "| **Pre-Deployment Estimate** | \`$ESTIMATED_COST\` |"
+            echo "| **Pre-Deployment Estimate (Primary)** | \`$PWSH_COST\` |"
+            echo "| **Pre-Deployment Estimate (ACE)** | \`$ACE_COST\` |"
             echo "| **Post-Deployment Actual** | \`$ACTUAL_COST\` |"
             echo "| **Environment** | \`${{ github.event.inputs.environment }}\` |"
             echo "| **SKU** | \`${{ github.event.inputs.sku }}\` |"
@@ -650,6 +769,11 @@ jobs:
               echo "2. **Set up cost alerts** in Azure Portal → Cost Management + Billing → Cost alerts"
               echo ""
               echo "3. **Review Azure Advisor** recommendations for cost optimization"
+              echo ""
+              echo "4. **Run local cost estimation:**"
+              echo "   \`\`\`bash"
+              echo "   pwsh ./scripts/infrastructure/estimate-costs.ps1 -Sku ${{ github.event.inputs.sku }} -Environment ${{ github.event.inputs.environment }}"
+              echo "   \`\`\`"
             fi
 
             echo ""
@@ -668,9 +792,11 @@ jobs:
             echo ""
             echo "---"
             echo ""
-            echo "*Cost estimation powered by [ACE (Azure Cost Estimator)](https://github.com/TheCloudTheory/arm-estimator)*"
+            echo "*Primary cost estimation: PowerShell script with Azure pricing data*"
             echo ""
-            echo "*Actual cost analysis powered by [azure-cost-cli](https://github.com/mivano/azure-cost-cli)*"
+            echo "*Secondary cost estimation: [ACE (Azure Cost Estimator)](https://github.com/TheCloudTheory/arm-estimator)*"
+            echo ""
+            echo "*Actual cost analysis: [azure-cost-cli](https://github.com/mivano/azure-cost-cli)*"
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "✅ Cost comparison summary generated"

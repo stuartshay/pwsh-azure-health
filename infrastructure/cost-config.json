@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Azure Cost Configuration",
+  "description": "Azure resource pricing data for cost estimation. Prices in USD.",
+  "lastUpdated": "2025-11-15",
+  "version": "1.0.0",
+  "regions": {
+    "eastus": {
+      "displayName": "East US",
+      "functionAppPlans": {
+        "Y1": {
+          "name": "Consumption",
+          "tier": "Dynamic",
+          "baseCost": 0.0,
+          "executionCost": {
+            "perExecution": 0.0000002,
+            "description": "First 1M executions free, then $0.20 per million executions"
+          },
+          "gbSecondCost": {
+            "perGBSecond": 0.000016,
+            "description": "First 400,000 GB-s free, then $0.000016 per GB-s"
+          },
+          "notes": "Pay-per-use model. Costs vary based on execution count and duration."
+        },
+        "EP1": {
+          "name": "Elastic Premium EP1",
+          "tier": "ElasticPremium",
+          "baseCost": 147.29,
+          "description": "210 ACU, 3.5 GB RAM per instance",
+          "features": [
+            "Always ready instances",
+            "VNet integration",
+            "No cold start",
+            "Pre-warmed instances"
+          ],
+          "notes": "Monthly base cost for 1 instance running 730 hours (monthly average)"
+        },
+        "EP2": {
+          "name": "Elastic Premium EP2",
+          "tier": "ElasticPremium",
+          "baseCost": 294.58,
+          "description": "420 ACU, 7 GB RAM per instance",
+          "notes": "Monthly base cost for 1 instance running 730 hours"
+        },
+        "EP3": {
+          "name": "Elastic Premium EP3",
+          "tier": "ElasticPremium",
+          "baseCost": 589.16,
+          "description": "840 ACU, 14 GB RAM per instance",
+          "notes": "Monthly base cost for 1 instance running 730 hours"
+        }
+      },
+      "storage": {
+        "Standard_LRS": {
+          "name": "Standard Locally Redundant Storage",
+          "baseCost": 0.0184,
+          "unit": "per GB/month",
+          "estimatedUsage": {
+            "functionApp": 1.0,
+            "description": "Estimated 1 GB storage for typical function app"
+          },
+          "transactions": {
+            "write": 0.05,
+            "read": 0.004,
+            "unit": "per 10,000 transactions"
+          },
+          "notes": "Costs include storage capacity and transaction costs"
+        },
+        "Standard_GRS": {
+          "name": "Standard Geo-Redundant Storage",
+          "baseCost": 0.0368,
+          "unit": "per GB/month"
+        }
+      },
+      "applicationInsights": {
+        "basic": {
+          "name": "Application Insights",
+          "dataIngestion": {
+            "free": 5.0,
+            "unit": "GB/month",
+            "costPerGB": 2.30,
+            "description": "First 5 GB/month free, then $2.30 per GB"
+          },
+          "estimatedUsage": {
+            "standard": 0.5,
+            "high": 2.0,
+            "description": "Estimated data ingestion for function app logs"
+          },
+          "notes": "Costs vary based on log volume and retention settings"
+        }
+      }
+    },
+    "westus": {
+      "displayName": "West US",
+      "functionAppPlans": {
+        "EP1": {
+          "baseCost": 147.29,
+          "notes": "Same pricing as East US"
+        }
+      }
+    },
+    "westus2": {
+      "displayName": "West US 2",
+      "functionAppPlans": {
+        "EP1": {
+          "baseCost": 147.29,
+          "notes": "Same pricing as East US"
+        }
+      }
+    },
+    "centralus": {
+      "displayName": "Central US",
+      "functionAppPlans": {
+        "EP1": {
+          "baseCost": 147.29,
+          "notes": "Same pricing as East US"
+        }
+      }
+    }
+  },
+  "estimationNotes": [
+    "Prices are based on Azure public pricing as of November 2025",
+    "Actual costs may vary based on usage patterns, region, and promotional offers",
+    "Consumption (Y1) plans have variable costs based on executions and resource usage",
+    "Premium (EP) plans have fixed monthly costs plus any additional instance costs",
+    "Storage costs include both capacity and transaction costs",
+    "Application Insights costs are based on data ingestion volume",
+    "All prices are in USD and represent monthly estimates"
+  ],
+  "sources": [
+    "https://azure.microsoft.com/en-us/pricing/details/functions/",
+    "https://azure.microsoft.com/en-us/pricing/details/storage/blobs/",
+    "https://azure.microsoft.com/en-us/pricing/details/monitor/"
+  ]
+}
