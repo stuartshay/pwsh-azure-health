@@ -275,16 +275,9 @@ jobs:
             echo "function_cost=\$$PWSH_FUNCTION_COST"
             echo "storage_cost=\$$PWSH_STORAGE_COST"
             echo "ai_cost=\$$PWSH_AI_COST"
-          } >> "$GITHUB_OUTPUT"
-
-          # Save full outputs for summary
-          {
             echo "pwsh_cost_details<<EOF"
             echo "$PWSH_COST_OUTPUT"
             echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-          {
             echo "ace_cost_details<<EOF"
             echo "$ACE_COST_OUTPUT"
             echo "EOF"
@@ -679,10 +672,6 @@ jobs:
           {
             echo "actual_cost=$ACTUAL_COST"
             echo "cost_status=$COST_STATUS"
-          } >> "$GITHUB_OUTPUT"
-
-          # Save full output for summary
-          {
             echo "actual_cost_details<<EOF"
             echo "$ACTUAL_COST_OUTPUT"
             echo "EOF"
