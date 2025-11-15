@@ -103,43 +103,48 @@ EOF
   [[ "$output" == *"Error: Resource group name is required"* ]]
 }
 
-# Test: get_policy_exemptions fails when subscription ID unavailable
-@test "get_policy_exemptions fails when cannot get subscription ID" {
+# Test: get_policy_exemptions handles command failures gracefully
+@test "get_policy_exemptions handles command failures gracefully" {
   cat > "$MOCK_DIR/az" << 'EOF'
 #!/bin/bash
-if [[ "$*" == *"account show"* ]]; then
+if [[ "$*" == *"policy exemption list"* ]]; then
+  echo "Error: Resource group not found" >&2
   exit 1
 fi
 EOF
   chmod +x "$MOCK_DIR/az"
 
   run get_policy_exemptions "test-rg"
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"Error: Failed to get subscription ID"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == "[]" ]]
 }
 
 # Test: format_policy_assignments with valid assignments
 @test "format_policy_assignments formats assignments correctly" {
-  local json='[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default"}]'
+  local json='[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default","complianceState":"Compliant"}]'
 
   run format_policy_assignments "$json"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Policy Assignments (1):"* ]]
-  [[ "$output" == *"**Test Assignment** (Default)"* ]]
+  [[ "$output" == *"✅"* ]]
+  [[ "$output" == *"**Test Assignment**"* ]]
+  [[ "$output" == *"_Compliant_"* ]]
 }
 
 # Test: format_policy_assignments with multiple assignments
 @test "format_policy_assignments handles multiple assignments" {
   local json='[
-    {"name":"assignment1","displayName":"Assignment One","enforcementMode":"Default"},
-    {"name":"assignment2","displayName":"Assignment Two","enforcementMode":"DoNotEnforce"}
+    {"name":"assignment1","displayName":"Assignment One","enforcementMode":"Default","complianceState":"NonCompliant"},
+    {"name":"assignment2","displayName":"Assignment Two","enforcementMode":"DoNotEnforce","complianceState":"Compliant"}
   ]'
 
   run format_policy_assignments "$json"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Policy Assignments (2):"* ]]
-  [[ "$output" == *"**Assignment One** (Default)"* ]]
-  [[ "$output" == *"**Assignment Two** (DoNotEnforce)"* ]]
+  [[ "$output" == *"❌"* ]]
+  [[ "$output" == *"✅"* ]]
+  [[ "$output" == *"**Assignment One**"* ]]
+  [[ "$output" == *"**Assignment Two**"* ]]
 }
 
 # Test: format_policy_assignments with empty array
@@ -165,23 +170,26 @@ EOF
 
 # Test: format_policy_exemptions with valid exemptions
 @test "format_policy_exemptions formats exemptions correctly" {
-  local json='[{"name":"exemption1","displayName":"Test Exemption","exemptionCategory":"Waiver","expiresOn":"2025-12-31"}]'
+  local json='[{"name":"exemption1","displayName":"Test Exemption","exemptionCategory":"Waiver","expiresOn":"2025-12-31","policyAssignmentId":"/subscriptions/test/resourceGroups/test/providers/Microsoft.Authorization/policyAssignments/test-policy","description":"Test reason"}]'
 
   run format_policy_exemptions "$json"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Policy Exemptions (1):"* ]]
-  [[ "$output" == *"**Test Exemption** (Waiver)"* ]]
-  [[ "$output" == *"Expires: 2025-12-31"* ]]
+  [[ "$output" == *"🛡️ **Test Exemption** - _Waiver_"* ]]
+  [[ "$output" == *"**Expires:** 2025-12-31"* ]]
+  [[ "$output" == *"**Reason:** Test reason"* ]]
+  [[ "$output" == *"**Policy:** \`test-policy\`"* ]]
 }
 
 # Test: format_policy_exemptions without expiration date
 @test "format_policy_exemptions handles exemptions without expiration" {
-  local json='[{"name":"exemption1","displayName":"Permanent Exemption","exemptionCategory":"Mitigated"}]'
+  local json='[{"name":"exemption1","displayName":"Permanent Exemption","exemptionCategory":"Mitigated","policyAssignmentId":"/subscriptions/test/resourceGroups/test/providers/Microsoft.Authorization/policyAssignments/test-policy","description":"Test reason"}]'
 
   run format_policy_exemptions "$json"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"**Permanent Exemption** (Mitigated)"* ]]
-  [[ "$output" != *"Expires:"* ]]
+  [[ "$output" == *"🛡️ **Permanent Exemption** - _Mitigated_"* ]]
+  [[ "$output" != *"**Expires:**"* ]]
+  [[ "$output" == *"**Reason:** Test reason"* ]]
 }
 
 # Test: format_policy_exemptions with empty array
@@ -194,15 +202,17 @@ EOF
 # Test: format_policy_exemptions with multiple exemptions
 @test "format_policy_exemptions handles multiple exemptions" {
   local json='[
-    {"name":"ex1","displayName":"Exemption One","exemptionCategory":"Waiver","expiresOn":"2025-12-31"},
-    {"name":"ex2","displayName":"Exemption Two","exemptionCategory":"Mitigated"}
+    {"name":"ex1","displayName":"Exemption One","exemptionCategory":"Waiver","expiresOn":"2025-12-31","policyAssignmentId":"/subscriptions/test/resourceGroups/test/providers/Microsoft.Authorization/policyAssignments/policy-one","description":"Reason one"},
+    {"name":"ex2","displayName":"Exemption Two","exemptionCategory":"Mitigated","policyAssignmentId":"/subscriptions/test/resourceGroups/test/providers/Microsoft.Authorization/policyAssignments/policy-two","description":"Reason two"}
   ]'
 
   run format_policy_exemptions "$json"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Policy Exemptions (2):"* ]]
-  [[ "$output" == *"**Exemption One** (Waiver)"* ]]
-  [[ "$output" == *"**Exemption Two** (Mitigated)"* ]]
+  [[ "$output" == *"🛡️ **Exemption One** - _Waiver_"* ]]
+  [[ "$output" == *"🛡️ **Exemption Two** - _Mitigated_"* ]]
+  [[ "$output" == *"**Reason:** Reason one"* ]]
+  [[ "$output" == *"**Reason:** Reason two"* ]]
 }
 
 # Test: generate_policy_report complete workflow
@@ -212,9 +222,11 @@ EOF
 if [[ "$*" == *"account show"* ]]; then
   echo "12345678-1234-1234-1234-123456789abc"
 elif [[ "$*" == *"policy assignment list"* ]]; then
-  echo '[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default"}]'
+  echo '[{"name":"assignment1","displayName":"Test Assignment","enforcementMode":"Default","policyDefinitionId":"/subscriptions/test/providers/Microsoft.Authorization/policyDefinitions/test-policy"}]'
+elif [[ "$*" == *"policy state list"* ]]; then
+  echo '[{"policyAssignment":"assignment1","compliance":"Compliant"}]'
 elif [[ "$*" == *"policy exemption list"* ]]; then
-  echo '[{"name":"exemption1","displayName":"Test Exemption","exemptionCategory":"Waiver"}]'
+  echo '[{"name":"exemption1","displayName":"Test Exemption","exemptionCategory":"Waiver","policyAssignmentId":"/subscriptions/test/resourceGroups/test/providers/Microsoft.Authorization/policyAssignments/test-policy","description":"Test reason"}]'
 else
   echo "[]"
 fi
@@ -225,9 +237,11 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"Azure Policy Status"* ]]
   [[ "$output" == *"Policy Assignments (1):"* ]]
-  [[ "$output" == *"**Test Assignment** (Default)"* ]]
+  [[ "$output" == *"✅"* ]]
+  [[ "$output" == *"**Test Assignment**"* ]]
   [[ "$output" == *"Policy Exemptions (1):"* ]]
-  [[ "$output" == *"**Test Exemption** (Waiver)"* ]]
+  [[ "$output" == *"🛡️ **Test Exemption** - _Waiver_"* ]]
+  [[ "$output" == *"**Reason:** Test reason"* ]]
 }
 
 # Test: generate_policy_report without resource group

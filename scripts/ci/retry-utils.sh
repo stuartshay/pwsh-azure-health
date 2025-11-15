@@ -25,7 +25,7 @@ retry_azure_operation() {
     set +e  # Temporarily disable exit on error
     output=$("${command[@]}" 2>&1)
     exit_code=$?
-    set -e
+    # Note: Do not re-enable set -e here to allow caller to capture exit code
 
     # Success
     if [ $exit_code -eq 0 ]; then
@@ -36,9 +36,19 @@ retry_azure_operation() {
 
     # Check for permanent failures (don't retry)
     if echo "$output" | grep -qE \
-      "(AuthorizationFailed|InvalidAuthenticationToken|Forbidden|InvalidResourceGroupName)"; then
+      "(AuthorizationFailed|InvalidAuthenticationToken|Forbidden|InvalidResourceGroupName|RequestDisallowedByPolicy|PolicyViolation)"; then
       echo "❌ Permanent failure detected: $description" >&2
       echo "$output" >&2
+
+      # If it's a policy violation, provide helpful context
+      if echo "$output" | grep -qE "(RequestDisallowedByPolicy|PolicyViolation)"; then
+        echo "" >&2
+        echo "⛔ Policy Denial Detected" >&2
+        echo "This deployment was blocked by an Azure Policy." >&2
+        echo "Review the policy assignments and ensure your deployment complies with requirements." >&2
+        echo "" >&2
+      fi
+
       return $exit_code
     fi
 

@@ -33,13 +33,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Setup retry utilities
+      - name: Setup retry utilities and policy query
         shell: bash
         run: |
           # Copy retry utilities from source
           cp scripts/ci/retry-utils.sh /tmp/retry-utils.sh
           chmod +x /tmp/retry-utils.sh
           echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
+
+          # Copy policy query utilities
+          cp scripts/ci/policy-query.sh /tmp/policy-query.sh
+          chmod +x /tmp/policy-query.sh
+          echo "✅ Policy query utilities configured"
 
       - name: Get managed identity from shared infrastructure
         id: get_identity
@@ -231,6 +236,82 @@ jobs:
             echo '```'
           } >> /tmp/whatif-summary.md
 
+      - name: Check Policy Compliance
+        id: policy_check
+        continue-on-error: true
+        shell: bash
+        run: |
+          source /tmp/policy-query.sh
+
+          echo "🔍 Checking Azure Policy compliance..."
+          echo ""
+
+          # Initialize policy summary
+          {
+            echo "## 🛡️ Policy Compliance Preview"
+            echo ""
+            echo "This preview shows current policy assignments and potential compliance issues."
+            echo ""
+          } >> /tmp/policy-summary.md
+
+          # Check dev environment policies
+          if az group exists --name "rg-azure-health-dev" > /dev/null 2>&1; then
+            echo "### Dev Environment Policy Status"
+            echo ""
+            DEV_POLICY_REPORT=$(generate_policy_report "rg-azure-health-dev" 2>&1) || {
+              DEV_POLICY_REPORT="⚠️ Unable to generate policy compliance report for dev environment."
+            }
+            {
+              echo "### Dev Environment"
+              echo ""
+              echo "$DEV_POLICY_REPORT"
+              echo ""
+            } >> /tmp/policy-summary.md
+          fi
+
+          # Check prod environment policies
+          if az group exists --name "rg-azure-health-prod" > /dev/null 2>&1; then
+            echo "### Prod Environment Policy Status"
+            echo ""
+            PROD_POLICY_REPORT=$(generate_policy_report "rg-azure-health-prod" 2>&1) || {
+              PROD_POLICY_REPORT="⚠️ Unable to generate policy compliance report for prod environment."
+            }
+            {
+              echo "### Prod Environment"
+              echo ""
+              echo "$PROD_POLICY_REPORT"
+              echo ""
+            } >> /tmp/policy-summary.md
+          fi
+
+          # Add policy guidance
+          {
+            echo "---"
+            echo ""
+            echo "### 📖 Policy Guidance"
+            echo ""
+            echo "**If policies show Non-Compliant:**"
+            echo "- Review the non-compliant resources listed above"
+            echo "- Check if exemptions are needed for development/testing"
+            echo "- Ensure deployments comply with organizational policies"
+            echo ""
+            echo "**Common Policy Issues:**"
+            echo "- **Deny App Service Plan SKUs**: Y1 (Consumption) may be denied - use EP1 or request exemption"
+            echo "- **Require Tags**: Ensure all resources have required tags (CostCenter, environment, etc.)"
+            echo "- **Function App Authentication**: Development may need exemption for easier testing"
+            echo ""
+            echo "**To create a policy exemption:**"
+            echo "\`\`\`bash"
+            echo "az policy exemption create \\"
+            echo "  --name 'exemption-name' \\"
+            echo "  --display-name 'Descriptive Name' \\"
+            echo "  --policy-assignment '/subscriptions/.../policyAssignments/assignment-name' \\"
+            echo "  --resource-group 'rg-azure-health-dev' \\"
+            echo "  --exemption-category 'Waiver' \\"
+            echo "  --description 'Reason for exemption'"
+            echo "\`\`\`"
+          } >> /tmp/policy-summary.md
+
       - name: Comment PR with What-If results
         uses: actions/github-script@v8
         with:
@@ -245,11 +326,23 @@ jobs:
               summary = '⚠️ Could not generate what-if preview. Check workflow logs for details.';
             }
 
+            // Read the policy summary
+            let policySummary = '';
+            try {
+              policySummary = fs.readFileSync('/tmp/policy-summary.md', 'utf8');
+            } catch (error) {
+              policySummary = '⚠️ Could not generate policy compliance preview. Check workflow logs for details.';
+            }
+
             const body = `## 🔍 Infrastructure What-If Preview
 
             This PR modifies infrastructure files. Here's a preview of what would change when deployed:
 
             ${summary}
+
+            ---
+
+            ${policySummary}
 
             ---
 
@@ -265,7 +358,8 @@ jobs:
             | **Max Scale** | 200 instances | 100 instances (configurable) |
 
             <sub>💡 This preview shows potential changes to both **dev** and **prod** environments
-            with both **Y1** and **EP1** SKU options based on the current Bicep templates.</sub>
+            with both **Y1** and **EP1** SKU options based on the current Bicep templates, along with
+            current Azure Policy compliance status.</sub>
             `;
 
             // Find existing comment

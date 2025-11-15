@@ -41,6 +41,10 @@ pre-commit run bats-tests --all-files
 
 - `retry-utils.bats` - Tests for retry utility functions in `scripts/ci/retry-utils.sh`
 - `deployment-output.bats` - Tests for deployment output parsing and JSON validation
+- `ace-cost-estimation.bats` - Tests for ACE (Azure Cost Estimator) cost estimation functionality
+- `deployment-verification.bats` - Tests for deployment verification utilities
+- `keyvault.bats` - Tests for Key Vault utility functions
+- `policy-query.bats` - Tests for Azure Policy query utilities
 
 ## Writing Tests
 
