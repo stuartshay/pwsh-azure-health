@@ -265,11 +265,7 @@ jobs:
           tmpfiles=()
           i=0
           for combo in "${combinations[@]}"; do
-            # shellcheck disable=SC2086
-            set -- $combo
-            env="$1"
-            sku="$2"
-            rg="$3"
+            read -r env sku rg <<< "$combo"
             tmpfile="/tmp/cost-estimate-$i.md"
             tmpfiles+=("$tmpfile")
             ./scripts/ci/cost-estimate.sh \

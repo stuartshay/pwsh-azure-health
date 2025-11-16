@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Reusable helper to perform pre-deployment cost estimation.
 # Provides a primary PowerShell-based estimate and a secondary ACE estimate.
@@ -89,14 +89,14 @@ log "PowerShell estimator exit code: $PWSH_EXIT_CODE"
 echo "$PWSH_COST_OUTPUT"
 
 # Extract the last JSON object from the output (for machine-readable values)
-PWSH_JSON=$(echo "$PWSH_COST_OUTPUT" | jq -s '.[-1]' 2>/dev/null || echo '{}')
+PWSH_JSON=$(echo "$PWSH_COST_OUTPUT" | awk 'BEGIN{found=0;json=""} /^\s*{/ {found=1} found {json=json $0; if ($0 ~ /^\s*}/) {result=json; json=""; found=0}} END{print result}' || echo '{}')
 
 PWSH_TOTAL_COST="N/A"
 PWSH_FUNCTION_COST="N/A"
 PWSH_STORAGE_COST="N/A"
 PWSH_AI_COST="N/A"
 
-if [ -n "$PWSH_JSON" ]; then
+if [ -n "$PWSH_JSON" ] && [ "$PWSH_JSON" != "{}" ]; then
   PWSH_TOTAL_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.Total.MonthlyCost' 2>/dev/null || echo "N/A")
   PWSH_FUNCTION_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.FunctionAppPlan.MonthlyCost' 2>/dev/null || echo "N/A")
   PWSH_STORAGE_COST=$(echo "$PWSH_JSON" | jq -r '.Costs.Storage.MonthlyCost' 2>/dev/null || echo "N/A")

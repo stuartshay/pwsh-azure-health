@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# Install ACE and azure-cost-cli for cost estimation/analysis steps.
+#!/bin/bash
+#
+# Install Cost Estimation Tools
 
 set -euo pipefail
 

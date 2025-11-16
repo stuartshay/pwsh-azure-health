@@ -155,7 +155,8 @@ jobs:
             --location "$LOCATION" \
             --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
             --resource-group "$RESOURCE_GROUP" \
-            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}"
+            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+            --summary-path "$GITHUB_STEP_SUMMARY"
       - name: Deploy Bicep template
         id: deploy
         shell: bash {0}  # {0} removes default -e -o pipefail, giving us full control
@@ -437,7 +438,8 @@ jobs:
         run: |
           ./scripts/ci/cost-analysis.sh \
             --resource-group "$RESOURCE_GROUP" \
-            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --summary-path "$GITHUB_STEP_SUMMARY"
       - name: Generate cost comparison summary
         shell: bash
         run: |

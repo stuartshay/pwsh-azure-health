@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-# Reusable helper to pull post-deployment actual costs using azure-cost-cli.
+#!/bin/bash
+
+# Reusable helper to perform post-deployment cost analysis.
+# Fetches actual costs and compares to estimates.
 
 set -euo pipefail
 
