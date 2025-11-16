@@ -69,8 +69,6 @@ if [ -z "${ENVIRONMENT:-}" ] || [ -z "${SKU:-}" ] || [ -z "${LOCATION:-}" ] || [
   exit 1
 fi
 
-SUMMARY_PATH="${SUMMARY_PATH:-}"
-
 log "Starting cost estimation for env=${ENVIRONMENT}, sku=${SKU}, location=${LOCATION}"
 
 # -------------------------------------------------------
@@ -91,7 +89,7 @@ log "PowerShell estimator exit code: $PWSH_EXIT_CODE"
 echo "$PWSH_COST_OUTPUT"
 
 # Extract the last JSON object from the output (for machine-readable values)
-PWSH_JSON=$(python3 - <<'PY'
+PWSH_JSON=$(python3 -c '
 import json, sys
 text = sys.stdin.read()
 decoder = json.JSONDecoder()
@@ -107,9 +105,7 @@ while idx < len(text):
     idx = end
 if last is not None:
     print(json.dumps(last))
-PY
-echo "$PWSH_COST_OUTPUT"
-)
+' <<< "$PWSH_COST_OUTPUT")
 
 PWSH_TOTAL_COST="N/A"
 PWSH_FUNCTION_COST="N/A"

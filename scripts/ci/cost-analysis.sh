@@ -55,8 +55,6 @@ if [ -z "${RESOURCE_GROUP:-}" ] || [ -z "${SUBSCRIPTION_ID:-}" ]; then
   exit 1
 fi
 
-SUMMARY_PATH="${SUMMARY_PATH:-}"
-
 echo "💰 Analyzing actual deployment costs with azure-cost-cli..."
 echo ""
 echo "⏳ Querying Azure Cost Management API for resource group costs..."
