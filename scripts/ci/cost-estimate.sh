@@ -89,23 +89,7 @@ log "PowerShell estimator exit code: $PWSH_EXIT_CODE"
 echo "$PWSH_COST_OUTPUT"
 
 # Extract the last JSON object from the output (for machine-readable values)
-PWSH_JSON=$(python3 -c '
-import json, sys
-text = sys.stdin.read()
-decoder = json.JSONDecoder()
-idx = 0
-last = None
-while idx < len(text):
-    try:
-        obj, end = decoder.raw_decode(text, idx)
-    except Exception:
-        idx += 1
-        continue
-    last = obj
-    idx = end
-if last is not None:
-    print(json.dumps(last))
-' <<< "$PWSH_COST_OUTPUT")
+PWSH_JSON=$(echo "$PWSH_COST_OUTPUT" | jq -s '.[-1]' 2>/dev/null || echo '{}')
 
 PWSH_TOTAL_COST="N/A"
 PWSH_FUNCTION_COST="N/A"
@@ -201,8 +185,8 @@ if [ -n "$SUMMARY_PATH" ]; then
     echo ""
     # Variance warning if both available
     if [ "$PWSH_TOTAL_COST" != "N/A" ] && [ "$ACE_TOTAL_COST" != "N/A" ] && [ "$ACE_TOTAL_COST" != "Unable to calculate" ]; then
-      PWSH_NUM=$(echo "$PWSH_TOTAL_COST" | tr -d '$')
-      ACE_NUM=$(echo "$ACE_TOTAL_COST" | tr -d '$')
+      PWSH_NUM=$(echo "$PWSH_TOTAL_COST" | tr -d '$,')
+      ACE_NUM=$(echo "$ACE_TOTAL_COST" | tr -d '$,')
       DIFF=$(echo "scale=2; ($PWSH_NUM - $ACE_NUM) / $PWSH_NUM * 100" | bc -l 2>/dev/null || echo "0")
       ABS_DIFF=$(echo "$DIFF" | tr -d '-')
       if (( $(echo "$ABS_DIFF > 10" | bc -l 2>/dev/null || echo 0) )); then

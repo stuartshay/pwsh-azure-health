@@ -254,41 +254,44 @@ jobs:
             echo ""
           } >> "$SUMMARY_PATH"
 
-          ./scripts/ci/cost-estimate.sh \
-            --environment "dev" \
-            --sku "Y1" \
-            --location "$LOCATION" \
-            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
-            --resource-group "rg-azure-health-dev" \
-            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
-            --summary-path "$SUMMARY_PATH"
+          # Define the combinations of environment, sku, and resource group
+          combinations=(
+            "dev Y1 rg-azure-health-dev"
+            "dev EP1 rg-azure-health-dev"
+            "prod Y1 rg-azure-health-prod"
+            "prod EP1 rg-azure-health-prod"
+          )
 
-          ./scripts/ci/cost-estimate.sh \
-            --environment "dev" \
-            --sku "EP1" \
-            --location "$LOCATION" \
-            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
-            --resource-group "rg-azure-health-dev" \
-            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
-            --summary-path "$SUMMARY_PATH"
+          tmpfiles=()
+          i=0
+          for combo in "${combinations[@]}"; do
+            # shellcheck disable=SC2086
+            set -- $combo
+            env="$1"
+            sku="$2"
+            rg="$3"
+            tmpfile="/tmp/cost-estimate-$i.md"
+            tmpfiles+=("$tmpfile")
+            ./scripts/ci/cost-estimate.sh \
+              --environment "$env" \
+              --sku "$sku" \
+              --location "$LOCATION" \
+              --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+              --resource-group "$rg" \
+              --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+              --summary-path "$tmpfile" &
+            i=$((i+1))
+          done
 
-          ./scripts/ci/cost-estimate.sh \
-            --environment "prod" \
-            --sku "Y1" \
-            --location "$LOCATION" \
-            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
-            --resource-group "rg-azure-health-prod" \
-            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
-            --summary-path "$SUMMARY_PATH"
+          wait
 
-          ./scripts/ci/cost-estimate.sh \
-            --environment "prod" \
-            --sku "EP1" \
-            --location "$LOCATION" \
-            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
-            --resource-group "rg-azure-health-prod" \
-            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
-            --summary-path "$SUMMARY_PATH"
+          # Concatenate all temp files into the main summary file
+          for f in "${tmpfiles[@]}"; do
+            cat "$f" >> "$SUMMARY_PATH"
+          done
+
+          # Clean up temp files
+          rm -f "${tmpfiles[@]}"
 
       - name: Check Policy Compliance
         id: policy_check
@@ -403,7 +406,7 @@ jobs:
             echo ""
             echo "| Feature | Y1 (Consumption) | EP1 (Elastic Premium) |"
             echo "|---------|------------------|------------------------|"
-            echo "| **Cost/Month** | ~\$0-20 (pay per execution) | ~\$146 (fixed) |"
+            echo "| **Cost/Month** | ~\$0-20 (pay per execution) | ~\$147 (fixed) |"
             echo "| **Always On** | ❌ No (scales to zero) | ✅ Yes |"
             echo "| **Cold Starts** | ✅ Yes | ❌ No (pre-warmed) |"
             echo "| **VNet Integration** | ❌ No | ✅ Ready |"
