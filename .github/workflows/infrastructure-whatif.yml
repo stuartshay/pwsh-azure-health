@@ -17,6 +17,7 @@ permissions:
 env:
   MAX_RETRY_ATTEMPTS: 5
   RETRY_BASE_DELAY: 2
+  LOCATION: eastus
 
 jobs:
   whatif:
@@ -45,6 +46,11 @@ jobs:
           cp scripts/ci/policy-query.sh /tmp/policy-query.sh
           chmod +x /tmp/policy-query.sh
           echo "✅ Policy query utilities configured"
+
+      - name: Install cost estimation tools
+        shell: bash
+        run: |
+          ./scripts/ci/install-cost-tools.sh
 
       - name: Get managed identity from shared infrastructure
         id: get_identity
@@ -235,6 +241,54 @@ jobs:
             echo "$whatif_ep1"
             echo '```'
           } >> /tmp/whatif-summary.md
+
+      - name: Estimate deployment costs for preview
+        continue-on-error: true
+        shell: bash
+        env:
+          SUMMARY_PATH: /tmp/whatif-summary.md
+        run: |
+          {
+            echo ""
+            echo "## 💰 Cost Estimates"
+            echo ""
+          } >> "$SUMMARY_PATH"
+
+          ./scripts/ci/cost-estimate.sh \
+            --environment "dev" \
+            --sku "Y1" \
+            --location "$LOCATION" \
+            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --resource-group "rg-azure-health-dev" \
+            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+            --summary-path "$SUMMARY_PATH"
+
+          ./scripts/ci/cost-estimate.sh \
+            --environment "dev" \
+            --sku "EP1" \
+            --location "$LOCATION" \
+            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --resource-group "rg-azure-health-dev" \
+            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+            --summary-path "$SUMMARY_PATH"
+
+          ./scripts/ci/cost-estimate.sh \
+            --environment "prod" \
+            --sku "Y1" \
+            --location "$LOCATION" \
+            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --resource-group "rg-azure-health-prod" \
+            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+            --summary-path "$SUMMARY_PATH"
+
+          ./scripts/ci/cost-estimate.sh \
+            --environment "prod" \
+            --sku "EP1" \
+            --location "$LOCATION" \
+            --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --resource-group "rg-azure-health-prod" \
+            --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+            --summary-path "$SUMMARY_PATH"
 
       - name: Check Policy Compliance
         id: policy_check
