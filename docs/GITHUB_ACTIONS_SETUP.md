@@ -6,10 +6,11 @@ This guide provides step-by-step instructions for setting up Azure authenticatio
 
 The repository includes several GitHub Actions workflows that require Azure authentication:
 
-- **`ci.yml`** - Continuous integration with linting, testing, and deployment
+- **`function-deploy.yml`** - Deploy function code (auto on master, or manual trigger)
 - **`infrastructure-deploy.yml`** - Deploy infrastructure using Bicep templates
 - **`infrastructure-destroy.yml`** - Destroy infrastructure and resource groups
 - **`infrastructure-whatif.yml`** - Preview infrastructure changes on pull requests
+- **`lint-and-test.yml`** - Run linting and tests (no Azure auth required)
 
 All workflows use **OIDC federated credentials** for authentication, which is more secure than storing client secrets in GitHub.
 
@@ -19,11 +20,9 @@ The following secrets must be configured in your GitHub repository:
 
 | Secret Name | Description | Used By |
 |-------------|-------------|---------|
-| `AZURE_CLIENT_ID` | Azure AD application (client) ID | All workflows |
-| `AZURE_TENANT_ID` | Azure AD tenant ID | All workflows |
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | All workflows |
-| `AZURE_RESOURCE_GROUP` | Resource group for production deployments | `ci.yml` |
-| `FUNCTION_APP_NAME` | Function App name for production | `ci.yml` |
+| `AZURE_CLIENT_ID` | Azure AD application (client) ID | All Azure workflows |
+| `AZURE_TENANT_ID` | Azure AD tenant ID | All Azure workflows |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | All Azure workflows |
 
 ## Prerequisites
 
@@ -271,11 +270,11 @@ The configured service principal has:
 
 ## Security Best Practices
 
-✅ **No client secrets** - Uses OIDC federated credentials  
-✅ **Least privilege** - Only Contributor role, scoped appropriately  
-✅ **Audit trail** - All actions logged in Azure Activity Log  
-✅ **Environment protection** - Configure GitHub environment protection rules for prod  
-✅ **Credential rotation** - No secrets to rotate; federated credentials use short-lived tokens  
+✅ **No client secrets** - Uses OIDC federated credentials
+✅ **Least privilege** - Only Contributor role, scoped appropriately
+✅ **Audit trail** - All actions logged in Azure Activity Log
+✅ **Environment protection** - Configure GitHub environment protection rules for prod
+✅ **Credential rotation** - No secrets to rotate; federated credentials use short-lived tokens
 
 ## Troubleshooting
 

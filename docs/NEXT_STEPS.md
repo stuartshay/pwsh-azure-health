@@ -1,238 +1,335 @@
-# Local Development Setup - Next Steps
+# Local Development Setup - Quick Start
 
-## Current Status ✅
+> **Note**: This document provides quick setup instructions for local development. For detailed information, see:
+> - [docs/LOCAL_STORAGE.md](LOCAL_STORAGE.md) - Azurite setup and storage emulation
+> - [docs/SETUP.md](SETUP.md) - Complete development environment setup
+> - [docs/DEPLOYMENT.md](DEPLOYMENT.md) - Deployment instructions
 
-The following have been configured and committed:
+## Current DevContainer Features ✅
 
-- ✅ **Azurite Auto-Start**: Automatically installs and starts in DevContainer post-create
+The DevContainer automatically includes:
+
+- ✅ **Azurite Extension**: VS Code extension handles Azure Storage emulation
 - ✅ **Port Forwarding**: Ports 10000-10002 configured for Blob, Queue, Table services
-- ✅ **Azure Developer CLI**: Added as a DevContainer feature
-- ✅ **Connection String**: Template updated with Azurite endpoints
-- ✅ **Helper Script**: `scripts/local/start-azurite.sh` for manual control
-- ✅ **Documentation**: Complete guide in `docs/LOCAL_STORAGE.md`
+- ✅ **Azure CLI**: Pre-installed for Azure management
+- ✅ **Azure Developer CLI (azd)**: Added as a DevContainer feature
+- ✅ **PowerShell 7.4**: For function development
+- ✅ **Azure Functions Core Tools**: For local function testing
+- ✅ **Pre-commit Hooks**: Automated code quality checks
 
-## Required Actions 🔧
+## Quick Setup Steps 🚀
 
-To complete your local development environment setup:
+### 1. Start Azurite (Storage Emulator)
 
-### 1. Rebuild DevContainer
+Azurite is managed via VS Code extension - no manual installation needed!
 
-**Action**: Rebuild the DevContainer to apply Azurite changes
+**Start Azurite:**
+- Click "Azurite" in VS Code status bar, OR
+- Command Palette (F1) → "Azurite: Start"
 
+**Verify:**
 ```bash
-# In VS Code Command Palette (F1 or Ctrl+Shift+P):
-Dev Containers: Rebuild Container
-```
-
-**Why**: The new post-create script needs to run to install and start Azurite
-
-**Time**: ~5-10 minutes for full rebuild
-
-**Note**: If the build fails due to network issues (e.g., Azure Functions Core Tools download), you can manually install tools after the container starts:
-
-```bash
-# Manual installation script
-./scripts/local/install-dev-tools.sh
-
-# Or install individually
-npm install -g azure-functions-core-tools@4
-npm install -g azurite
-```
-
-### 2. Verify Azurite After Rebuild
-
-After the rebuild completes, verify Azurite is running:
-
-```bash
-# Check process
-ps aux | grep azurite
-
-# Check ports are listening
-netstat -tlnp | grep -E '10000|10001|10002'
-
 # Test blob endpoint
 curl http://127.0.0.1:10000/devstoreaccount1?comp=list
-
-# View logs if needed
-cat /workspaces/pwsh-azure-health/.azurite/debug.log
 ```
 
-**Expected**: You should see azurite running and ports 10000-10002 listening
-
-### 3. Azure Authentication
-
-**Action**: Authenticate with Azure CLI
+### 2. Azure Authentication
 
 ```bash
 # Login to Azure
 az login
 
-# Set default subscription (replace with your subscription ID)
+# Set default subscription
 az account set --subscription "YOUR_SUBSCRIPTION_ID"
 
-# Verify authentication
+# Verify
 az account show
 ```
 
-**Why**: The GetServiceHealth function needs Azure credentials to query Service Health
+### 3. Configure Local Settings
 
-### 4. Update Local Settings
-
-**Action**: Edit `src/local.settings.json` with your subscription ID
+Edit `src/local.settings.json`:
 
 ```json
 {
   "Values": {
     "AZURE_SUBSCRIPTION_ID": "YOUR_SUBSCRIPTION_ID_HERE",
-    ...
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "powershell"
   }
 }
 ```
 
-**Why**: The function needs a subscription ID to query Service Health
+> **Note**: `local.settings.json` is in `.gitignore` and won't be committed.
 
-**Note**: This file is in `.gitignore` and won't be committed
-
-### 5. Test the Function
-
-**Action**: Start and test the Azure Function locally
+### 4. Start and Test Functions
 
 ```bash
-# Navigate to function directory
 cd src
-
-# Start the Functions host
 func start
+```
 
-# In another terminal, test the function
+Test endpoints:
+```bash
+# Health check
+curl "http://localhost:7071/api/HealthCheck"
+
+# Service Health
 curl "http://localhost:7071/api/GetServiceHealth?subscriptionId=YOUR_SUBSCRIPTION_ID"
 ```
 
-**Expected**: You should see Service Health data returned as JSON
-
 ## Verification Checklist 📋
 
-After completing the steps above, verify:
-
-- [ ] Azurite is running (ports 10000-10002 active)
-- [ ] Azure CLI is authenticated (`az account show` works)
-- [ ] Subscription ID is set in `local.settings.json`
-- [ ] Azure Functions host starts without errors
-- [ ] GetServiceHealth function responds to HTTP requests
-- [ ] Function can query Azure Service Health successfully
+- [ ] Azurite running (use VS Code extension)
+- [ ] Azure CLI authenticated (`az account show` works)
+- [ ] `local.settings.json` configured with subscription ID
+- [ ] Functions host starts: `cd src && func start`
+- [ ] HealthCheck endpoint responds: `curl http://localhost:7071/api/HealthCheck`
+- [ ] GetServiceHealth returns data
 
 ## Troubleshooting 🔍
 
-### Azurite Not Running
+### Azurite Issues
+
+- **Start via VS Code**: Click "Azurite" in status bar or Command Palette → "Azurite: Start"
+- **Check ports**: VS Code PORTS tab should show 10000, 10001, 10002
+- **Alternative**: Use `scripts/local/start-azurite.sh` (if npm azurite is installed)
+
+### Azure Authentication
 
 ```bash
-# Start manually
-./scripts/local/start-azurite.sh
-
-# Or directly
-azurite --silent --location ~/.azurite --debug ~/.azurite/debug.log \
-  --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 &
-```
-
-### Azure Authentication Issues
-
-```bash
-# Clear cached credentials
+# Clear and re-authenticate
 az account clear
+az login --use-device-code  # If browser doesn't work
 
-# Login again with device code (if browser doesn't work)
-az login --use-device-code
-
-# List available subscriptions
-az account list --output table
+# Verify Reader role (needed for Service Health)
+az role assignment list --assignee $(az account show --query user.name -o tsv)
 ```
 
-### Function Connection Errors
+### Function Errors
 
-1. Check Azurite is running
-2. Verify connection string in `src/local.settings.json`
-3. Check ports are forwarded in VS Code (PORTS tab)
-4. Restart Functions host: `cd src && func start`
-
-### Permission Errors
-
-```bash
-# Check Service Health permissions for your account
-az role assignment list --assignee YOUR_EMAIL --output table
-
-# You may need "Reader" role on the subscription
-az role assignment create --role "Reader" \
-  --assignee YOUR_EMAIL \
-  --subscription YOUR_SUBSCRIPTION_ID
-```
+1. **Connection errors**: Ensure Azurite is running and ports are forwarded
+2. **PowerShell errors**: Check you're using PowerShell 7.4+ (`pwsh --version`)
+3. **Module errors**: Functions host installs Az modules automatically from `requirements.psd1`
 
 ## Documentation References 📚
 
-- **Azurite Setup**: `docs/LOCAL_STORAGE.md`
-- **Project Setup**: `docs/SETUP.md`
-- **Deployment Guide**: `docs/DEPLOYMENT.md`
-- **API Documentation**: `docs/API.md`
-- **DevContainer Features**: `.devcontainer/FEATURES.md`
-- **Pre-commit Hooks**: `docs/PRE_COMMIT.md`
+- [LOCAL_STORAGE.md](LOCAL_STORAGE.md) - Azurite and storage emulation details
+- [SETUP.md](SETUP.md) - Complete development environment setup
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Azure deployment guide
+- [API.md](API.md) - API endpoints documentation
+- [PRE_COMMIT.md](PRE_COMMIT.md) - Pre-commit hooks reference
+- [COST_ESTIMATION.md](COST_ESTIMATION.md) - Azure cost estimation guide
 
-## VS Code Tasks (Optional) 🎯
-
-Consider creating VS Code tasks for common operations:
-
-Create `.vscode/tasks.json`:
-
-```json
-{
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Start Azurite",
-      "type": "shell",
-      "command": "./scripts/local/start-azurite.sh",
-      "problemMatcher": [],
-      "group": "none"
-    },
-    {
-      "label": "Start Azure Functions",
-      "type": "shell",
-      "command": "cd src && func start",
-      "problemMatcher": [],
-      "group": "none",
-      "isBackground": true
-    },
-    {
-      "label": "Run Tests",
-      "type": "shell",
-      "command": "pwsh -File tests/unit/ServiceHealth.Tests.ps1",
-      "problemMatcher": [],
-      "group": "test"
-    }
-  ]
-}
-```
-
-Then run tasks via: **Terminal > Run Task...**
-
-## What's Next? 🚀
+## Next Steps 🚀
 
 Once local development is working:
 
-1. **Implement Additional Functions**: Add more Azure health monitoring endpoints
-2. **Add Integration Tests**: Test against Azurite storage
-3. **CI/CD Pipeline**: Deploy to Azure via GitHub Actions
-4. **Monitoring**: Configure Application Insights
-5. **Documentation**: Update API docs with new endpoints
-
-## Support 💬
-
-If you encounter issues:
-
-1. Check the relevant documentation in `docs/`
-2. Review logs in `~/.azurite/debug.log`
-3. Run pre-commit hooks manually: `pre-commit run --all-files`
-4. Rebuild container if configuration changes aren't applied
+1. **Deploy to Azure**: See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment options
+2. **Set up CI/CD**: Configure GitHub Actions (see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md))
+3. **Add tests**: Write unit tests with Pester, workflow tests with BATS
+4. **Monitor costs**: Use custom cost estimation tools (see [COST_ESTIMATION.md](COST_ESTIMATION.md))
+5. **Configure monitoring**: Application Insights is included in infrastructure
 
 ---
 
-**Last Updated**: Configuration committed to `develop` branch
-**Commit**: feat: Add Azurite for local Azure Storage emulation
+## Future Improvements 💡
+
+### High Priority
+
+#### 1. Production Environment Setup
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
+
+Production environment created in GitHub with proper federated credentials. Validation script now shows 17/17 checks passed.
+
+**Benefit:** Complete deployment pipeline, better separation of dev/prod environments.
+
+---
+
+#### 2. Automated Pricing Freshness Check
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
+
+Added automated check in `.github/workflows/lint-and-test.yml` that validates pricing data freshness:
+- Checks `infrastructure/cost-config.json` lastUpdated date
+- Warns if pricing data is older than 90 days
+- Provides actionable update instructions in workflow output
+
+**Benefit:** Ensures cost estimates remain accurate over time.
+
+---
+
+#### 3. Enhanced Error Handling in PowerShell Functions
+**Status:** 💭 Enhancement  
+**Current State:** Some functions could benefit from more detailed error handling.
+
+**Action:** Add comprehensive error handling pattern:
+```powershell
+function Invoke-SafeOperation {
+    [CmdletBinding()]
+    param()
+
+    try {
+        # Operation logic
+    }
+    catch {
+        Write-Error "Operation failed: $($_.Exception.Message)"
+        Write-Host "Stack Trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+
+        # Log to Application Insights if available
+        if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING) {
+            # Send custom telemetry
+        }
+
+        throw
+    }
+}
+```
+
+**Benefit:** Better debugging, improved observability in production.
+
+---
+
+#### 4. Integration Tests for GitHub Actions Workflows
+**Status:** 💭 Planned  
+**Current State:** 143 BATS tests, but no end-to-end workflow testing.
+
+**Action:** Add integration tests in `tests/workflows/integration/`:
+```bash
+# tests/workflows/integration/full-deployment.bats
+@test "complete infrastructure deployment workflow" {
+  # Test full deploy → verify → cost analysis pipeline
+  # Could run against a separate test subscription
+}
+```
+
+**Benefit:** Catch workflow-level issues before they reach production.
+
+---
+
+#### 5. Monitoring Dashboard with Application Insights
+**Status:** 💭 Planned  
+**Current State:** Application Insights is deployed but no pre-built dashboards.
+
+**Action:** Create an Application Insights workbook for monitoring:
+- GetServiceHealthTimer execution frequency and duration
+- Cache hit/miss rates
+- Error rates by function
+- Cost trends over time
+- API response times
+
+**Benefit:** Better visibility into production health and performance.
+
+---
+
+### Medium Priority
+
+#### 6. Dependency Version Pinning
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
+
+Pinned exact versions for all PowerShell modules in both requirements files:
+- **Root requirements.psd1**: Development dependencies (9 modules pinned)
+  - Az.Accounts: 5.3.0, Az.Storage: 9.3.0, Az.ResourceGraph: 1.2.1
+  - Az.Resources: 8.1.1, Az.Monitor: 6.0.3, Az.Functions: 4.2.1, Az.Websites: 3.4.2
+  - Pester: 5.7.1, PSScriptAnalyzer: 1.24.0, PSRule: 2.9.0, PSRule.Rules.Azure: 1.39.1
+- **src/requirements.psd1**: Azure Functions runtime (3 modules pinned)
+  - Az.Accounts: 5.3.0, Az.Storage: 9.3.0, Az.ResourceGraph: 1.2.1
+
+**Benefit:** Prevents breaking changes from upstream module updates, ensures reproducible builds.
+
+---
+
+#### 7. Cache Invalidation Strategy
+**Status:** 💭 Enhancement  
+**Current State:** Timer-based cache updates (every 15 minutes).
+
+**Action:** Add manual cache invalidation endpoint:
+```powershell
+# New function: InvalidateCache
+function InvalidateCache {
+    # Force refresh of service health cache
+    # Useful after Azure incidents
+}
+```
+
+**Benefit:** Immediate updates during critical Azure incidents.
+
+---
+
+#### 8. Regional Deployment Support
+**Status:** 💭 Future Enhancement  
+**Current State:** Single region deployment (East US).
+
+**Action:** Add multi-region support for high availability:
+- Bicep parameter for primary/secondary regions
+- Traffic Manager or Front Door configuration
+- Cross-region cache replication strategy
+
+**Benefit:** Better disaster recovery and global performance.
+
+---
+
+#### 9. Pre-commit Hook for Bicep Validation
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
+
+Added Bicep linting to pre-commit hooks in `.pre-commit-config.yaml`:
+- `bicep-lint` hook runs `az bicep lint` on all `.bicep` files
+- `bicep-build` hook validates Bicep can compile successfully
+- Both hooks run automatically on commit for modified Bicep files
+- Catches syntax errors, best practice violations, and compilation issues
+
+**Benefit:** Catch IaC issues before they reach CI/CD.
+
+---
+
+#### 10. Documentation Versioning
+**Status:** 💭 Enhancement  
+**Current State:** Documentation is in markdown but no version tracking.
+
+**Action:** Add document versions and last-updated dates:
+```markdown
+---
+version: 1.2.0
+last-updated: 2025-11-17
+---
+```
+
+**Benefit:** Track documentation changes and identify outdated guides.
+
+---
+
+### Future Enhancements
+
+#### 11. API Rate Limiting
+Add rate limiting to public HTTP endpoints to prevent abuse.
+
+#### 12. GraphQL API Layer
+Alternative API layer for more efficient querying of service health data.
+
+#### 13. Notification Webhooks
+Push notifications to Teams/Slack when critical service issues detected.
+
+#### 14. Historical Data Retention
+Long-term storage of service health events in Azure SQL/Cosmos DB for trend analysis.
+
+#### 15. Custom Metrics Export
+Export custom metrics to Prometheus/Grafana for unified monitoring.
+
+---
+
+**Project Health Score: 9/10** ✅
+
+**Strengths:**
+- ✅ Excellent documentation (17+ docs)
+- ✅ Comprehensive testing (143 BATS + 8 Pester tests)
+- ✅ Strong DevOps practices (pre-commit, GitHub Actions)
+- ✅ Security best practices (managed identity, RBAC)
+- ✅ Cost management (estimation + analysis)
+- ✅ IaC with Bicep (declarative, idempotent)
+
+---
+
+**For Help**: Check documentation in `docs/` or project README

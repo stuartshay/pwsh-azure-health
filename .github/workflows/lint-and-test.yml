@@ -68,6 +68,33 @@ jobs:
             throw "Pester reported $($result.FailedCount) failure(s)."
           }
 
+      - name: Check pricing freshness
+        shell: bash
+        run: |
+          echo "Checking cost-config.json pricing data freshness..."
+
+          LAST_UPDATED=$(jq -r '.lastUpdated' infrastructure/cost-config.json)
+          echo "Last updated: $LAST_UPDATED"
+
+          # Calculate age in days (portable approach for Ubuntu runners)
+          LAST_UPDATED_EPOCH=$(date -d "$LAST_UPDATED" +%s 2>/dev/null || date -ud "$LAST_UPDATED" +%s 2>/dev/null || echo "0")
+          CURRENT_EPOCH=$(date +%s)
+          AGE_DAYS=$(( (CURRENT_EPOCH - LAST_UPDATED_EPOCH) / 86400 ))
+
+          echo "Pricing data age: $AGE_DAYS days"
+
+          if [ $AGE_DAYS -gt 90 ]; then
+            echo "::warning file=infrastructure/cost-config.json::⚠️  Pricing data is $AGE_DAYS days old (>90 days). Consider updating Azure pricing."
+            echo ""
+            echo "📋 To update pricing:"
+            echo "  1. Visit docs/COST_ESTIMATION.md for update instructions"
+            echo "  2. Check current Azure pricing at: https://azure.microsoft.com/en-us/pricing/calculator/"
+            echo "  3. Update infrastructure/cost-config.json with new prices"
+            echo "  4. Update 'lastUpdated' field to current date"
+          else
+            echo "✅ Pricing data is current ($AGE_DAYS days old)"
+          fi
+
       - name: Upload test results
         uses: actions/upload-artifact@v5
         if: always()

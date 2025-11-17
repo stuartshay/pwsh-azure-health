@@ -93,17 +93,13 @@ Write-Host "Error: Failed to connect" -ForegroundColor Red
 
 ### 3. Set Up Pre-Commit Hooks
 
-This project uses pre-commit hooks to enforce code quality standards. **This is required** before making commits:
-
-```bash
-# Install the pre-commit hooks
-./scripts/install-hooks.sh
-```
+This project uses pre-commit hooks to enforce code quality standards. **Pre-commit is automatically installed** in the DevContainer.
 
 The pre-commit hooks will automatically:
 - Lint PowerShell code with PSScriptAnalyzer
-- Check for secrets and credentials using pattern matching
-- Validate YAML and JSON files
+- Check for secrets and credentials using gitleaks
+- Validate YAML, JSON, and Bicep files
+- Validate GitHub Actions workflows with actionlint
 - Remove trailing whitespace
 - Ensure proper line endings
 - Check for large files
@@ -113,7 +109,7 @@ If a hook fails, your commit will be blocked. Fix the issues and try committing 
 
 **To manually test the hooks before committing:**
 ```bash
-./scripts/pre-commit-hook.sh
+pre-commit run --all-files
 ```
 
 ### 4. Test Your Changes

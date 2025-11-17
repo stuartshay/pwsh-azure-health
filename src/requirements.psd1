@@ -6,7 +6,9 @@
 #
 @{
     # Minimal module set for Service Health polling and storage access
-    'Az.Accounts'      = '3.*'
-    'Az.Storage'       = '5.*'
-    'Az.ResourceGraph' = '1.*'
+    # Pinned to specific versions for reproducible builds
+    # These versions are tested and verified to work with Azure Functions runtime
+    'Az.Accounts'      = '5.3.0'
+    'Az.Storage'       = '9.3.0'
+    'Az.ResourceGraph' = '1.2.1'
 }

@@ -5,9 +5,11 @@ This directory contains utility scripts for the Azure Health Monitoring Function
 ## Directory Layout
 
 - `ci/` – helpers that run in GitHub Actions or other continuous integration contexts.
-- `deployment/` – tooling used to publish the Functions app to Azure.
+- `deployment/` – deployment automation scripts.
+- `infrastructure/` – Bicep deployment and infrastructure management scripts.
 - `local/` – local workstation helpers (environment validation, bootstrap installers, etc.).
-- `install-hooks.sh`, `pre-commit-hook.sh` – git hook wiring and the consolidated check runner.
+- `logging/` – logging and monitoring scripts.
+- `setup/` – GitHub Actions and Azure authentication setup scripts.
 
 Agent-oriented automation does not yet have its own folder; today, the "agent" helpers we
 maintain are simply the same local setup scripts developers rely on. If we later add
@@ -16,22 +18,14 @@ introduce a scoped directory (for example, `agents/`) to keep the structure bala
 
 ## Pre-Commit Hooks
 
-### Setup
-
-To install the pre-commit hooks locally:
-
-```bash
-./scripts/install-hooks.sh
-```
-
-This will configure Git to automatically run quality checks before each commit.
+Pre-commit hooks are automatically installed in the DevContainer. See [PRE_COMMIT.md](../docs/PRE_COMMIT.md) for details.
 
 ### Manual Validation
 
 To manually run all pre-commit checks without committing:
 
 ```bash
-./scripts/pre-commit-hook.sh
+pre-commit run --all-files
 ```
 
 ### What Gets Checked
@@ -55,10 +49,6 @@ git commit --no-verify
 ```
 
 ## Other Scripts
-
-### Deployment
-
-- `deployment/deploy-to-azure.sh` - Deployment automation (see docs/DEPLOYMENT.md)
 
 ### Local Development
 

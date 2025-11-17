@@ -49,6 +49,22 @@ repos:
 
   - repo: local
     hooks:
+      - id: bicep-lint
+        name: Bicep Linter
+        entry: >
+          bash -c 'EXIT_CODE=0;
+          for file in "$@"; do
+            echo "Linting $file...";
+            if ! az bicep lint --file "$file"; then
+              EXIT_CODE=1;
+            fi;
+          done;
+          exit $EXIT_CODE' --
+        language: system
+        files: \.bicep$
+        pass_filenames: true
+        verbose: true
+
       - id: bicep-build
         name: Bicep Build Validation
         entry: >

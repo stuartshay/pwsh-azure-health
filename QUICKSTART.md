@@ -130,8 +130,8 @@ func start --port 7072 --script-root src
    - Add additional filters or telemetry helpers in `src/shared/`
 
 3. **Deploy to Azure**
-   - Use the deployment script: `./scripts/deployment/deploy-to-azure.sh`
-   - Or deploy via VS Code Azure Functions extension
+   - Use Bicep deployment: `./scripts/infrastructure/deploy-bicep.ps1 -Environment dev`
+   - Or use GitHub Actions workflows (infrastructure-deploy.yml)
    - See [Deployment Guide](docs/DEPLOYMENT.md) for details
 
 4. **Add More Functions**

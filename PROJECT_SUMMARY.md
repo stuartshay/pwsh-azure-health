@@ -61,12 +61,13 @@ This project provides an enterprise-ready Azure Functions application for monito
 
 ### Deployment & Operations
 
-1. **scripts/deployment/deploy-to-azure.sh** - Automated Azure deployment
-   - Creates resource group
-   - Provisions Function App
+1. **scripts/infrastructure/deploy-bicep.ps1** - Bicep infrastructure deployment
+   - Creates resource groups (shared and project-specific)
+   - Provisions Function App with EP1 plan
    - Configures Application Insights
-   - Enables Managed Identity
+   - Uses User-Assigned Managed Identity
    - Assigns RBAC roles
+   - Deploys with cost estimation
 
 2. **scripts/local/setup-local-dev.ps1** - Local setup automation
    - Validates prerequisites
@@ -108,8 +109,8 @@ pwsh-azure-health/
 │   └── SETUP.md
 ├── scripts/                       # Automation scripts
 │   ├── ci/
-│   ├── deployment/
-│   │   └── deploy-to-azure.sh
+│   ├── infrastructure/
+│   │   └── deploy-bicep.ps1
 │   └── local/
 │       └── setup-local-dev.ps1
 ├── src/                           # Function app source
@@ -188,7 +189,7 @@ pwsh-azure-health/
 
 3. **Deploy to Azure:**
    ```bash
-   ./scripts/deploy-to-azure.sh
+   ./scripts/infrastructure/deploy-bicep.ps1 -Environment dev
    ```
 
 ## Next Steps
