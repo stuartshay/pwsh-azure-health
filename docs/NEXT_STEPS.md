@@ -133,4 +133,221 @@ Once local development is working:
 
 ---
 
+## Future Improvements 💡
+
+### High Priority
+
+#### 1. Production Environment Setup
+**Status:** ⚠️ Not configured  
+**Current State:** Validation script shows warning - `prod` environment not configured in GitHub.
+
+**Action:**
+```bash
+# Create prod environment in GitHub
+gh api --method PUT -H "Accept: application/vnd.github+json" \
+  /repos/stuartshay/pwsh-azure-health/environments/prod
+```
+
+**Benefit:** Complete deployment pipeline, better separation of dev/prod environments.
+
+---
+
+#### 2. Automated Pricing Freshness Check
+**Status:** 💭 Planned  
+**Current State:** `infrastructure/cost-config.json` has manual pricing that could become stale.
+
+**Action:** Add to `.github/workflows/lint-and-test.yml`:
+```yaml
+- name: Check pricing freshness
+  run: |
+    LAST_UPDATED=$(jq -r '.lastUpdated' infrastructure/cost-config.json)
+    AGE_DAYS=$(( ($(date +%s) - $(date -d "$LAST_UPDATED" +%s)) / 86400 ))
+    if [ $AGE_DAYS -gt 180 ]; then
+      echo "⚠️  Pricing data is $AGE_DAYS days old. Consider updating."
+      echo "Visit docs/COST_ESTIMATION.md for update instructions."
+    fi
+```
+
+**Benefit:** Ensures cost estimates remain accurate over time.
+
+---
+
+#### 3. Enhanced Error Handling in PowerShell Functions
+**Status:** 💭 Enhancement  
+**Current State:** Some functions could benefit from more detailed error handling.
+
+**Action:** Add comprehensive error handling pattern:
+```powershell
+function Invoke-SafeOperation {
+    [CmdletBinding()]
+    param()
+
+    try {
+        # Operation logic
+    }
+    catch {
+        Write-Error "Operation failed: $($_.Exception.Message)"
+        Write-Host "Stack Trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+
+        # Log to Application Insights if available
+        if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING) {
+            # Send custom telemetry
+        }
+
+        throw
+    }
+}
+```
+
+**Benefit:** Better debugging, improved observability in production.
+
+---
+
+#### 4. Integration Tests for GitHub Actions Workflows
+**Status:** 💭 Planned  
+**Current State:** 143 BATS tests, but no end-to-end workflow testing.
+
+**Action:** Add integration tests in `tests/workflows/integration/`:
+```bash
+# tests/workflows/integration/full-deployment.bats
+@test "complete infrastructure deployment workflow" {
+  # Test full deploy → verify → cost analysis pipeline
+  # Could run against a separate test subscription
+}
+```
+
+**Benefit:** Catch workflow-level issues before they reach production.
+
+---
+
+#### 5. Monitoring Dashboard with Application Insights
+**Status:** 💭 Planned  
+**Current State:** Application Insights is deployed but no pre-built dashboards.
+
+**Action:** Create an Application Insights workbook for monitoring:
+- GetServiceHealthTimer execution frequency and duration
+- Cache hit/miss rates
+- Error rates by function
+- Cost trends over time
+- API response times
+
+**Benefit:** Better visibility into production health and performance.
+
+---
+
+### Medium Priority
+
+#### 6. Dependency Version Pinning
+**Status:** 💭 Enhancement  
+**Current State:** `requirements.psd1` doesn't specify exact versions for some modules.
+
+**Action:** Pin specific versions in `src/requirements.psd1`:
+```powershell
+@{
+    'Az.Accounts' = '3.2.0'  # Pin specific version
+    'Az.ResourceGraph' = '1.0.0'
+    'Az.Monitor' = '5.2.1'
+}
+```
+
+**Benefit:** Prevents breaking changes from upstream module updates.
+
+---
+
+#### 7. Cache Invalidation Strategy
+**Status:** 💭 Enhancement  
+**Current State:** Timer-based cache updates (every 15 minutes).
+
+**Action:** Add manual cache invalidation endpoint:
+```powershell
+# New function: InvalidateCache
+function InvalidateCache {
+    # Force refresh of service health cache
+    # Useful after Azure incidents
+}
+```
+
+**Benefit:** Immediate updates during critical Azure incidents.
+
+---
+
+#### 8. Regional Deployment Support
+**Status:** 💭 Future Enhancement  
+**Current State:** Single region deployment (East US).
+
+**Action:** Add multi-region support for high availability:
+- Bicep parameter for primary/secondary regions
+- Traffic Manager or Front Door configuration
+- Cross-region cache replication strategy
+
+**Benefit:** Better disaster recovery and global performance.
+
+---
+
+#### 9. Pre-commit Hook for Bicep Validation
+**Status:** 💭 Enhancement  
+**Current State:** No Bicep linting in pre-commit hooks.
+
+**Action:** Add Bicep linter to `.pre-commit-config.yaml`:
+```yaml
+- repo: local
+  hooks:
+    - id: bicep-lint
+      name: Bicep Linter
+      entry: az bicep lint --file
+      language: system
+      files: \.bicep$
+```
+
+**Benefit:** Catch IaC issues before they reach CI/CD.
+
+---
+
+#### 10. Documentation Versioning
+**Status:** 💭 Enhancement  
+**Current State:** Documentation is in markdown but no version tracking.
+
+**Action:** Add document versions and last-updated dates:
+```markdown
+---
+version: 1.2.0
+last-updated: 2025-11-17
+---
+```
+
+**Benefit:** Track documentation changes and identify outdated guides.
+
+---
+
+### Future Enhancements
+
+#### 11. API Rate Limiting
+Add rate limiting to public HTTP endpoints to prevent abuse.
+
+#### 12. GraphQL API Layer
+Alternative API layer for more efficient querying of service health data.
+
+#### 13. Notification Webhooks
+Push notifications to Teams/Slack when critical service issues detected.
+
+#### 14. Historical Data Retention
+Long-term storage of service health events in Azure SQL/Cosmos DB for trend analysis.
+
+#### 15. Custom Metrics Export
+Export custom metrics to Prometheus/Grafana for unified monitoring.
+
+---
+
+**Project Health Score: 9/10** ✅
+
+**Strengths:**
+- ✅ Excellent documentation (17+ docs)
+- ✅ Comprehensive testing (143 BATS + 8 Pester tests)
+- ✅ Strong DevOps practices (pre-commit, GitHub Actions)
+- ✅ Security best practices (managed identity, RBAC)
+- ✅ Cost management (estimation + analysis)
+- ✅ IaC with Bicep (declarative, idempotent)
+
+---
+
 **For Help**: Check documentation in `docs/` or project README
