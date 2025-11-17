@@ -10,9 +10,9 @@ This document provides a comprehensive overview of the Azure permissions, securi
 
 ### Security Posture
 
-✅ **Production Ready** - Implements industry-standard security controls
-✅ **Least Privilege** - Minimal permissions for required operations
-✅ **Zero Credentials** - No secrets or connection strings in code
+✅ **Production Ready** - Implements industry-standard security controls  
+✅ **Least Privilege** - Minimal permissions for required operations  
+✅ **Zero Credentials** - No secrets or connection strings in code  
 ✅ **Identity-Based** - Leverages Azure AD Managed Identity
 
 ---
@@ -71,9 +71,9 @@ ServiceHealthResources
 
 #### What Reader Does NOT Provide
 
-❌ No write, modify, or delete permissions
-❌ No role assignment management
-❌ No access to secrets or keys
+❌ No write, modify, or delete permissions  
+❌ No role assignment management  
+❌ No access to secrets or keys  
 ❌ No ability to modify resources
 
 #### Alternative Roles Considered
@@ -110,9 +110,9 @@ Provides read-only access to **Application Insights**, **Log Analytics**, and mo
 
 #### What Monitoring Reader Does NOT Provide
 
-❌ No write permissions to monitoring data
-❌ No resource creation or deletion
-❌ No data export capabilities
+❌ No write permissions to monitoring data  
+❌ No resource creation or deletion  
+❌ No data export capabilities  
 ❌ No alert rule modifications
 
 ### 1.4 Storage Blob Data Contributor Role
@@ -193,7 +193,7 @@ module roleAssignments 'modules/roleAssignments.bicep' = {
 
 ### 2.1 Identity Type
 
-**Type:** User-Assigned Managed Identity (Shared Infrastructure)  
+**Type:** User-Assigned Managed Identity (Shared Infrastructure)
 **Configuration:** `infrastructure/main.bicep` (lines 141-147)
 
 ```bicep
@@ -281,11 +281,11 @@ try {
 
 ### 2.5 Retrieving Principal ID
 
-**Via Azure Portal:**  
+**Via Azure Portal:**
 1. Navigate to Function App → Identity → System assigned
 2. Copy **Object (principal) ID**
 
-**Via Azure CLI:**  
+**Via Azure CLI:**
 ```bash
 az functionapp identity show \
   --name <function-app-name> \
@@ -653,18 +653,18 @@ Before deploying to a new environment:
 
 ### 5.2 Deployment Command
 
-**Prerequisites:**  
+**Prerequisites:**
 1. User-Assigned Managed Identity must exist in shared resource group
 2. Identity must have Reader and Monitoring Reader roles at subscription scope
 3. Get the full resource ID of the managed identity
 
-**Bicep Deployment:**  
+**Bicep Deployment:**
 ```powershell
 # From scripts/infrastructure/
 ./deploy-bicep.ps1 -Environment dev -ManagedIdentityResourceId "/subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}"
 ```
 
-**What Happens:**  
+**What Happens:**
 1. Reference existing User-Assigned Managed Identity from shared resource group
 2. Deploy storage account
 3. Deploy Application Insights
@@ -677,7 +677,7 @@ Before deploying to a new environment:
 
 #### Verify Managed Identity
 
-**Check Function App identity configuration:**  
+**Check Function App identity configuration:**
 ```bash
 az functionapp identity show \
   --name azurehealth-func-dev-<suffix> \
@@ -697,7 +697,7 @@ Expected:
 }
 ```
 
-**Get shared identity principal ID:**  
+**Get shared identity principal ID:**
 ```bash
 az identity show \
   --name <identity-name> \
@@ -707,7 +707,7 @@ az identity show \
 
 #### Verify Role Assignments
 
-**Reader Role:**  
+**Reader Role:**
 ```bash
 az role assignment list \
   --assignee <principal-id> \
@@ -715,7 +715,7 @@ az role assignment list \
   --scope /subscriptions/<subscription-id>
 ```
 
-**Storage Blob Data Contributor:**  
+**Storage Blob Data Contributor:**
 ```bash
 az role assignment list \
   --assignee <principal-id> \
@@ -730,7 +730,7 @@ az role assignment list \
 ./scripts/logging/test-logging.ps1
 ```
 
-**Expected Logs:**  
+**Expected Logs:**
 ```
 ✅ INFORMATION: Authenticating with Managed Identity...
 ✅ INFORMATION: Retrieved X event(s) from Azure Resource Graph
@@ -743,7 +743,7 @@ az role assignment list \
 
 **Cause:** Deploying principal lacks `User Access Administrator` or `Owner` role.
 
-**Solution:**  
+**Solution:**
 ```bash
 # Grant deployer role assignment permissions
 az role assignment create \
@@ -829,12 +829,12 @@ AzureActivity
 
 ### 6.3 Security Center Recommendations
 
-**Enable Azure Defender for:**  
+**Enable Azure Defender for:**
 - ✅ App Service (function apps)
 - ✅ Storage
 - ✅ Azure Resource Manager
 
-**Regular Reviews:**  
+**Regular Reviews:**
 - Quarterly RBAC audit
 - Monthly Security Center review
 - Weekly Application Insights error logs
@@ -845,7 +845,7 @@ AzureActivity
 
 ### 7.1 Azure Policy Enforcement
 
-**Recommended Policies:**  
+**Recommended Policies:**
 
 | Policy | Effect | Scope |
 |--------|--------|-------|
@@ -855,7 +855,7 @@ AzureActivity
 | **Require managed identity** | Audit | Function Apps |
 | **Require diagnostic logging** | DeployIfNotExists | All resources |
 
-**Implementation:**  
+**Implementation:**
 ```bash
 az policy assignment create \
   --name "require-function-https" \
@@ -865,7 +865,7 @@ az policy assignment create \
 
 ### 7.2 Exemptions
 
-**Policy Exemption for Easy Auth:**  
+**Policy Exemption for Easy Auth:**
 
 Some Azure Policies may flag Easy Auth with excluded paths as non-compliant. Create exemption:
 
@@ -939,7 +939,7 @@ az functionapp config appsettings set \
 
 **Symptom:** Function fails to authenticate with User-Assigned Managed Identity.
 
-**Diagnosis:**  
+**Diagnosis:**
 ```bash
 # Verify User-Assigned identity is configured
 az functionapp identity show \
@@ -960,7 +960,7 @@ Expected:
 }
 ```
 
-**Resolution:**  
+**Resolution:**
 ```bash
 # Assign user-assigned identity to function app
 az functionapp identity assign \
@@ -996,7 +996,7 @@ az functionapp restart \
 
 **Diagnosis:** Check query syntax in `src/shared/Modules/ServiceHealth.psm1`.
 
-**Common Causes:**  
+**Common Causes:**
 - Case-sensitive property names (use `tostring()` conversions)
 - Incorrect table name (must be `ServiceHealthResources`)
 - Invalid KQL syntax
