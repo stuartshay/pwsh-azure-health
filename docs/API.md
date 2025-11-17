@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # API Documentation
 
 This document provides detailed information about the Azure Health Monitoring Functions API endpoints.
@@ -39,7 +44,7 @@ GET|POST /api/GetServiceHealth
 | SubscriptionId | string | Query/Body | No* | Azure subscription ID to query. If not provided, uses `AZURE_SUBSCRIPTION_ID` environment variable. |
 | code | string | Query | Yes** | Function authorization key |
 
-\* Required if `AZURE_SUBSCRIPTION_ID` is not configured in application settings  
+\* Required if `AZURE_SUBSCRIPTION_ID` is not configured in application settings
 \** Required when deployed to Azure (not needed for local development)
 
 #### Request Examples

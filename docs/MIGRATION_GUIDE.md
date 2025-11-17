@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # Migration Guide: System-Assigned to User-Assigned Managed Identity
 
 This guide provides step-by-step instructions for migrating from System-Assigned Managed Identity to User-Assigned Managed Identity in the shared resource group pattern.

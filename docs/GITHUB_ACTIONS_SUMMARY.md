@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # GitHub Actions Azure Setup - Complete Guide
 
 ## Overview

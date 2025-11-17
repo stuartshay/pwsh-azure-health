@@ -1,4 +1,9 @@
-# GitHub Actions Testing Framework
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# Testing Framework Documentation
 
 This document describes the testing framework for GitHub Actions workflows and CI scripts.
 

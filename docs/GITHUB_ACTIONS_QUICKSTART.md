@@ -1,4 +1,9 @@
-# GitHub Actions Quick Setup Checklist
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# GitHub Actions Quick Start Guide
 
 Use this checklist to quickly set up GitHub Actions for automated deployments.
 

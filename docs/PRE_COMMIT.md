@@ -1,4 +1,9 @@
-# Pre-commit Hooks Guide
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# Pre-Commit Hooks Guide
 
 This project uses [pre-commit](https://pre-commit.com/) to automatically validate code quality before commits are made. This ensures consistent code quality and catches common issues early.
 

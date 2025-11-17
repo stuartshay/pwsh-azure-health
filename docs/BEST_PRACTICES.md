@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # Best Practices for Azure Health Monitoring Functions
 
 This document outlines best practices for developing, deploying, and maintaining Azure Functions using PowerShell.

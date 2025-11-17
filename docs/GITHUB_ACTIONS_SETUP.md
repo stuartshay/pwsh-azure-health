@@ -1,4 +1,9 @@
-# GitHub Actions Azure Authentication Setup
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# GitHub Actions Setup Guide
 
 This guide provides step-by-step instructions for setting up Azure authentication for GitHub Actions workflows using OpenID Connect (OIDC) federated credentials.
 

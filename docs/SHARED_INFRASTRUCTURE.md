@@ -1,4 +1,9 @@
-# Shared Infrastructure Architecture
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# Shared Infrastructure Setup
 
 This document describes the shared infrastructure pattern used across Azure Health Monitoring projects.
 

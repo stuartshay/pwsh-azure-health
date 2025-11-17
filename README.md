@@ -1,3 +1,8 @@
+---
+version: 2.0.0
+last-updated: 2025-11-17
+---
+
 # Azure Health Monitoring Functions (PowerShell)
 
 [![Deploy Infrastructure](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/infrastructure-deploy.yml/badge.svg)](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/infrastructure-deploy.yml)
@@ -12,7 +17,7 @@ This project provides a robust, production-ready solution for monitoring Azure S
 
 ## 🔐 Security & Permissions
 
-This application uses **System-Assigned Managed Identity** with **least-privilege RBAC** roles for secure, credential-free access to Azure resources.
+This application uses **User-Assigned Managed Identity** with **least-privilege RBAC** roles for secure, credential-free access to Azure resources. The managed identity is provisioned in a shared resource group and referenced during deployment.
 
 ### Required Azure RBAC Roles
 
@@ -67,8 +72,11 @@ Or run an Azure CLI deployment directly:
 az deployment group create \
   --resource-group <resource-group-name> \
   --template-file infrastructure/main.bicep \
-  --parameters environment=dev
+  --parameters environment=dev \
+  --parameters managedIdentityResourceId="/subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}"
 ```
+
+**Note:** The `managedIdentityResourceId` parameter is required and must reference a pre-existing User-Assigned Managed Identity. See [`docs/SHARED_INFRASTRUCTURE.md`](docs/SHARED_INFRASTRUCTURE.md) for setup instructions.
 
 📖 **See [`infrastructure/README.md`](infrastructure/README.md) for module details, parameters, and additional deployment options.**
 
@@ -101,6 +109,7 @@ All prerequisites (PowerShell 7.4, Azure Functions Core Tools, .NET 8, Azure CLI
 ### Azure Requirements
 
 - Azure subscription
+- **User-Assigned Managed Identity** in a shared resource group (see [`docs/SHARED_INFRASTRUCTURE.md`](docs/SHARED_INFRASTRUCTURE.md))
 - **Required RBAC roles** (automatically assigned during Bicep deployment):
   - **Reader** at subscription scope
   - **Monitoring Reader** at subscription scope
@@ -109,6 +118,8 @@ All prerequisites (PowerShell 7.4, Azure Functions Core Tools, .NET 8, Azure CLI
 - Application Insights instance (for monitoring)
 
 > **📖 See [docs/SECURITY_PERMISSIONS.md](docs/SECURITY_PERMISSIONS.md)** for detailed permission requirements, security controls, and deployment verification procedures.
+>
+> **📖 See [docs/SHARED_INFRASTRUCTURE.md](docs/SHARED_INFRASTRUCTURE.md)** for setting up the shared User-Assigned Managed Identity.
 
 ## Project Structure
 
@@ -201,13 +212,21 @@ Then edit `src/local.settings.json` with your subscription ID:
 
 ### 4. Install PowerShell Modules
 
-The required PowerShell modules are defined in `src/requirements.psd1` and will be automatically installed by Azure Functions when running locally or in Azure. For local development, you can pre-install them:
+The required PowerShell modules are defined in `src/requirements.psd1` (runtime) and `requirements.psd1` (development) with pinned versions for reproducible builds:
+
+**Runtime modules (automatically installed by Azure Functions):**
+- Az.Accounts: 5.3.0
+- Az.Storage: 9.3.0
+- Az.ResourceGraph: 1.2.1
+
+For local development, install all modules:
 
 ```powershell
-Install-Module -Name Az -Repository PSGallery -Force -AllowClobber
-Install-Module -Name Az.ResourceGraph -Repository PSGallery -Force
-Install-Module -Name Az.Monitor -Repository PSGallery -Force
+# Installs all pinned modules from root requirements.psd1
+./scripts/local/install-dev-tools.sh
 ```
+
+**Dependency management:** This project uses [Renovate](https://docs.renovatebot.com/) to automatically keep PowerShell modules and Azure Bicep API versions up-to-date with grouped pull requests.
 
 ### 5. Authenticate with Azure
 
@@ -397,6 +416,7 @@ This project uses EditorConfig for consistent formatting:
 
 This project uses [pre-commit](https://pre-commit.com/) framework to enforce code quality standards. All commits are automatically validated for:
 
+- **Bicep Validation**: Linting and build validation for Infrastructure as Code
 - **PowerShell Linting**: PSScriptAnalyzer checks for code quality and best practices
 - **File Quality**: Trailing whitespace, end-of-file fixes, line ending consistency
 - **Security**: GitLeaks scans for secrets, passwords, and API keys
@@ -405,6 +425,7 @@ This project uses [pre-commit](https://pre-commit.com/) framework to enforce cod
 - **Merge Conflict Detection**: Prevents committing files with conflict markers
 - **Branch Protection**: Blocks direct commits to master/main branches
 - **Unit Tests**: Pester tests run on pre-push
+- **BATS Tests**: 143 workflow tests for deployment scripts
 
 📖 **See [docs/PRE_COMMIT.md](docs/PRE_COMMIT.md) for complete documentation**
 
@@ -472,7 +493,7 @@ For more details, see [`.github/agents/README.md`](.github/agents/README.md).
 
 ### GitHub Actions Setup
 
-To enable automated deployments and infrastructure management via GitHub Actions, you need to configure Azure authentication. We provide an automated setup script:
+To enable automated deployments and infrastructure management via GitHub Actions, you need to configure Azure authentication and GitHub environments. We provide an automated setup script:
 
 ```bash
 # Run the setup script
@@ -487,6 +508,12 @@ The script will:
 - Configure OIDC authentication for GitHub Actions
 - Assign necessary Azure permissions
 - Display GitHub secrets that need to be added
+
+**GitHub Environments:** This project uses separate `dev` and `prod` environments with environment-specific variables:
+- `MANAGED_IDENTITY_RESOURCE_ID`: Full resource path to User-Assigned Managed Identity
+- Environment protection rules (optional for prod)
+
+**Validation:** Use `./scripts/setup/validate-github-actions-setup.sh` to verify complete setup (17 checks).
 
 📖 **See [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md) for detailed instructions**
 
