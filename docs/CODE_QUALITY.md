@@ -15,13 +15,7 @@ This project enforces strict enterprise development standards through:
 
 ### Quick Start
 
-Install the pre-commit hooks locally:
-
-```bash
-./scripts/install-hooks.sh
-```
-
-The hooks will automatically run on every `git commit`. If any check fails, the commit will be blocked.
+Pre-commit hooks are automatically installed in the DevContainer. The hooks will automatically run on every `git commit`. If any check fails, the commit will be blocked.
 
 ### What Gets Validated
 
@@ -40,7 +34,7 @@ The hooks will automatically run on every `git commit`. If any check fails, the 
 To run the pre-commit checks without committing:
 
 ```bash
-./scripts/pre-commit-hook.sh
+pre-commit run --all-files
 ```
 
 ### Bypassing Hooks
@@ -101,10 +95,8 @@ git commit --no-verify
 git clone https://github.com/stuartshay/pwsh-azure-health.git
 cd pwsh-azure-health
 
-# Install pre-commit hooks
-./scripts/install-hooks.sh
-
-# Install PowerShell modules
+# Pre-commit hooks are automatically installed in DevContainer
+# Install PowerShell modules (if not using DevContainer)
 pwsh -Command "Install-Module -Name PSScriptAnalyzer, Pester -Force"
 ```
 
@@ -118,7 +110,7 @@ pwsh -Command "Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./.PSScriptA
 pwsh -Command "Invoke-Pester -Path ./tests/unit -Output Detailed"
 
 # Run pre-commit checks (optional - will run automatically on commit)
-./scripts/pre-commit-hook.sh
+pre-commit run --all-files
 ```
 
 ### Making a Commit
@@ -193,7 +185,8 @@ function Get-Something {
 **Hook not running:**
 ```bash
 # Reinstall the hooks
-./scripts/install-hooks.sh
+pre-commit install
+pre-commit install --hook-type pre-push
 ```
 
 **Hook fails on PowerShell check:**

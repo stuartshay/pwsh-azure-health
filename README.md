@@ -120,13 +120,12 @@ pwsh-azure-health/
 │   ├── main.bicepparam         # Default parameter file
 │   └── modules/                # Reusable Bicep modules
 ├── scripts/
-│   ├── ci/                     # Continuous integration helpers (placeholder)
-│   ├── deployment/             # Deployment automation scripts (CLI helpers)
+│   ├── ci/                     # Continuous integration helpers
+│   ├── deployment/             # Deployment automation scripts
 │   ├── infrastructure/         # Infrastructure deployment helpers
 │   ├── local/                  # Local development utilities
-│   ├── setup/                  # GitHub Actions/OIDC bootstrap scripts
-│   ├── install-hooks.sh        # Convenience installer for pre-commit hooks
-│   └── pre-commit-hook.sh      # Aggregated local quality checks
+│   ├── logging/                # Logging and monitoring scripts
+│   └── setup/                  # GitHub Actions/OIDC bootstrap scripts
 ├── src/
 │   ├── GetServiceHealth/       # HTTP-triggered Service Health API
 │   ├── GetServiceHealthTimer/  # Timer-triggered Service Health polling
@@ -448,7 +447,7 @@ pwsh -Command "Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./.PSScriptA
 pwsh -Command "Invoke-Pester -Path ./tests/unit -Output Detailed"
 
 # Run pre-commit checks manually
-./scripts/pre-commit-hook.sh
+pre-commit run --all-files
 ```
 
 ### GitHub Copilot Custom Agent
