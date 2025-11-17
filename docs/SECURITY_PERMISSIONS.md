@@ -1,7 +1,7 @@
 # Azure Permissions & Security Architecture
 
-**Document Version:** 2.0
-**Last Updated:** November 17, 2025
+**Document Version:** 2.0  
+**Last Updated:** November 17, 2025  
 **Security Classification:** Internal
 
 ## Executive Summary
