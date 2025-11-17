@@ -273,19 +273,14 @@ function InvalidateCache {
 ---
 
 #### 9. Pre-commit Hook for Bicep Validation
-**Status:** 💭 Enhancement  
-**Current State:** No Bicep linting in pre-commit hooks.
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
 
-**Action:** Add Bicep linter to `.pre-commit-config.yaml`:
-```yaml
-- repo: local
-  hooks:
-    - id: bicep-lint
-      name: Bicep Linter
-      entry: az bicep lint --file
-      language: system
-      files: \.bicep$
-```
+Added Bicep linting to pre-commit hooks in `.pre-commit-config.yaml`:
+- `bicep-lint` hook runs `az bicep lint` on all `.bicep` files
+- `bicep-build` hook validates Bicep can compile successfully
+- Both hooks run automatically on commit for modified Bicep files
+- Catches syntax errors, best practice violations, and compilation issues
 
 **Benefit:** Catch IaC issues before they reach CI/CD.
 
