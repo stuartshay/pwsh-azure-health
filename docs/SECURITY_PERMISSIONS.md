@@ -10,9 +10,9 @@ This document provides a comprehensive overview of the Azure permissions, securi
 
 ### Security Posture
 
-✅ **Production Ready** - Implements industry-standard security controls
-✅ **Least Privilege** - Minimal permissions for required operations
-✅ **Zero Credentials** - No secrets or connection strings in code
+✅ **Production Ready** - Implements industry-standard security controls  
+✅ **Least Privilege** - Minimal permissions for required operations  
+✅ **Zero Credentials** - No secrets or connection strings in code  
 ✅ **Identity-Based** - Leverages Azure AD Managed Identity
 
 ---
@@ -71,9 +71,9 @@ ServiceHealthResources
 
 #### What Reader Does NOT Provide
 
-❌ No write, modify, or delete permissions
-❌ No role assignment management
-❌ No access to secrets or keys
+❌ No write, modify, or delete permissions  
+❌ No role assignment management  
+❌ No access to secrets or keys  
 ❌ No ability to modify resources
 
 #### Alternative Roles Considered
@@ -110,9 +110,9 @@ Provides read-only access to **Application Insights**, **Log Analytics**, and mo
 
 #### What Monitoring Reader Does NOT Provide
 
-❌ No write permissions to monitoring data
-❌ No resource creation or deletion
-❌ No data export capabilities
+❌ No write permissions to monitoring data  
+❌ No resource creation or deletion  
+❌ No data export capabilities  
 ❌ No alert rule modifications
 
 ### 1.4 Storage Blob Data Contributor Role
@@ -577,15 +577,15 @@ Allows Azure Functions to use **function keys** for API authentication instead o
 
 #### Encryption in Transit
 
-✅ **TLS 1.2** enforced on all services
-✅ **HTTPS-only** for all endpoints
+✅ **TLS 1.2** enforced on all services  
+✅ **HTTPS-only** for all endpoints  
 ✅ **Secure storage connections** via HTTPS
 
 #### No Secrets in Code
 
-✅ **Zero hardcoded credentials**
-✅ **Managed Identity** for authentication
-✅ **Environment variables** for configuration
+✅ **Zero hardcoded credentials**  
+✅ **Managed Identity** for authentication  
+✅ **Environment variables** for configuration  
 ✅ **No connection strings** in source control
 
 **Configuration:** `src/local.settings.json.template`
@@ -732,8 +732,8 @@ az role assignment list \
 
 **Expected Logs:**
 ```
-✅ INFORMATION: Authenticating with Managed Identity...
-✅ INFORMATION: Retrieved X event(s) from Azure Resource Graph
+✅ INFORMATION: Authenticating with Managed Identity...  
+✅ INFORMATION: Retrieved X event(s) from Azure Resource Graph  
 
 ### 5.4 Troubleshooting Deployment Issues
 
@@ -828,12 +828,12 @@ AzureActivity
 ### 6.3 Security Center Recommendations
 
 **Enable Azure Defender for:**
-- ✅ App Service (function apps)
-- ✅ Storage
+- ✅ App Service (function apps)  
+- ✅ Storage  
 
 **Regular Reviews:**
-- Quarterly RBAC audit
-- Monthly Security Center review
+- Quarterly RBAC audit  
+- Monthly Security Center review  
 
 ---
 
@@ -874,9 +874,9 @@ Some Azure Policies may flag Easy Auth with excluded paths as non-compliant. Cre
 
 This architecture supports compliance with:
 
-- ✅ **NIST 800-53** - AC-2 (Account Management), AC-6 (Least Privilege)
-- ✅ **CIS Azure Foundations** - Section 8 (AppService)
-- ✅ **ISO 27001** - A.9.2.3 (Management of privileged access rights)
+- ✅ **NIST 800-53** - AC-2 (Account Management), AC-6 (Least Privilege)  
+- ✅ **CIS Azure Foundations** - Section 8 (AppService)  
+- ✅ **ISO 27001** - A.9.2.3 (Management of privileged access rights)  
 - ✅ **SOC 2** - CC6.3 (Logical and physical access controls)
 
 ---
