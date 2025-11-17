@@ -78,17 +78,17 @@ print_header() {
 # Function for check results
 check_pass() {
   echo -e "${GREEN}✅ PASS:${NC} $1"
-  ((CHECKS_PASSED++))
+  ((CHECKS_PASSED++)) || true
 }
 
 check_fail() {
   echo -e "${RED}❌ FAIL:${NC} $1"
-  ((CHECKS_FAILED++))
+  ((CHECKS_FAILED++)) || true
 }
 
 check_warn() {
   echo -e "${YELLOW}⚠️  WARN:${NC} $1"
-  ((CHECKS_WARNING++))
+  ((CHECKS_WARNING++)) || true
 }
 
 print_info() {
