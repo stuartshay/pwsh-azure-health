@@ -1,15 +1,26 @@
 # Azure Cost Estimation Guide
 
+> **🚨 CRITICAL WORKFLOW RULE**: When adding ANY new Azure resource to your infrastructure (VMs, databases, Key Vaults, etc.), you MUST update the cost estimation system. See [Adding New Resources](#adding-new-resources) section below.
+
 ## Overview
 
-This project uses a dual-approach cost estimation system:
+This project uses a **custom-built** dual-approach cost estimation system:
 1. **Primary Estimator**: PowerShell script with JSON-based pricing data (`estimate-costs.ps1`)
 2. **Secondary Estimator**: ACE (Azure Cost Estimator) for comparison
 
+### How It Works
+
+**This is a CUSTOM solution** - not an Azure-provided library:
+- ✅ **No external APIs** - Pricing stored locally in version-controlled JSON
+- ✅ **Simple math** - PowerShell reads JSON and calculates totals
+- ✅ **Manual updates** - You research and maintain pricing data
+- ✅ **Fast & reliable** - No network dependencies or API rate limits
+- ⚠️ **Requires maintenance** - Must update when Azure changes prices or you add resources
+
 ## Files
 
-- `infrastructure/cost-config.json` - Pricing database
-- `scripts/infrastructure/estimate-costs.ps1` - Cost estimation script
+- `infrastructure/cost-config.json` - **Custom pricing database** (manually maintained)
+- `scripts/infrastructure/estimate-costs.ps1` - **Custom PowerShell calculator** (simple JSON reader + math)
 - `.github/workflows/infrastructure-deploy.yml` - Automated cost estimation in CI/CD
 
 ## Maintenance
@@ -67,9 +78,33 @@ Update the version metadata in `cost-config.json`:
 
 ## Adding New Resources
 
-When you add new resources to your Bicep template, follow these steps:
+> **⚠️ IMPORTANT**: Whenever you add a new Azure resource to your Bicep template, you MUST update the cost estimation system to include pricing for that resource. This ensures accurate cost projections before deployment.
 
-### Step 1: Update cost-config.json
+### Quick Checklist for New Resources
+
+When adding ANY new Azure resource (VM, SQL Database, Key Vault, Container Registry, etc.):
+
+- [ ] Research current Azure pricing for the resource
+- [ ] Add pricing to `infrastructure/cost-config.json`
+- [ ] Update `scripts/infrastructure/estimate-costs.ps1` calculation logic
+- [ ] Add resource to output formatting (text and JSON)
+- [ ] Test the estimator with new resource
+- [ ] Update this documentation with example
+
+### Step 1: Research Pricing
+
+**Official Sources:**
+1. [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calculator/)
+2. [Azure Retail Prices API](https://prices.azure.com/api/retail/prices)
+3. Azure Portal (during resource creation)
+
+**Example API Query:**
+```bash
+# Get VM pricing for East US
+az rest --method get --url "https://prices.azure.com/api/retail/prices?\$filter=serviceName eq 'Virtual Machines' and armRegionName eq 'eastus' and priceType eq 'Consumption'"
+```
+
+### Step 2: Update cost-config.json
 
 Add the new resource pricing under the appropriate region:
 
@@ -150,9 +185,11 @@ if ($newResource.Notes) {
 Write-Host ""
 ```
 
-## Examples
+## Real-World Examples
 
-### Adding Azure Key Vault
+### Example 1: Adding Azure Key Vault
+
+#### Step-by-Step Process:
 
 **1. Update cost-config.json:**
 
@@ -174,7 +211,129 @@ Write-Host ""
 }
 ```
 
-### Adding Azure SQL Database
+**2. Update estimate-costs.ps1:** (Add calculation function and include in total)
+
+**3. Test:** `pwsh scripts/infrastructure/estimate-costs.ps1 -IncludeKeyVault`
+
+### Example 2: Adding Virtual Machine
+
+**1. Update cost-config.json:**
+
+```json
+{
+  "regions": {
+    "eastus": {
+      "virtualMachines": {
+        "Standard_B2s": {
+          "name": "Standard B2s (Burstable)",
+          "baseCost": 30.37,
+          "unit": "per month (730 hours)",
+          "specs": {
+            "vCPUs": 2,
+            "RAM": "4 GB",
+            "tempStorage": "8 GB"
+          },
+          "estimatedUsage": {
+            "hoursPerMonth": 730,
+            "description": "Assumes 24/7 operation"
+          }
+        },
+        "Standard_D2s_v3": {
+          "name": "Standard D2s v3 (General Purpose)",
+          "baseCost": 96.36,
+          "unit": "per month (730 hours)",
+          "specs": {
+            "vCPUs": 2,
+            "RAM": "8 GB",
+            "tempStorage": "16 GB"
+          }
+        }
+      },
+      "managedDisks": {
+        "P10": {
+          "name": "Premium SSD P10",
+          "baseCost": 19.71,
+          "unit": "per disk/month",
+          "size": "128 GB"
+        }
+      }
+    }
+  }
+}
+```
+
+**2. Update estimate-costs.ps1:**
+
+```powershell
+# Add new parameters
+param(
+    # ... existing parameters ...
+    [Parameter(Mandatory = $false)]
+    [switch]$IncludeVM,
+
+    [Parameter(Mandatory = $false)]
+    [string]$VMSize = "Standard_B2s"
+)
+
+# Add calculation function
+function Get-VirtualMachineCost {
+    param(
+        [object]$RegionPricing,
+        [string]$VMSize,
+        [string]$DiskSku = "P10"
+    )
+
+    $vmPricing = $RegionPricing.virtualMachines.$VMSize
+    $diskPricing = $RegionPricing.managedDisks.$DiskSku
+
+    if (-not $vmPricing) {
+        return @{
+            Name = $VMSize
+            TotalCost = 0.0
+            Notes = "Pricing data not available"
+        }
+    }
+
+    $totalCost = $vmPricing.baseCost + $diskPricing.baseCost
+
+    return @{
+        Name = $vmPricing.name
+        ComputeCost = $vmPricing.baseCost
+        DiskCost = $diskPricing.baseCost
+        TotalCost = $totalCost
+        Specs = $vmPricing.specs
+        Notes = $vmPricing.notes
+    }
+}
+
+# In main logic, add:
+if ($IncludeVM) {
+    $vm = Get-VirtualMachineCost -RegionPricing $regionPricing -VMSize $VMSize
+    $vmCost = $vm.TotalCost
+
+    # Add to total
+    $totalCost += $vmCost
+
+    # Add to output
+    Write-ColorOutput "5. Virtual Machine ($($vm.Name))" -Color White
+    Write-ColorOutput "   Compute: $(Format-Currency $vm.ComputeCost)" -Color Green
+    Write-ColorOutput "   Disk: $(Format-Currency $vm.DiskCost)" -Color Green
+    Write-ColorOutput "   Monthly Cost: $(Format-Currency $vmCost)" -Color Green
+
+    # Add to JSON result
+    $result.Costs.VirtualMachine = @{
+        Name = $vm.Name
+        ComputeCost = $vm.ComputeCost
+        DiskCost = $vm.DiskCost
+        MonthlyCost = $vmCost
+        Specs = $vm.Specs
+    }
+}
+```
+
+**3. Test:** `pwsh scripts/infrastructure/estimate-costs.ps1 -IncludeVM -VMSize Standard_D2s_v3`
+
+### Example 3: Adding Azure SQL Database
 
 **1. Update cost-config.json:**
 
