@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "1867786788374941490"
+      "templateHash": "16013063892030108519"
     }
   },
   "parameters": {
@@ -56,6 +56,17 @@
         "description": "Blob container name for caching Service Health payloads"
       }
     },
+    "functionAppPlanSku": {
+      "type": "string",
+      "defaultValue": "Y1",
+      "allowedValues": [
+        "Y1",
+        "EP1"
+      ],
+      "metadata": {
+        "description": "Function App hosting plan SKU"
+      }
+    },
     "managedIdentityResourceId": {
       "type": "string",
       "minLength": 100,
@@ -78,17 +89,16 @@
     "functionAppName": "[format('{0}-func-{1}-{2}', parameters('baseName'), parameters('environment'), variables('uniqueSuffix'))]",
     "appInsightsName": "[format('{0}-ai-{1}', parameters('baseName'), parameters('environment'))]",
     "appServicePlanName": "[format('{0}-plan-{1}', parameters('baseName'), parameters('environment'))]",
-    "commonTags": {
-      "environment": "[parameters('environment')]",
-      "project": "pwsh-azure-health",
-      "managedBy": "bicep",
-      "createdDate": "[parameters('currentDate')]"
-    }
+    "isConsumptionPlan": "[equals(parameters('functionAppPlanSku'), 'Y1')]",
+    "isPremiumPlan": "[equals(parameters('functionAppPlanSku'), 'EP1')]",
+    "planTier": "[if(variables('isConsumptionPlan'), 'Dynamic', 'ElasticPremium')]",
+    "planFamily": "[if(variables('isConsumptionPlan'), 'Y', 'EP')]",
+    "commonTags": "[union(resourceGroup().tags, createObject('environment', parameters('environment'), 'project', 'pwsh-azure-health', 'managedBy', 'bicep', 'createdDate', parameters('currentDate')))]"
   },
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2025-01-01",
+      "apiVersion": "2023-05-01",
       "name": "[variables('storageAccountName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -115,7 +125,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices",
-      "apiVersion": "2025-01-01",
+      "apiVersion": "2023-05-01",
       "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
@@ -123,7 +133,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-      "apiVersion": "2025-01-01",
+      "apiVersion": "2023-05-01",
       "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', parameters('cacheContainerName'))]",
       "properties": {
         "publicAccess": "None"
@@ -148,23 +158,22 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2024-11-01",
+      "apiVersion": "2023-12-01",
       "name": "[variables('appServicePlanName')]",
       "location": "[parameters('location')]",
-      "tags": "[variables('commonTags')]",
+      "tags": "[union(variables('commonTags'), createObject('sku', parameters('functionAppPlanSku'), 'tier', variables('planTier')))]",
       "sku": {
-        "name": "Y1",
-        "tier": "Dynamic",
-        "size": "Y1",
-        "family": "Y"
+        "name": "[parameters('functionAppPlanSku')]",
+        "tier": "[variables('planTier')]",
+        "size": "[parameters('functionAppPlanSku')]",
+        "family": "[variables('planFamily')]"
       },
-      "properties": {
-        "reserved": false
-      }
+      "kind": "[if(variables('isConsumptionPlan'), 'functionapp', 'elastic')]",
+      "properties": "[union(createObject('reserved', false()), if(variables('isPremiumPlan'), createObject('maximumElasticWorkerCount', 20), createObject()))]"
     },
     {
       "type": "Microsoft.Web/sites",
-      "apiVersion": "2024-11-01",
+      "apiVersion": "2023-12-01",
       "name": "[variables('functionAppName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -178,67 +187,7 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
         "httpsOnly": true,
-        "siteConfig": {
-          "powerShellVersion": "7.4",
-          "appSettings": [
-            {
-              "name": "AzureWebJobsStorage__accountname",
-              "value": "[variables('storageAccountName')]"
-            },
-            {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2025-01-01').keys[0].value, environment().suffixes.storage)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[toLower(variables('functionAppName'))]"
-            },
-            {
-              "name": "FUNCTIONS_EXTENSION_VERSION",
-              "value": "~4"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "powershell"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME_VERSION",
-              "value": "7.4"
-            },
-            {
-              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
-            },
-            {
-              "name": "AZURE_SUBSCRIPTION_ID",
-              "value": "[parameters('subscriptionId')]"
-            },
-            {
-              "name": "CACHE_CONTAINER",
-              "value": "[parameters('cacheContainerName')]"
-            },
-            {
-              "name": "TIMER_CRON",
-              "value": "[parameters('timerSchedule')]"
-            },
-            {
-              "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "1"
-            }
-          ],
-          "ftpsState": "Disabled",
-          "minTlsVersion": "1.2",
-          "cors": {
-            "allowedOrigins": [
-              "https://portal.azure.com",
-              "https://ms.portal.azure.com",
-              "https://functions.azure.com",
-              "https://functions-staging.azure.com",
-              "https://functions-next.azure.com"
-            ],
-            "supportCredentials": false
-          }
-        }
+        "siteConfig": "[union(createObject('powerShellVersion', '7.4', 'alwaysOn', not(variables('isConsumptionPlan')), 'functionsRuntimeScaleMonitoringEnabled', variables('isPremiumPlan'), 'appSettings', createArray(createObject('name', 'AzureWebJobsStorage__accountname', 'value', variables('storageAccountName')), createObject('name', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', 'value', format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-05-01').keys[0].value, environment().suffixes.storage)), createObject('name', 'WEBSITE_CONTENTSHARE', 'value', toLower(variables('functionAppName'))), createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'powershell'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME_VERSION', 'value', '7.4'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString), createObject('name', 'AZURE_SUBSCRIPTION_ID', 'value', parameters('subscriptionId')), createObject('name', 'CACHE_CONTAINER', 'value', parameters('cacheContainerName')), createObject('name', 'TIMER_CRON', 'value', parameters('timerSchedule')), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '1')), 'ftpsState', 'Disabled', 'minTlsVersion', '1.2', 'cors', createObject('allowedOrigins', createArray('https://portal.azure.com', 'https://ms.portal.azure.com', 'https://functions.azure.com', 'https://functions-staging.azure.com', 'https://functions-next.azure.com'), 'supportCredentials', false())), if(variables('isPremiumPlan'), createObject('preWarmedInstanceCount', 1, 'minimumElasticInstanceCount', 1, 'healthCheckPath', '/api/HealthCheck'), createObject()))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
@@ -248,7 +197,7 @@
     },
     {
       "type": "Microsoft.Web/sites/config",
-      "apiVersion": "2024-11-01",
+      "apiVersion": "2023-12-01",
       "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
       "properties": {
         "globalValidation": {
@@ -292,7 +241,7 @@
     },
     "functionAppUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-11-01').defaultHostName)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01').defaultHostName)]"
     },
     "storageAccountName": {
       "type": "string",

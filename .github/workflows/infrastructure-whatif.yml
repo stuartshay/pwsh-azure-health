@@ -17,6 +17,7 @@ permissions:
 env:
   MAX_RETRY_ATTEMPTS: 5
   RETRY_BASE_DELAY: 2
+  LOCATION: eastus
 
 jobs:
   whatif:
@@ -46,31 +47,43 @@ jobs:
           chmod +x /tmp/policy-query.sh
           echo "✅ Policy query utilities configured"
 
+      - name: Install cost estimation tools
+        shell: bash
+        run: |
+          ./scripts/ci/install-cost-tools.sh
+
       - name: Get managed identity from shared infrastructure
         id: get_identity
         shell: bash
         run: |
           echo "🔍 Retrieving managed identity from shared infrastructure..."
 
-          # Check if shared-identity-info.json exists
-          if [ ! -f "scripts/infrastructure/shared-identity-info.json" ]; then
-            echo "⚠️ Warning: scripts/infrastructure/shared-identity-info.json not found"
-            echo "The shared infrastructure may not be set up. What-if will use empty parameter."
-            echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
-            exit 0
+          # Use GitHub variable if available, otherwise fall back to local file
+          MANAGED_IDENTITY_RESOURCE_ID="${{ vars.MANAGED_IDENTITY_RESOURCE_ID }}"
+
+          if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
+            echo "ℹ️ GitHub variable MANAGED_IDENTITY_RESOURCE_ID not set, checking local file..."
+
+            if [ -f "scripts/infrastructure/shared-identity-info.json" ]; then
+              MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
+              echo "✅ Found managed identity in local file: $MANAGED_IDENTITY_RESOURCE_ID"
+            else
+              echo "⚠️ Warning: No managed identity found in GitHub variables or local file"
+              echo "The shared infrastructure may not be set up. What-if will use empty parameter."
+              echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            echo "✅ Found managed identity in GitHub variables: $MANAGED_IDENTITY_RESOURCE_ID"
           fi
 
-          # Extract resource ID from the JSON file
-          MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
-
           if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ] || [ "$MANAGED_IDENTITY_RESOURCE_ID" == "null" ]; then
-            echo "⚠️ Warning: Could not extract resourceId from shared-identity-info.json"
+            echo "⚠️ Warning: Invalid managed identity resource ID"
             echo "What-if will use empty parameter."
             echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "✅ Found managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
           echo "managed_identity_resource_id=$MANAGED_IDENTITY_RESOURCE_ID" >> "$GITHUB_OUTPUT"
 
       - name: Run What-If for Dev environment
@@ -236,6 +249,53 @@ jobs:
             echo '```'
           } >> /tmp/whatif-summary.md
 
+      - name: Estimate deployment costs for preview
+        continue-on-error: true
+        shell: bash
+        env:
+          SUMMARY_PATH: /tmp/whatif-summary.md
+        run: |
+          {
+            echo ""
+            echo "## 💰 Cost Estimates"
+            echo ""
+          } >> "$SUMMARY_PATH"
+
+          # Define the combinations of environment, sku, and resource group
+          combinations=(
+            "dev Y1 rg-azure-health-dev"
+            "dev EP1 rg-azure-health-dev"
+            "prod Y1 rg-azure-health-prod"
+            "prod EP1 rg-azure-health-prod"
+          )
+
+          tmpfiles=()
+          i=0
+          for combo in "${combinations[@]}"; do
+            read -r env sku rg <<< "$combo"
+            tmpfile="/tmp/cost-estimate-$i.md"
+            tmpfiles+=("$tmpfile")
+            ./scripts/ci/cost-estimate.sh \
+              --environment "$env" \
+              --sku "$sku" \
+              --location "$LOCATION" \
+              --subscription-id "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+              --resource-group "$rg" \
+              --managed-identity-id "${{ steps.get_identity.outputs.managed_identity_resource_id }}" \
+              --summary-path "$tmpfile" &
+            i=$((i+1))
+          done
+
+          wait
+
+          # Concatenate all temp files into the main summary file
+          for f in "${tmpfiles[@]}"; do
+            cat "$f" >> "$SUMMARY_PATH"
+          done
+
+          # Clean up temp files
+          rm -f "${tmpfiles[@]}"
+
       - name: Check Policy Compliance
         id: policy_check
         continue-on-error: true
@@ -311,6 +371,58 @@ jobs:
             echo "  --description 'Reason for exemption'"
             echo "\`\`\`"
           } >> /tmp/policy-summary.md
+
+      - name: Generate GitHub Actions Summary
+        shell: bash
+        run: |
+          echo "📊 Generating GitHub Actions summary report..."
+
+          # Read what-if summary
+          if [ -f /tmp/whatif-summary.md ]; then
+            cat /tmp/whatif-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ Could not generate what-if preview. Check workflow logs for details." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          {
+            echo ""
+            echo "---"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Read policy summary
+          if [ -f /tmp/policy-summary.md ]; then
+            cat /tmp/policy-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ Could not generate policy compliance preview. Check workflow logs for details." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          {
+            echo ""
+            echo "---"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Add SKU comparison table
+          {
+            echo "### 💵 SKU Comparison"
+            echo ""
+            echo "| Feature | Y1 (Consumption) | EP1 (Elastic Premium) |"
+            echo "|---------|------------------|------------------------|"
+            echo "| **Cost/Month** | ~\$0-20 (pay per execution) | ~\$147 (fixed) |"
+            echo "| **Always On** | ❌ No (scales to zero) | ✅ Yes |"
+            echo "| **Cold Starts** | ✅ Yes | ❌ No (pre-warmed) |"
+            echo "| **VNet Integration** | ❌ No | ✅ Ready |"
+            echo "| **Health Check** | ❌ No | ✅ /api/HealthCheck |"
+            echo "| **Max Scale** | 200 instances | 100 instances (configurable) |"
+            echo ""
+            echo "---"
+            echo ""
+            echo "💡 **Note:** This preview shows potential changes to both **dev** and **prod** environments"
+            echo "with both **Y1** and **EP1** SKU options based on the current Bicep templates."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "✅ Summary report generated"
 
       - name: Comment PR with What-If results
         uses: actions/github-script@v8

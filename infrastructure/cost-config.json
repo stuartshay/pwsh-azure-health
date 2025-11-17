@@ -56,8 +56,8 @@
           "baseCost": 0.0184,
           "unit": "per GB/month",
           "estimatedUsage": {
-            "functionApp": 1.0,
-            "description": "Estimated 1 GB storage for typical function app"
+            "functionApp": 10.0,
+            "description": "Estimated 10 GB storage for function app with cache data"
           },
           "transactions": {
             "write": 0.05,
