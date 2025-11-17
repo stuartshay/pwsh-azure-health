@@ -13,6 +13,15 @@
       "description": "Group Azure Bicep API version updates",
       "matchManagers": ["bicep"],
       "groupName": "Azure API versions"
+    },
+    {
+      "description": "Group all PowerShell module updates into a single PR",
+      "matchManagers": ["nuget"],
+      "matchFileNames": ["**/requirements.psd1"],
+      "groupName": "PowerShell modules",
+      "schedule": ["before 10am on monday"],
+      "commitMessagePrefix": "chore(deps):",
+      "commitMessageTopic": "PowerShell modules"
     }
   ]
 }
