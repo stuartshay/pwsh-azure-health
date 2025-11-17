@@ -138,35 +138,23 @@ Once local development is working:
 ### High Priority
 
 #### 1. Production Environment Setup
-**Status:** ⚠️ Not configured  
-**Current State:** Validation script shows warning - `prod` environment not configured in GitHub.
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
 
-**Action:**
-```bash
-# Create prod environment in GitHub
-gh api --method PUT -H "Accept: application/vnd.github+json" \
-  /repos/stuartshay/pwsh-azure-health/environments/prod
-```
+Production environment created in GitHub with proper federated credentials. Validation script now shows 17/17 checks passed.
 
 **Benefit:** Complete deployment pipeline, better separation of dev/prod environments.
 
 ---
 
 #### 2. Automated Pricing Freshness Check
-**Status:** 💭 Planned  
-**Current State:** `infrastructure/cost-config.json` has manual pricing that could become stale.
+**Status:** ✅ Completed  
+**Implemented:** November 17, 2025
 
-**Action:** Add to `.github/workflows/lint-and-test.yml`:
-```yaml
-- name: Check pricing freshness
-  run: |
-    LAST_UPDATED=$(jq -r '.lastUpdated' infrastructure/cost-config.json)
-    AGE_DAYS=$(( ($(date +%s) - $(date -d "$LAST_UPDATED" +%s)) / 86400 ))
-    if [ $AGE_DAYS -gt 180 ]; then
-      echo "⚠️  Pricing data is $AGE_DAYS days old. Consider updating."
-      echo "Visit docs/COST_ESTIMATION.md for update instructions."
-    fi
-```
+Added automated check in `.github/workflows/lint-and-test.yml` that validates pricing data freshness:
+- Checks `infrastructure/cost-config.json` lastUpdated date
+- Warns if pricing data is older than 90 days
+- Provides actionable update instructions in workflow output
 
 **Benefit:** Ensures cost estimates remain accurate over time.
 
