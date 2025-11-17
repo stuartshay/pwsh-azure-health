@@ -74,7 +74,7 @@ classification: public
 Use **two trailing spaces** for explicit line breaks in markdown:
 
 ```markdown
-This is a line.  
+This is a line.
 This is the next line.
 ```
 
