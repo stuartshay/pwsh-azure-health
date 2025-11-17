@@ -231,8 +231,33 @@ else
   print_info "Manually verify secrets at: https://github.com/$GITHUB_ORG/$GITHUB_REPO/settings/secrets/actions"
 fi
 
+# Check GitHub Variables
+print_header "7. Checking GitHub Variables"
+
+if [ "$GH_CLI_AVAILABLE" = true ] && gh auth status &> /dev/null; then
+  VARIABLES=$(gh variable list --repo "$GITHUB_ORG/$GITHUB_REPO" 2>/dev/null || echo "")
+
+  if [ -n "$VARIABLES" ]; then
+    if echo "$VARIABLES" | grep -q "MANAGED_IDENTITY_RESOURCE_ID"; then
+      check_pass "GitHub variable 'MANAGED_IDENTITY_RESOURCE_ID' is configured"
+      MANAGED_IDENTITY_ID=$(gh variable get MANAGED_IDENTITY_RESOURCE_ID --repo "$GITHUB_ORG/$GITHUB_REPO" 2>/dev/null)
+      if [ -n "$MANAGED_IDENTITY_ID" ]; then
+        echo "   Resource ID: $MANAGED_IDENTITY_ID"
+      fi
+    else
+      check_warn "GitHub variable 'MANAGED_IDENTITY_RESOURCE_ID' not set (workflows will fall back to local file)"
+      print_info "To set: gh variable set MANAGED_IDENTITY_RESOURCE_ID --body '<resource-id>'"
+    fi
+  else
+    check_warn "Could not retrieve GitHub variables list"
+  fi
+else
+  check_warn "Cannot check GitHub variables (GitHub CLI not available or not authenticated)"
+  print_info "Manually verify variables at: https://github.com/$GITHUB_ORG/$GITHUB_REPO/settings/variables/actions"
+fi
+
 # Check GitHub Environments
-print_header "7. Checking GitHub Environments (Optional)"
+print_header "8. Checking GitHub Environments (Optional)"
 
 if [ "$GH_CLI_AVAILABLE" = true ] && gh auth status &> /dev/null; then
   for env in "dev" "prod"; do
