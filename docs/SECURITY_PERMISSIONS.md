@@ -1,12 +1,12 @@
 # Azure Permissions & Security Architecture
 
-**Document Version:** 1.0
-**Last Updated:** November 4, 2025
+**Document Version:** 2.0
+**Last Updated:** November 17, 2025
 **Security Classification:** Internal
 
 ## Executive Summary
 
-This document provides a comprehensive overview of the Azure permissions, security controls, and identity architecture for the PowerShell Azure Health Functions application. The implementation follows enterprise security best practices with a **least-privilege** security model using **System-Assigned Managed Identity** and **Azure RBAC**.
+This document provides a comprehensive overview of the Azure permissions, security controls, and identity architecture for the PowerShell Azure Health Functions application. The implementation follows enterprise security best practices with a **least-privilege** security model using **User-Assigned Managed Identity** and **Azure RBAC**.
 
 ### Security Posture
 
@@ -193,27 +193,43 @@ module roleAssignments 'modules/roleAssignments.bicep' = {
 
 ### 2.1 Identity Type
 
-**Type:** System-Assigned Managed Identity
-**Configuration:** `infrastructure/main.bicep` (lines 119-121)
+**Type:** User-Assigned Managed Identity (Shared Infrastructure)
+**Configuration:** `infrastructure/main.bicep` (lines 141-147)
 
 ```bicep
-resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
+// Reference to User-Assigned Managed Identity (must already exist in shared RG)
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' existing = {
+  name: last(split(managedIdentityResourceId, '/'))
+  scope: resourceGroup(split(managedIdentityResourceId, '/')[2], split(managedIdentityResourceId, '/')[4])
+}
+
+resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentity.id}': {}
+    }
   }
 }
 ```
 
-### 2.2 Why System-Assigned?
+### 2.2 Why User-Assigned?
 
 | Feature | System-Assigned | User-Assigned | Our Choice |
 |---------|----------------|---------------|------------|
-| **Lifecycle** | Tied to resource | Independent | ✅ System |
-| **Sharing** | Single resource | Multiple resources | ✅ System |
-| **Complexity** | Low | Medium | ✅ System |
-| **Use Case** | Single-purpose functions | Multi-resource scenarios | ✅ System |
+| **Lifecycle** | Tied to resource | Independent | ✅ User |
+| **Sharing** | Single resource | Multiple resources | ✅ User |
+| **Complexity** | Low | Medium | ✅ User |
+| **Use Case** | Single-purpose functions | Multi-resource scenarios | ✅ User |
+| **Reusability** | Cannot reuse | Reusable across environments | ✅ User |
 
-**Rationale:** Since the Function App is the only resource requiring these permissions, a System-Assigned identity provides the simplest lifecycle management.
+**Rationale:** User-Assigned Managed Identity is provisioned once in a shared resource group and referenced by multiple Function App deployments (dev, staging, prod). This provides:
+- **Centralized identity management**: Single identity for all environments
+- **Simplified role assignments**: Assign RBAC roles once, not per deployment
+- **Better lifecycle management**: Identity persists even if Function Apps are deleted/recreated
+- **Deployment flexibility**: Easier to manage federated credentials for CI/CD
+
+**Setup Documentation:** See [`SHARED_INFRASTRUCTURE.md`](SHARED_INFRASTRUCTURE.md) for provisioning the shared managed identity.
 
 ### 2.3 Identity Authentication Flow
 
@@ -357,7 +373,7 @@ Provided by: **Storage Blob Data Contributor** role at storage account scope
 **Environment Variable:** `AzureWebJobsStorage__accountname`
 
 ```bicep
-// infrastructure/main.bicep:127
+// infrastructure/main.bicep (app settings section)
 {
   name: 'AzureWebJobsStorage__accountname'
   value: storageAccount.name
@@ -455,8 +471,8 @@ Application Insights uses **connection strings** for telemetry **ingestion** (wr
 #### HTTPS Enforcement
 
 ```bicep
-// infrastructure/main.bicep:124
-resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
+// infrastructure/main.bicep
+resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   properties: {
     httpsOnly: true  // ✅ Enforce HTTPS
   }
@@ -591,13 +607,20 @@ Allows Azure Functions to use **function keys** for API authentication instead o
 
 ```powershell
 @{
-    'Az.Accounts'      = '3.*'  # Latest 3.x version
-    'Az.Storage'       = '5.*'  # Latest 5.x version
-    'Az.ResourceGraph' = '1.*'  # Latest 1.x version
+    # Pinned to specific versions for reproducible builds
+    'Az.Accounts'      = '5.3.0'
+    'Az.Storage'       = '9.3.0'
+    'Az.ResourceGraph' = '1.2.1'
 }
 ```
 
-**Automatic Updates:** Azure Functions runtime manages module updates within version ranges.
+**Dependency Management:**
+- **Version pinning**: Exact versions specified to prevent breaking changes
+- **Renovate automation**: Automated dependency updates via grouped pull requests
+- **Development dependencies**: Additional modules in root `requirements.psd1` (11 modules total)
+- **Runtime dependencies**: Minimal subset in `src/requirements.psd1` (3 modules)
+
+**Update Process:** Dependencies are updated via Renovate bot, which creates weekly PRs with grouped module updates for review and testing before merging.
 
 #### Error Handling
 
@@ -630,32 +653,57 @@ Before deploying to a new environment:
 
 ### 5.2 Deployment Command
 
+**Prerequisites:**
+1. User-Assigned Managed Identity must exist in shared resource group
+2. Identity must have Reader and Monitoring Reader roles at subscription scope
+3. Get the full resource ID of the managed identity
+
 **Bicep Deployment:**
 ```powershell
 # From scripts/infrastructure/
-./deploy-bicep.ps1 -Environment dev
+./deploy-bicep.ps1 -Environment dev -ManagedIdentityResourceId "/subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}"
 ```
 
 **What Happens:**
-1. Deploy storage account
-2. Deploy Application Insights
-3. Deploy Function App with System-Assigned MSI
-4. Assign **Reader** role (subscription scope)
-5. Assign **Monitoring Reader** role (subscription scope)
-6. Assign **Storage Blob Data Contributor** role (storage account scope)
+1. Reference existing User-Assigned Managed Identity from shared resource group
+2. Deploy storage account
+3. Deploy Application Insights
+4. Deploy Function App with User-Assigned Managed Identity
+5. Assign **Storage Blob Data Contributor** role (storage account scope only)
+
+**Note:** Reader and Monitoring Reader roles are assigned once to the shared identity, not during each deployment. See [`SHARED_INFRASTRUCTURE.md`](SHARED_INFRASTRUCTURE.md) for setup.
 
 ### 5.3 Post-Deployment Verification
 
 #### Verify Managed Identity
 
+**Check Function App identity configuration:**
 ```bash
 az functionapp identity show \
   --name azurehealth-func-dev-<suffix> \
-  --resource-group rg-azure-health-dev \
-  --query principalId -o tsv
+  --resource-group rg-azure-health-dev
 ```
 
-Expected: `<guid>` (e.g., `8f814002-d39d-480c-a7cd-eb92607fdd62`)
+Expected:
+```json
+{
+  "type": "UserAssigned",
+  "userAssignedIdentities": {
+    "/subscriptions/{subId}/.../userAssignedIdentities/{name}": {
+      "clientId": "<guid>",
+      "principalId": "<guid>"
+    }
+  }
+}
+```
+
+**Get shared identity principal ID:**
+```bash
+az identity show \
+  --name <identity-name> \
+  --resource-group <shared-resource-group> \
+  --query principalId -o tsv
+```
 
 #### Verify Role Assignments
 
@@ -889,11 +937,11 @@ az functionapp config appsettings set \
 
 #### "ManagedIdentityCredential authentication failed"
 
-**Symptom:** Function fails to authenticate with MSI.
+**Symptom:** Function fails to authenticate with User-Assigned Managed Identity.
 
 **Diagnosis:**
 ```bash
-# Verify MSI is enabled
+# Verify User-Assigned identity is configured
 az functionapp identity show \
   --name <function-app-name> \
   --resource-group <resource-group>
@@ -902,18 +950,23 @@ az functionapp identity show \
 Expected:
 ```json
 {
-  "principalId": "<guid>",
-  "tenantId": "<guid>",
-  "type": "SystemAssigned"
+  "type": "UserAssigned",
+  "userAssignedIdentities": {
+    "/subscriptions/{subId}/.../userAssignedIdentities/{name}": {
+      "clientId": "<guid>",
+      "principalId": "<guid>"
+    }
+  }
 }
 ```
 
 **Resolution:**
 ```bash
-# Enable system-assigned identity
+# Assign user-assigned identity to function app
 az functionapp identity assign \
   --name <function-app-name> \
-  --resource-group <resource-group>
+  --resource-group <resource-group> \
+  --identities "/subscriptions/{subId}/resourcegroups/{rgName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}"
 ```
 
 #### "The credentials in ServicePrincipalSecret are invalid"
@@ -1000,6 +1053,7 @@ az graph query -q "ServiceHealthResources | where type =~ 'Microsoft.ResourceHea
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | 2025-11-17 | System | Updated for User-Assigned Managed Identity architecture, pinned module versions, Renovate automation, latest Bicep API versions (Storage: 2025-06-01, Web: 2025-03-01, ManagedIdentity: 2024-11-30) |
 | 1.0 | 2025-11-04 | System | Initial comprehensive security documentation |
 
 ---
