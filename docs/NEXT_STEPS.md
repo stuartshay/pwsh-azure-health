@@ -138,7 +138,7 @@ Once local development is working:
 ### High Priority
 
 #### 1. Production Environment Setup
-**Status:** ✅ Completed  
+**Status:** ✅ Completed
 **Implemented:** November 17, 2025
 
 Production environment created in GitHub with proper federated credentials. Validation script now shows 17/17 checks passed.
@@ -148,7 +148,7 @@ Production environment created in GitHub with proper federated credentials. Vali
 ---
 
 #### 2. Automated Pricing Freshness Check
-**Status:** ✅ Completed  
+**Status:** ✅ Completed
 **Implemented:** November 17, 2025
 
 Added automated check in `.github/workflows/lint-and-test.yml` that validates pricing data freshness:
@@ -161,7 +161,7 @@ Added automated check in `.github/workflows/lint-and-test.yml` that validates pr
 ---
 
 #### 3. Enhanced Error Handling in PowerShell Functions
-**Status:** 💭 Enhancement  
+**Status:** 💭 Enhancement
 **Current State:** Some functions could benefit from more detailed error handling.
 
 **Action:** Add comprehensive error handling pattern:
@@ -192,7 +192,7 @@ function Invoke-SafeOperation {
 ---
 
 #### 4. Integration Tests for GitHub Actions Workflows
-**Status:** 💭 Planned  
+**Status:** 💭 Planned
 **Current State:** 143 BATS tests, but no end-to-end workflow testing.
 
 **Action:** Add integration tests in `tests/workflows/integration/`:
@@ -209,7 +209,7 @@ function Invoke-SafeOperation {
 ---
 
 #### 5. Monitoring Dashboard with Application Insights
-**Status:** 💭 Planned  
+**Status:** 💭 Planned
 **Current State:** Application Insights is deployed but no pre-built dashboards.
 
 **Action:** Create an Application Insights workbook for monitoring:
@@ -226,23 +226,27 @@ function Invoke-SafeOperation {
 ### Medium Priority
 
 #### 6. Dependency Version Pinning
-**Status:** ✅ Completed  
+**Status:** ✅ Completed
 **Implemented:** November 17, 2025
 
-Pinned exact versions for all PowerShell modules in both requirements files:
-- **Root requirements.psd1**: Development dependencies (9 modules pinned)
+Pinned exact versions for all PowerShell modules and Azure Bicep API versions:
+- **Root requirements.psd1**: Development dependencies (11 modules pinned)
   - Az.Accounts: 5.3.0, Az.Storage: 9.3.0, Az.ResourceGraph: 1.2.1
   - Az.Resources: 8.1.1, Az.Monitor: 6.0.3, Az.Functions: 4.2.1, Az.Websites: 3.4.2
   - Pester: 5.7.1, PSScriptAnalyzer: 1.24.0, PSRule: 2.9.0, PSRule.Rules.Azure: 1.39.1
 - **src/requirements.psd1**: Azure Functions runtime (3 modules pinned)
   - Az.Accounts: 5.3.0, Az.Storage: 9.3.0, Az.ResourceGraph: 1.2.1
+- **infrastructure/main.bicep**: Azure API versions updated to latest stable
+  - Storage: 2023-05-01 → 2025-06-01, Web: 2023-12-01 → 2025-03-01
+  - Managed Identity: 2023-01-31 → 2024-11-30
+- **Renovate configured**: Automated dependency updates for PowerShell modules grouped into single PRs
 
-**Benefit:** Prevents breaking changes from upstream module updates, ensures reproducible builds.
+**Benefit:** Prevents breaking changes from upstream updates, ensures reproducible builds and deployments.
 
 ---
 
 #### 7. Cache Invalidation Strategy
-**Status:** 💭 Enhancement  
+**Status:** 💭 Enhancement
 **Current State:** Timer-based cache updates (every 15 minutes).
 
 **Action:** Add manual cache invalidation endpoint:
@@ -259,7 +263,7 @@ function InvalidateCache {
 ---
 
 #### 8. Regional Deployment Support
-**Status:** 💭 Future Enhancement  
+**Status:** 💭 Future Enhancement
 **Current State:** Single region deployment (East US).
 
 **Action:** Add multi-region support for high availability:
@@ -272,7 +276,7 @@ function InvalidateCache {
 ---
 
 #### 9. Pre-commit Hook for Bicep Validation
-**Status:** ✅ Completed  
+**Status:** ✅ Completed
 **Implemented:** November 17, 2025
 
 Added Bicep linting to pre-commit hooks in `.pre-commit-config.yaml`:
@@ -286,7 +290,7 @@ Added Bicep linting to pre-commit hooks in `.pre-commit-config.yaml`:
 ---
 
 #### 10. Documentation Versioning
-**Status:** 💭 Enhancement  
+**Status:** 💭 Enhancement
 **Current State:** Documentation is in markdown but no version tracking.
 
 **Action:** Add document versions and last-updated dates:
