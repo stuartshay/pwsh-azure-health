@@ -16,7 +16,6 @@
     },
     {
       "description": "Group all PowerShell module updates into a single PR",
-      "matchManagers": ["nuget"],
       "matchFileNames": ["**/requirements.psd1"],
       "groupName": "PowerShell modules",
       "schedule": ["before 10am on monday"],

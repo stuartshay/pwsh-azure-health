@@ -76,8 +76,8 @@ jobs:
           LAST_UPDATED=$(jq -r '.lastUpdated' infrastructure/cost-config.json)
           echo "Last updated: $LAST_UPDATED"
 
-          # Calculate age in days
-          LAST_UPDATED_EPOCH=$(date -d "$LAST_UPDATED" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$LAST_UPDATED" +%s)
+          # Calculate age in days (portable approach for Ubuntu runners)
+          LAST_UPDATED_EPOCH=$(date -d "$LAST_UPDATED" +%s 2>/dev/null || date -ud "$LAST_UPDATED" +%s 2>/dev/null || echo "0")
           CURRENT_EPOCH=$(date +%s)
           AGE_DAYS=$(( (CURRENT_EPOCH - LAST_UPDATED_EPOCH) / 86400 ))
 
