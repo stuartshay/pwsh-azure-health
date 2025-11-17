@@ -89,7 +89,21 @@ log "PowerShell estimator exit code: $PWSH_EXIT_CODE"
 echo "$PWSH_COST_OUTPUT"
 
 # Extract the last JSON object from the output (for machine-readable values)
-PWSH_JSON=$(echo "$PWSH_COST_OUTPUT" | awk 'BEGIN{found=0;json=""} /^\s*{/ {found=1} found {json=json $0; if ($0 ~ /^\s*}/) {result=json; json=""; found=0}} END{print result}' || echo '{}')
+# Use Python to reliably extract JSON from mixed text output
+PWSH_JSON=$(python3 -c '
+import json, sys, re
+text = sys.stdin.read()
+# Find the last complete JSON object in the output
+matches = list(re.finditer(r"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}", text, re.DOTALL))
+if matches:
+    try:
+        obj = json.loads(matches[-1].group(0))
+        print(json.dumps(obj))
+    except:
+        print("{}")
+else:
+    print("{}")
+' <<< "$PWSH_COST_OUTPUT" || echo '{}')
 
 PWSH_TOTAL_COST="N/A"
 PWSH_FUNCTION_COST="N/A"

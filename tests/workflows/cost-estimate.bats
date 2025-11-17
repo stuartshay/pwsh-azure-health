@@ -24,7 +24,57 @@ teardown() {
   rm -rf "$TEST_TEMP_DIR"
 }
 
-# Test: jq JSON extraction from PowerShell output
+# Test: Python JSON extraction from PowerShell output with mixed text
+@test "extracts JSON from PowerShell output with profile loading text" {
+  # Simulate PowerShell output with profile loading messages and JSON
+  pwsh_output='🌐 Loading system profile.
+👤 Loading personal profile.
+PowerShell profile loaded with Git and Azure subscription display
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║            Azure Cost Estimator - PowerShell Edition v1.0.0                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📄 JSON Output:
+{
+  "Configuration": {
+    "Environment": "dev",
+    "Sku": "EP1"
+  },
+  "Costs": {
+    "Total": {
+      "MonthlyCost": 147.31
+    },
+    "FunctionAppPlan": {
+      "MonthlyCost": 147.29
+    }
+  }
+}
+✅ Cost estimation completed successfully!'
+
+  run bash -c "
+    PWSH_JSON=\$(python3 -c '
+import json, sys, re
+text = sys.stdin.read()
+matches = list(re.finditer(r\"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}\", text, re.DOTALL))
+if matches:
+    try:
+        obj = json.loads(matches[-1].group(0))
+        print(json.dumps(obj))
+    except:
+        print(\"{}\")
+else:
+    print(\"{}\")
+' <<< '$pwsh_output' || echo '{}')
+
+    echo \"\$PWSH_JSON\" | jq -r '.Costs.Total.MonthlyCost'
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "147.31" ]
+}
+
+# Test: jq extracts last JSON object from PowerShell output
 @test "jq extracts last JSON object from PowerShell output" {
   # Simulate PowerShell output with multiple JSON objects
   pwsh_output='{"timestamp":"2025-11-16T10:00:00","status":"starting"}
@@ -376,6 +426,38 @@ EOF
 
   [ "$status" -eq 0 ]
   [ "$output" = "10.33" ]
+}
+
+# Test: Cost extraction should not return N/A for valid JSON
+@test "cost extraction returns numeric values not N/A from valid JSON" {
+  pwsh_json='{
+    "Costs": {
+      "Total": {"MonthlyCost": 147.31},
+      "FunctionAppPlan": {"MonthlyCost": 147.29},
+      "Storage": {"MonthlyCost": 0.02},
+      "ApplicationInsights": {"MonthlyCost": 0.0}
+    }
+  }'
+
+  run bash -c "
+    TOTAL=\$(echo '$pwsh_json' | jq -r '.Costs.Total.MonthlyCost' 2>/dev/null || echo 'N/A')
+    FUNCTION=\$(echo '$pwsh_json' | jq -r '.Costs.FunctionAppPlan.MonthlyCost' 2>/dev/null || echo 'N/A')
+    STORAGE=\$(echo '$pwsh_json' | jq -r '.Costs.Storage.MonthlyCost' 2>/dev/null || echo 'N/A')
+    AI=\$(echo '$pwsh_json' | jq -r '.Costs.ApplicationInsights.MonthlyCost' 2>/dev/null || echo 'N/A')
+
+    # All values should be numeric, not N/A
+    if [ \"\$TOTAL\" != 'N/A' ] && [ \"\$FUNCTION\" != 'N/A' ] && [ \"\$STORAGE\" != 'N/A' ] && [ \"\$AI\" != 'N/A' ]; then
+      echo \"SUCCESS: \$TOTAL \$FUNCTION \$STORAGE \$AI\"
+    else
+      echo \"FAILED: Got N/A values\"
+      exit 1
+    fi
+  "
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SUCCESS"* ]]
+  [[ "$output" == *"147.31"* ]]
+  [[ "$output" == *"147.29"* ]]
 }
 
 # Test: Handles multiple inline parameters for ACE
