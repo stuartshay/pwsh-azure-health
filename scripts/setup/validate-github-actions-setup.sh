@@ -223,15 +223,6 @@ if [ "$GH_CLI_AVAILABLE" = true ] && gh auth status &> /dev/null; then
         check_fail "GitHub secret '$secret' is missing"
       fi
     done
-
-    # Check optional secrets for CI workflow
-    for secret in "AZURE_RESOURCE_GROUP" "FUNCTION_APP_NAME"; do
-      if echo "$SECRETS" | grep -q "$secret"; then
-        check_pass "GitHub secret '$secret' is configured (for ci.yml)"
-      else
-        check_warn "GitHub secret '$secret' is missing (required for ci.yml deployment)"
-      fi
-    done
   else
     check_warn "Could not retrieve GitHub secrets list"
   fi

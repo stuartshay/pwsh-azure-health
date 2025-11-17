@@ -161,9 +161,21 @@ The repository includes GitHub Actions workflows for infrastructure deployment a
    - Posts what-if comparison as PR comment
    - Shows changes for both dev and prod environments
 
-#### CI/CD Workflow
+#### Function Deployment Workflow
 
-The `ci.yml` workflow runs PSScriptAnalyzer, Pester unit tests, and deploys the function code using OIDC.
+**`function-deploy.yml`** - Deploy function code
+- Automatically triggered on push to `master` branch (when `src/**` changes)
+- Can be manually triggered via workflow dispatch
+- Deploys PowerShell function code to existing infrastructure
+
+#### Linting and Testing Workflow
+
+**`lint-and-test.yml`** - Run quality checks
+- Automatically triggered on PRs to `main` or `develop`
+- Runs PSScriptAnalyzer linting
+- Executes Pester unit tests
+- Validates YAML files
+- Security scanning
 
 #### Setup GitHub Secrets for Azure OIDC Authentication
 
@@ -263,8 +275,6 @@ Add the following secrets in your GitHub repository settings (Settings → Secre
 | `AZURE_CLIENT_ID` | `<APP_ID from step 1>` | Azure AD application (client) ID |
 | `AZURE_TENANT_ID` | `<TENANT_ID from step 2>` | Azure AD tenant ID |
 | `AZURE_SUBSCRIPTION_ID` | `<SUBSCRIPTION_ID from step 3>` | Target Azure subscription ID |
-| `AZURE_RESOURCE_GROUP` | `rg-azure-health-prod` | Resource group for prod deployments (for ci.yml) |
-| `FUNCTION_APP_NAME` | `func-azure-health-prod` | Function app name (for ci.yml) |
 
 ```bash
 # Display values for GitHub Secrets configuration
@@ -283,7 +293,8 @@ Once configured, you can:
 - **Deploy infrastructure**: Go to Actions → Deploy Infrastructure → Run workflow → Select environment
 - **Destroy infrastructure**: Go to Actions → Destroy Infrastructure → Run workflow → Select environment
 - **Preview changes**: Create a PR modifying files in `infrastructure/` to see what-if preview
-- **Deploy code**: Push to `master` branch to trigger linting, testing, and code deployment
+- **Deploy function code**: Push to `master` branch (changes in `src/**`) or manually trigger "Deploy Function App"
+- **Run tests**: Create a PR to `main` or `develop` to trigger lint-and-test workflow
 
 ##### Security Notes
 

@@ -46,21 +46,20 @@ After setup is verified:
 - [ ] Wait for deployment to complete
 - [ ] Note the Function App name from the workflow output
 
-## Configure CI/CD Secrets
+## Test Function Deployment
 
-For the CI workflow to deploy code:
+After infrastructure is deployed, test function code deployment:
 
-- [ ] Add `AZURE_RESOURCE_GROUP` secret (e.g., `rg-azure-health-prod`)
-- [ ] Add `FUNCTION_APP_NAME` secret (from infrastructure deployment)
+- [ ] Push changes to `src/` directory on `master` branch
+- [ ] Or manually trigger "Deploy Function App" workflow from Actions tab
+- [ ] Verify deployment completes successfully
 
 ## Test Full Workflow
 
-- [ ] Push a change to the `master` branch
-- [ ] Verify the CI workflow runs:
-  - [ ] Linting passes
-  - [ ] Tests pass
-  - [ ] Deployment succeeds
-- [ ] Test the deployed function
+- [ ] Push a change to `src/` on the `master` branch
+- [ ] Verify the "Deploy Function App" workflow runs automatically
+- [ ] Or manually trigger deployment from Actions tab
+- [ ] Test the deployed function endpoint
 
 ## Troubleshooting
 

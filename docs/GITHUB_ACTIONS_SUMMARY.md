@@ -70,8 +70,6 @@ After running the setup, add these secrets to your GitHub repository at:
 | `AZURE_CLIENT_ID` | Azure AD application (client) ID |
 | `AZURE_TENANT_ID` | Azure AD tenant ID |
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
-| `AZURE_RESOURCE_GROUP` | Resource group for prod deployments (for ci.yml) |
-| `FUNCTION_APP_NAME` | Function App name (for ci.yml) |
 
 ## Supported Workflows
 
@@ -80,15 +78,16 @@ Once configured, these workflows will work automatically:
 1. **infrastructure-whatif.yml** - Preview infrastructure changes on PRs
 2. **infrastructure-deploy.yml** - Deploy infrastructure (manual trigger)
 3. **infrastructure-destroy.yml** - Destroy infrastructure (manual trigger)
-4. **ci.yml** - Continuous integration with deployment to prod
+4. **function-deploy.yml** - Deploy function code (auto on master, or manual trigger)
+5. **lint-and-test.yml** - Run linting and tests on PRs
 
 ## Security Benefits
 
-✅ **No client secrets** - Uses OIDC federated credentials  
-✅ **Short-lived tokens** - Tokens are valid only during workflow execution  
-✅ **Least privilege** - Only Contributor role, scoped appropriately  
-✅ **Audit trail** - All actions logged in Azure Activity Log  
-✅ **No credential rotation** - Federated credentials don't expire  
+✅ **No client secrets** - Uses OIDC federated credentials
+✅ **Short-lived tokens** - Tokens are valid only during workflow execution
+✅ **Least privilege** - Only Contributor role, scoped appropriately
+✅ **Audit trail** - All actions logged in Azure Activity Log
+✅ **No credential rotation** - Federated credentials don't expire
 
 ## Testing Your Setup
 
@@ -180,5 +179,5 @@ For issues or questions:
 
 ---
 
-**Last Updated:** November 2025  
+**Last Updated:** November 2025
 **Version:** 1.0

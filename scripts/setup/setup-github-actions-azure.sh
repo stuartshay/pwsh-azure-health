@@ -317,13 +317,6 @@ printf "│ %-27s │ %-40s │\n" "AZURE_TENANT_ID" "$TENANT_ID"
 printf "│ %-27s │ %-40s │\n" "AZURE_SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 echo "└─────────────────────────────┴──────────────────────────────────────────┘"
 echo ""
-echo "For the ci.yml workflow, also add (after infrastructure is deployed):"
-echo ""
-echo "┌─────────────────────────────┬──────────────────────────────────────────┐"
-printf "│ %-27s │ %-40s │\n" "AZURE_RESOURCE_GROUP" "rg-azure-health-prod"
-printf "│ %-27s │ %-40s │\n" "FUNCTION_APP_NAME" "<your-function-app-name>"
-echo "└─────────────────────────────┴──────────────────────────────────────────┘"
-echo ""
 
 # Check if GitHub CLI is available
 if command -v gh &> /dev/null; then
@@ -397,8 +390,6 @@ GitHub Secrets (add these to your repository):
   AZURE_CLIENT_ID: $APP_ID
   AZURE_TENANT_ID: $TENANT_ID
   AZURE_SUBSCRIPTION_ID: $SUBSCRIPTION_ID
-  AZURE_RESOURCE_GROUP: rg-azure-health-prod (for ci.yml)
-  FUNCTION_APP_NAME: <your-function-app-name> (for ci.yml)
 
 Secrets URL: https://github.com/$GITHUB_ORG/$GITHUB_REPO/settings/secrets/actions
 
