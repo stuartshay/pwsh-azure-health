@@ -577,15 +577,15 @@ Allows Azure Functions to use **function keys** for API authentication instead o
 
 #### Encryption in Transit
 
-✅ **TLS 1.2** enforced on all services
-✅ **HTTPS-only** for all endpoints
+✅ **TLS 1.2** enforced on all services  
+✅ **HTTPS-only** for all endpoints  
 ✅ **Secure storage connections** via HTTPS
 
 #### No Secrets in Code
 
-✅ **Zero hardcoded credentials**
-✅ **Managed Identity** for authentication
-✅ **Environment variables** for configuration
+✅ **Zero hardcoded credentials**  
+✅ **Managed Identity** for authentication  
+✅ **Environment variables** for configuration  
 ✅ **No connection strings** in source control
 
 **Configuration:** `src/local.settings.json.template`
@@ -732,10 +732,8 @@ az role assignment list \
 
 **Expected Logs:**
 ```
-✅ INFORMATION: Authenticating with Managed Identity...
-✅ INFORMATION: Retrieved X event(s) from Azure Resource Graph
-✅ INFORMATION: Successfully cached X new Service Health event(s)
-```
+✅ INFORMATION: Authenticating with Managed Identity...  
+✅ INFORMATION: Retrieved X event(s) from Azure Resource Graph  
 
 ### 5.4 Troubleshooting Deployment Issues
 
@@ -830,14 +828,12 @@ AzureActivity
 ### 6.3 Security Center Recommendations
 
 **Enable Azure Defender for:**
-- ✅ App Service (function apps)
-- ✅ Storage
-- ✅ Azure Resource Manager
+- ✅ App Service (function apps)  
+- ✅ Storage  
 
 **Regular Reviews:**
-- Quarterly RBAC audit
-- Monthly Security Center review
-- Weekly Application Insights error logs
+- Quarterly RBAC audit  
+- Monthly Security Center review  
 
 ---
 
@@ -878,9 +874,9 @@ Some Azure Policies may flag Easy Auth with excluded paths as non-compliant. Cre
 
 This architecture supports compliance with:
 
-- ✅ **NIST 800-53** - AC-2 (Account Management), AC-6 (Least Privilege)
-- ✅ **CIS Azure Foundations** - Section 8 (AppService)
-- ✅ **ISO 27001** - A.9.2.3 (Management of privileged access rights)
+- ✅ **NIST 800-53** - AC-2 (Account Management), AC-6 (Least Privilege)  
+- ✅ **CIS Azure Foundations** - Section 8 (AppService)  
+- ✅ **ISO 27001** - A.9.2.3 (Management of privileged access rights)  
 - ✅ **SOC 2** - CC6.3 (Logical and physical access controls)
 
 ---
