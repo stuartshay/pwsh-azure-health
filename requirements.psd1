@@ -9,21 +9,22 @@
 #
 @{
     # Core Azure modules (required for runtime and development)
-    'Az.Accounts'        = @{ MinimumVersion = '3.0.0' }
-    'Az.Storage'         = @{ MinimumVersion = '7.0.0' }
-    'Az.ResourceGraph'   = @{ MinimumVersion = '1.0.0' }
+    # Pinned to specific versions for reproducible builds
+    'Az.Accounts'        = '5.3.0'
+    'Az.Storage'         = '9.3.0'
+    'Az.ResourceGraph'   = '1.2.1'
 
     # Additional Azure modules for development and infrastructure
-    'Az.Resources'       = @{ MinimumVersion = '7.0.0' }
-    'Az.Monitor'         = @{ MinimumVersion = '5.0.0' }
-    'Az.Functions'       = @{ MinimumVersion = '4.0.0' }
-    'Az.Websites'        = @{ MinimumVersion = '3.0.0' }
+    'Az.Resources'       = '8.1.1'
+    'Az.Monitor'         = '6.0.3'
+    'Az.Functions'       = '4.2.1'
+    'Az.Websites'        = '3.4.2'
 
     # Testing and code quality modules
-    'Pester'             = @{ MinimumVersion = '5.0.0'; MaximumVersion = '5.99.99' }
-    'PSScriptAnalyzer'   = @{ MinimumVersion = '1.23.0'; MaximumVersion = '1.99.99' }
-    'PSRule'             = @{ MinimumVersion = '2.0.0' }
-    'PSRule.Rules.Azure' = @{ MinimumVersion = '1.0.0' }
+    'Pester'             = '5.7.1'
+    'PSScriptAnalyzer'   = '1.24.0'
+    'PSRule'             = '2.9.0'
+    'PSRule.Rules.Azure' = '1.39.1'
 
     # Optional: Helpful development modules
     # 'PowerShellGet'   = @{ Version = '3.*' }
