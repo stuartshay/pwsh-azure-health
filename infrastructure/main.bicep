@@ -60,7 +60,7 @@ var commonTags = union(resourceGroup().tags, {
 })
 
 // Storage Account for Function App
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-06-01' = {
   name: storageAccountName
   location: location
   tags: commonTags
@@ -87,12 +87,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 }
 
 // Blob service and container for cache
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-06-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-resource cacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+resource cacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-06-01' = {
   parent: blobService
   name: cacheContainerName
   properties: {
@@ -115,7 +115,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // App Service Plan (Dynamic SKU: Consumption or Premium)
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2025-03-01' = {
   name: appServicePlanName
   location: location
   tags: union(commonTags, {
@@ -138,13 +138,13 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
 }
 
 // Reference to User-Assigned Managed Identity (must already exist in shared RG)
-resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' existing = {
   name: last(split(managedIdentityResourceId, '/'))
   scope: resourceGroup(split(managedIdentityResourceId, '/')[2], split(managedIdentityResourceId, '/')[4])
 }
 
 // Function App
-resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   name: functionAppName
   location: location
   tags: commonTags
@@ -236,7 +236,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 
 // Enable Easy Auth / Microsoft Entra ID authentication (required by Azure Policy)
 // Excludes API endpoints to allow function key authentication while keeping Easy Auth enabled
-resource functionAppAuthConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+resource functionAppAuthConfig 'Microsoft.Web/sites/config@2025-03-01' = {
   name: 'authsettingsV2'
   parent: functionApp
   properties: {
