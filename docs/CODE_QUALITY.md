@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # Code Quality and CI/CD
 
 This document describes the automated quality checks and continuous integration setup for the Azure Health Monitoring Functions project.

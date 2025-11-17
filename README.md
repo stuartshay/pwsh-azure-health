@@ -1,3 +1,8 @@
+---
+version: 2.0.0
+last-updated: 2025-11-17
+---
+
 # Azure Health Monitoring Functions (PowerShell)
 
 [![Deploy Infrastructure](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/infrastructure-deploy.yml/badge.svg)](https://github.com/stuartshay/pwsh-azure-health/actions/workflows/infrastructure-deploy.yml)

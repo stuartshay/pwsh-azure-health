@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # Azure Cost Estimation Guide
 
 > **🚨 CRITICAL WORKFLOW RULE**: When adding ANY new Azure resource to your infrastructure (VMs, databases, Key Vaults, etc.), you MUST update the cost estimation system. See [Adding New Resources](#adding-new-resources) section below.

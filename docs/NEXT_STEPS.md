@@ -121,7 +121,12 @@ az role assignment list --assignee $(az account show --query user.name -o tsv)
 - [PRE_COMMIT.md](PRE_COMMIT.md) - Pre-commit hooks reference
 - [COST_ESTIMATION.md](COST_ESTIMATION.md) - Azure cost estimation guide
 
-## Next Steps 🚀
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# Next Steps & Improvements
 
 Once local development is working:
 
@@ -290,7 +295,7 @@ Added Bicep linting to pre-commit hooks in `.pre-commit-config.yaml`:
 ---
 
 #### 10. Documentation Versioning
-**Status:** 💭 Enhancement
+**Status:** ✅ Completed
 **Current State:** Documentation is in markdown but no version tracking.
 
 **Action:** Add document versions and last-updated dates:
@@ -300,6 +305,20 @@ version: 1.2.0
 last-updated: 2025-11-17
 ---
 ```
+
+**Implemented:** November 17, 2025
+
+Added YAML front matter with version metadata to all documentation files:
+- README.md: v2.0.0 (reflects major User-Assigned Identity architecture changes)
+- All docs in `docs/` directory: v1.0.0 (initial versioning baseline)
+- SECURITY_PERMISSIONS.md: Already had v2.0.0 metadata
+- Metadata includes: `version` (semantic versioning) and `last-updated` (YYYY-MM-DD)
+
+Created DOCUMENTATION_STANDARDS.md with versioning guidelines:
+- Version format: Semantic versioning (major.minor.patch)
+- Major version: Significant restructuring or architectural changes
+- Minor version: Content updates, additions, or corrections
+- Update date format: ISO 8601 (YYYY-MM-DD)
 
 **Benefit:** Track documentation changes and identify outdated guides.
 
