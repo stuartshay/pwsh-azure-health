@@ -58,25 +58,32 @@ jobs:
         run: |
           echo "🔍 Retrieving managed identity from shared infrastructure..."
 
-          # Check if shared-identity-info.json exists
-          if [ ! -f "scripts/infrastructure/shared-identity-info.json" ]; then
-            echo "⚠️ Warning: scripts/infrastructure/shared-identity-info.json not found"
-            echo "The shared infrastructure may not be set up. What-if will use empty parameter."
-            echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
-            exit 0
+          # Use GitHub variable if available, otherwise fall back to local file
+          MANAGED_IDENTITY_RESOURCE_ID="${{ vars.MANAGED_IDENTITY_RESOURCE_ID }}"
+
+          if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ]; then
+            echo "ℹ️ GitHub variable MANAGED_IDENTITY_RESOURCE_ID not set, checking local file..."
+
+            if [ -f "scripts/infrastructure/shared-identity-info.json" ]; then
+              MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
+              echo "✅ Found managed identity in local file: $MANAGED_IDENTITY_RESOURCE_ID"
+            else
+              echo "⚠️ Warning: No managed identity found in GitHub variables or local file"
+              echo "The shared infrastructure may not be set up. What-if will use empty parameter."
+              echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            echo "✅ Found managed identity in GitHub variables: $MANAGED_IDENTITY_RESOURCE_ID"
           fi
 
-          # Extract resource ID from the JSON file
-          MANAGED_IDENTITY_RESOURCE_ID=$(jq -r '.resourceId' scripts/infrastructure/shared-identity-info.json)
-
           if [ -z "$MANAGED_IDENTITY_RESOURCE_ID" ] || [ "$MANAGED_IDENTITY_RESOURCE_ID" == "null" ]; then
-            echo "⚠️ Warning: Could not extract resourceId from shared-identity-info.json"
+            echo "⚠️ Warning: Invalid managed identity resource ID"
             echo "What-if will use empty parameter."
             echo "managed_identity_resource_id=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "✅ Found managed identity: $MANAGED_IDENTITY_RESOURCE_ID"
           echo "managed_identity_resource_id=$MANAGED_IDENTITY_RESOURCE_ID" >> "$GITHUB_OUTPUT"
 
       - name: Run What-If for Dev environment
