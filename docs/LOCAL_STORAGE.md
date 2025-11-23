@@ -1,4 +1,9 @@
-# Local Azure Storage with Azurite
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
+# Local Storage (Azurite) Testing Guide
 
 This project uses [Azurite](https://github.com/Azure/Azurite) to emulate Azure Storage services locally for development and testing via the VS Code extension.
 

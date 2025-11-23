@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "16013063892030108519"
+      "templateHash": "6746267367955060074"
     }
   },
   "parameters": {
@@ -98,7 +98,7 @@
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2023-05-01",
+      "apiVersion": "2025-06-01",
       "name": "[variables('storageAccountName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -125,7 +125,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices",
-      "apiVersion": "2023-05-01",
+      "apiVersion": "2025-06-01",
       "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
@@ -133,7 +133,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-      "apiVersion": "2023-05-01",
+      "apiVersion": "2025-06-01",
       "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', parameters('cacheContainerName'))]",
       "properties": {
         "publicAccess": "None"
@@ -158,7 +158,7 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2023-12-01",
+      "apiVersion": "2025-03-01",
       "name": "[variables('appServicePlanName')]",
       "location": "[parameters('location')]",
       "tags": "[union(variables('commonTags'), createObject('sku', parameters('functionAppPlanSku'), 'tier', variables('planTier')))]",
@@ -173,7 +173,7 @@
     },
     {
       "type": "Microsoft.Web/sites",
-      "apiVersion": "2023-12-01",
+      "apiVersion": "2025-03-01",
       "name": "[variables('functionAppName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
@@ -187,7 +187,7 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
         "httpsOnly": true,
-        "siteConfig": "[union(createObject('powerShellVersion', '7.4', 'alwaysOn', not(variables('isConsumptionPlan')), 'functionsRuntimeScaleMonitoringEnabled', variables('isPremiumPlan'), 'appSettings', createArray(createObject('name', 'AzureWebJobsStorage__accountname', 'value', variables('storageAccountName')), createObject('name', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', 'value', format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-05-01').keys[0].value, environment().suffixes.storage)), createObject('name', 'WEBSITE_CONTENTSHARE', 'value', toLower(variables('functionAppName'))), createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'powershell'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME_VERSION', 'value', '7.4'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString), createObject('name', 'AZURE_SUBSCRIPTION_ID', 'value', parameters('subscriptionId')), createObject('name', 'CACHE_CONTAINER', 'value', parameters('cacheContainerName')), createObject('name', 'TIMER_CRON', 'value', parameters('timerSchedule')), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '1')), 'ftpsState', 'Disabled', 'minTlsVersion', '1.2', 'cors', createObject('allowedOrigins', createArray('https://portal.azure.com', 'https://ms.portal.azure.com', 'https://functions.azure.com', 'https://functions-staging.azure.com', 'https://functions-next.azure.com'), 'supportCredentials', false())), if(variables('isPremiumPlan'), createObject('preWarmedInstanceCount', 1, 'minimumElasticInstanceCount', 1, 'healthCheckPath', '/api/HealthCheck'), createObject()))]"
+        "siteConfig": "[union(createObject('powerShellVersion', '7.4', 'alwaysOn', not(variables('isConsumptionPlan')), 'functionsRuntimeScaleMonitoringEnabled', variables('isPremiumPlan'), 'appSettings', createArray(createObject('name', 'AzureWebJobsStorage__accountname', 'value', variables('storageAccountName')), createObject('name', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', 'value', format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2025-06-01').keys[0].value, environment().suffixes.storage)), createObject('name', 'WEBSITE_CONTENTSHARE', 'value', toLower(variables('functionAppName'))), createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'powershell'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME_VERSION', 'value', '7.4'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString), createObject('name', 'AZURE_SUBSCRIPTION_ID', 'value', parameters('subscriptionId')), createObject('name', 'CACHE_CONTAINER', 'value', parameters('cacheContainerName')), createObject('name', 'TIMER_CRON', 'value', parameters('timerSchedule')), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '1')), 'ftpsState', 'Disabled', 'minTlsVersion', '1.2', 'cors', createObject('allowedOrigins', createArray('https://portal.azure.com', 'https://ms.portal.azure.com', 'https://functions.azure.com', 'https://functions-staging.azure.com', 'https://functions-next.azure.com'), 'supportCredentials', false())), if(variables('isPremiumPlan'), createObject('preWarmedInstanceCount', 1, 'minimumElasticInstanceCount', 1, 'healthCheckPath', '/api/HealthCheck'), createObject()))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
@@ -197,7 +197,7 @@
     },
     {
       "type": "Microsoft.Web/sites/config",
-      "apiVersion": "2023-12-01",
+      "apiVersion": "2025-03-01",
       "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
       "properties": {
         "globalValidation": {
@@ -226,7 +226,7 @@
       "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'))]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2023-01-31').principalId]",
+        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2024-11-30').principalId]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -241,7 +241,7 @@
     },
     "functionAppUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01').defaultHostName)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2025-03-01').defaultHostName)]"
     },
     "storageAccountName": {
       "type": "string",
@@ -253,11 +253,11 @@
     },
     "managedIdentityPrincipalId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2023-01-31').principalId]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2024-11-30').principalId]"
     },
     "managedIdentityClientId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2023-01-31').clientId]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('managedIdentityResourceId'), '/')[2], split(parameters('managedIdentityResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', last(split(parameters('managedIdentityResourceId'), '/'))), '2024-11-30').clientId]"
     },
     "managedIdentityResourceId": {
       "type": "string",

@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # Deployment Guide
 
 This guide covers deploying the Azure Health Monitoring Functions to Azure.

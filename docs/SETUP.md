@@ -1,3 +1,8 @@
+---
+version: 1.0.0
+last-updated: 2025-11-17
+---
+
 # Local Development Setup Guide
 
 This guide walks you through setting up your local development environment for the Azure Health Monitoring Functions project.
