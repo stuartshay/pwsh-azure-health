@@ -62,10 +62,10 @@ jobs:
           chmod +x /tmp/policy-query.sh
           echo "✅ Policy query utilities configured"
 
-          # Copy Key Vault utilities from source
-          cp scripts/ci/keyvault-utils.sh /tmp/keyvault-utils.sh
+          # Download Key Vault utilities from shared repository
+          curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/keyvault-utils.sh -o /tmp/keyvault-utils.sh
           chmod +x /tmp/keyvault-utils.sh
-          echo "✅ Key Vault utilities configured"
+          echo "✅ Key Vault utilities configured (shared version)"
 
           # Copy deployment verification utilities from source
           cp scripts/ci/deployment-verification.sh /tmp/deployment-verification.sh
