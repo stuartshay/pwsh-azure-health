@@ -3,10 +3,13 @@
 # Tests for Key Vault utilities
 # Run with: bats tests/workflows/keyvault.bats
 
-# shellcheck disable=SC1091
-source "${BATS_TEST_DIRNAME}/../../scripts/ci/keyvault-utils.sh"
-
+# Note: Downloads shared keyvault-utils.sh from shared-azure-health repository
 setup() {
+  # Download and load the shared keyvault utilities
+  curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/keyvault-utils.sh -o /tmp/keyvault-utils-test.sh
+  # shellcheck disable=SC1091
+  source /tmp/keyvault-utils-test.sh
+
   # Create temporary directory for mock scripts
   export MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
   mkdir -p "$MOCK_DIR"
