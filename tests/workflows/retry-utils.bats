@@ -4,9 +4,10 @@
 # Run with: bats tests/workflows/retry-utils.bats
 
 setup() {
-  # Load the retry utilities
+  # Download and load the shared retry utilities
+  curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/retry-utils.sh -o /tmp/retry-utils-test.sh
   # shellcheck disable=SC1091
-  source "${BATS_TEST_DIRNAME}/../../scripts/ci/retry-utils.sh"
+  source /tmp/retry-utils-test.sh
   export RETRY_BASE_DELAY=0  # Speed up tests by removing delays
 }
 

@@ -52,10 +52,10 @@ jobs:
       - name: Setup CI utilities
         shell: bash
         run: |
-          # Copy retry utilities from source
-          cp scripts/ci/retry-utils.sh /tmp/retry-utils.sh
+          # Download retry utilities from shared repo
+          curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/retry-utils.sh -o /tmp/retry-utils.sh
           chmod +x /tmp/retry-utils.sh
-          echo "✅ Retry utilities configured (max attempts: $MAX_RETRY_ATTEMPTS, base delay: ${RETRY_BASE_DELAY}s)"
+          echo "✅ Retry utilities configured (shared version)"
 
           # Copy policy query utilities from source
           cp scripts/ci/policy-query.sh /tmp/policy-query.sh
