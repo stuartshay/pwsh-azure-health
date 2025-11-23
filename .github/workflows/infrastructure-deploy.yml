@@ -67,10 +67,10 @@ jobs:
           chmod +x /tmp/keyvault-utils.sh
           echo "✅ Key Vault utilities configured (shared version)"
 
-          # Copy deployment verification utilities from source
-          cp scripts/ci/deployment-verification.sh /tmp/deployment-verification.sh
+          # Download deployment verification utilities from shared repository
+          curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/deployment-verification.sh -o /tmp/deployment-verification.sh
           chmod +x /tmp/deployment-verification.sh
-          echo "✅ Deployment verification utilities configured"
+          echo "✅ Deployment verification utilities configured (shared version)"
 
       - name: Install cost estimation tools
         shell: bash

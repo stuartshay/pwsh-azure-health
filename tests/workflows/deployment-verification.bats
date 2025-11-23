@@ -3,10 +3,13 @@
 # Tests for deployment verification utilities
 # Run with: bats tests/workflows/deployment-verification.bats
 
-# shellcheck disable=SC1091
-source "${BATS_TEST_DIRNAME}/../../scripts/ci/deployment-verification.sh"
-
+# Note: Downloads shared deployment-verification.sh from shared-azure-health repository
 setup() {
+  # Download and load the shared deployment verification utilities
+  curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/deployment-verification.sh -o /tmp/deployment-verification-test.sh
+  # shellcheck disable=SC1091
+  source /tmp/deployment-verification-test.sh
+
   export MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
   mkdir -p "$MOCK_DIR"
   export PATH="$MOCK_DIR:$PATH"
