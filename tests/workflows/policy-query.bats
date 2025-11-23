@@ -3,10 +3,12 @@
 # Tests for policy query utilities
 # Run with: bats tests/workflows/policy-query.bats
 
-# shellcheck disable=SC1091
-source "${BATS_TEST_DIRNAME}/../../scripts/ci/policy-query.sh"
-
 setup() {
+  # Download shared script
+  curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/policy-query.sh -o "$BATS_TEST_TMPDIR/policy-query.sh"
+  # shellcheck disable=SC1091
+  source "$BATS_TEST_TMPDIR/policy-query.sh"
+
   # Create temporary directory for mock scripts
   export MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
   mkdir -p "$MOCK_DIR"

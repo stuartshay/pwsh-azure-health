@@ -42,10 +42,9 @@ jobs:
           chmod +x /tmp/retry-utils.sh
           echo "✅ Retry utilities configured (shared version)"
 
-          # Copy policy query utilities
-          cp scripts/ci/policy-query.sh /tmp/policy-query.sh
-          chmod +x /tmp/policy-query.sh
-          echo "✅ Policy query utilities configured"
+          # Download shared policy query utilities
+          curl -sSL https://raw.githubusercontent.com/stuartshay/shared-azure-health/master/scripts/policy-query.sh -o /tmp/policy-query.sh
+          echo "✅ Policy query utilities configured (shared version)"
 
       - name: Install cost estimation tools
         shell: bash
